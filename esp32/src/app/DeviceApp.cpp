@@ -1,0 +1,87 @@
+#include "DeviceApp.hpp"
+
+namespace NaTrack {
+
+void DeviceApp::begin() noexcept {
+    // 1. Output concise production boot logs
+    Serial.begin(Config::SerialBaudRate);
+    Serial.println("NaTrack Booting...");
+
+    // Give managers static lifetimes
+    static StatusReporter reporter{Serial, Config::StatusReportIntervalMs};
+    static ButtonManager buttons{};
+    static BluetoothManager bluetooth{};
+    static PowerManager power{};
+    static SensorManager sensors{};
+    static BatteryManager battery{};
+    static SettingsManager settings{};
+    static NavigationManager navigation{};
+    static UIManager uiManager{};
+    static DisplayManager displayManager{};
+
+    // Wire up listeners
+    buttons.setListener(&navigation);
+
+    // Save references to member pointers
+    statusReporter_ = &reporter;
+    buttonManager_ = &buttons;
+    bluetoothManager_ = &bluetooth;
+    powerManager_ = &power;
+    sensorManager_ = &sensors;
+    batteryManager_ = &battery;
+    settingsManager_ = &settings;
+    navManager_ = &navigation;
+    uiManager_ = &uiManager;
+    displayManager_ = &displayManager;
+
+    // Initialize state & managers
+    statusReporter_->begin();
+    buttonManager_->begin();
+    bluetoothManager_->begin(&state_);
+    powerManager_->begin();
+    sensorManager_->begin(&state_);
+    batteryManager_->begin(&state_);
+    settingsManager_->begin(&state_);
+    navManager_->begin(&state_);
+    uiManager_->begin(navManager_);
+
+    // Begin DisplayManager, which handles Low-level SSD1306 and pacing
+    displayManager_->begin(&state_, uiManager_, navManager_);
+
+    Serial.println("Display Ready");
+    Serial.println("Buttons Ready");
+    Serial.println("Temperature Ready");
+    Serial.println("System Ready");
+}
+
+void DeviceApp::update() noexcept {
+    if (buttonManager_ != nullptr) {
+        buttonManager_->update();
+    }
+    if (navManager_ != nullptr) {
+        navManager_->update();
+    }
+    if (sensorManager_ != nullptr) {
+        sensorManager_->update();
+    }
+    if (batteryManager_ != nullptr) {
+        batteryManager_->update();
+    }
+    if (bluetoothManager_ != nullptr) {
+        bluetoothManager_->update();
+    }
+    if (displayManager_ != nullptr) {
+        displayManager_->update();
+    }
+    if (statusReporter_ != nullptr) {
+        statusReporter_->update();
+    }
+    if (powerManager_ != nullptr) {
+        powerManager_->update();
+    }
+    if (settingsManager_ != nullptr) {
+        settingsManager_->update();
+    }
+}
+
+} // namespace NaTrack

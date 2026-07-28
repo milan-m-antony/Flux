@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "551940941440",
+    "project_id": "natrack-6548a",
+    "storage_bucket": "natrack-6548a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:551940941440:android:9328317a052081a915a865",
+        "android_client_info": {
+          "package_name": "com.natrack.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCB0u2VfZEV2csAkHOSIMP6V3AFRwsn1mU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
