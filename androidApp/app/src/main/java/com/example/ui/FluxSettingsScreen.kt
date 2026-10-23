@@ -36,6 +36,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.MainViewModel
@@ -47,6 +49,7 @@ fun FluxSettingsScreen(
     viewModel: MainViewModel,
     onNotificationClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val lowThreshold by viewModel.lowTempThreshold.collectAsState()
     val highThreshold by viewModel.highTempThreshold.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
@@ -65,12 +68,13 @@ fun FluxSettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // Spacer to clear the fixed top header
-            Spacer(modifier = Modifier.height(72.dp))
+            // Spacer to clear the fixed top header cleanly
+            Spacer(modifier = Modifier.height(68.dp))
 
             // 2. Title & Subtitle
             Text(
@@ -90,114 +94,139 @@ fun FluxSettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. Card 1 — App Theme (Light / Dark Selection)
+            // 3. Card 1 — App Theme (Responsive Light / Dark Selection)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
                     .background(colors.cardBg, RoundedCornerShape(26.dp))
                     .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
-                    .padding(horizontal = 18.dp, vertical = 14.dp)
+                    .padding(horizontal = 18.dp, vertical = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Sun Icon
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.LightMode,
-                            contentDescription = null,
-                            tint = FluxOrange,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column {
-                        Text(
-                            text = "App Theme",
-                            color = colors.textPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Choose how Flux looks",
-                            color = colors.textSecondary,
-                            fontSize = 11.5.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    // Light / Dark Toggle Capsule
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Header Row with Icon and Title
                     Row(
-                        modifier = Modifier
-                            .background(colors.pillBg, RoundedCornerShape(20.dp))
-                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
-                            .padding(3.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Light Option
-                        Row(
+                        Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (selectedTheme == "Light") (if (isDarkTheme) Color(0xFF334155) else FluxOrange) else Color.Transparent)
-                                .clickable {
-                                    selectedTheme = "Light"
-                                    viewModel.setDarkTheme(false)
-                                }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.LightMode,
+                                imageVector = if (isDarkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
                                 contentDescription = null,
-                                tint = if (selectedTheme == "Light") Color.White else colors.textSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Light",
-                                color = if (selectedTheme == "Light") Color.White else colors.textSecondary,
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold
+                                tint = FluxOrange,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
-                        // Dark Option
-                        Row(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(if (selectedTheme == "Dark") FluxOrange else Color.Transparent)
-                                .clickable {
-                                    selectedTheme = "Dark"
-                                    viewModel.setDarkTheme(true)
-                                }
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.DarkMode,
-                                contentDescription = null,
-                                tint = if (selectedTheme == "Dark") Color.White else colors.textSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column {
                             Text(
-                                text = "Dark",
-                                color = if (selectedTheme == "Dark") Color.White else colors.textSecondary,
-                                fontSize = 11.5.sp,
+                                text = "App Theme",
+                                color = colors.textPrimary,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            Text(
+                                text = if (isDarkTheme) "Dark mode enabled" else "Light mode enabled",
+                                color = colors.textSecondary,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Responsive Full-Width Segmented Theme Buttons
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.pillBg, RoundedCornerShape(20.dp))
+                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
+                            .padding(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Light Button
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (!isDarkTheme) FluxOrange else Color.Transparent
+                                )
+                                .clickable {
+                                    if (isDarkTheme) {
+                                        viewModel.setDarkTheme(false)
+                                        Toast.makeText(context, "Switched to Light theme", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LightMode,
+                                    contentDescription = null,
+                                    tint = if (!isDarkTheme) Color.White else colors.textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Light",
+                                    color = if (!isDarkTheme) Color.White else colors.textSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        // Dark Button
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    if (isDarkTheme) FluxOrange else Color.Transparent
+                                )
+                                .clickable {
+                                    if (!isDarkTheme) {
+                                        viewModel.setDarkTheme(true)
+                                        Toast.makeText(context, "Switched to Dark theme", Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DarkMode,
+                                    contentDescription = null,
+                                    tint = if (isDarkTheme) Color.White else colors.textSecondary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Dark",
+                                    color = if (isDarkTheme) Color.White else colors.textSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
@@ -268,6 +297,7 @@ fun FluxSettingsScreen(
                                 .clickable {
                                     selectedUnit = "C"
                                     viewModel.setPreferredUnit("C")
+                                    Toast.makeText(context, "Temperature unit: °C", Toast.LENGTH_SHORT).show()
                                 }
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -287,6 +317,7 @@ fun FluxSettingsScreen(
                                 .clickable {
                                     selectedUnit = "F"
                                     viewModel.setPreferredUnit("F")
+                                    Toast.makeText(context, "Temperature unit: °F", Toast.LENGTH_SHORT).show()
                                 }
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
                             contentAlignment = Alignment.Center
@@ -366,7 +397,10 @@ fun FluxSettingsScreen(
 
                         Switch(
                             checked = alertsEnabled,
-                            onCheckedChange = { alertsEnabled = it },
+                            onCheckedChange = {
+                                alertsEnabled = it
+                                Toast.makeText(context, if (it) "Temperature alerts enabled" else "Temperature alerts disabled", Toast.LENGTH_SHORT).show()
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
                                 checkedTrackColor = FluxOrange,
@@ -601,7 +635,7 @@ fun FluxSettingsScreen(
                             DeviceDetailRow(
                                 icon = Icons.Outlined.Wifi,
                                 label = "Device",
-                                value = "ESP32",
+                                value = "Flux1",
                                 colors = colors
                             )
 
@@ -649,7 +683,7 @@ fun FluxSettingsScreen(
                             DeviceDetailRow(
                                 icon = Icons.Outlined.LocationOn,
                                 label = "Device ID",
-                                value = "DS18B20 • ESP32",
+                                value = "DS18B20 • Flux1",
                                 colors = colors
                             )
                         }

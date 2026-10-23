@@ -315,7 +315,7 @@ fun FluxApp(viewModel: MainViewModel) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .statusBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .padding(start = 16.dp, top = 2.dp, end = 16.dp, bottom = 4.dp)
                             .align(Alignment.TopCenter)
                     ) {
                         FluxHeader(

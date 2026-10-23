@@ -54,12 +54,13 @@ fun FluxHistoryScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // Spacer to clear the fixed top header
-            Spacer(modifier = Modifier.height(72.dp))
+            // Spacer to clear the fixed top header cleanly
+            Spacer(modifier = Modifier.height(68.dp))
 
             // 2. Title & Subtitle
             Text(

@@ -25,6 +25,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import com.example.MainViewModel
 import com.example.R
 import com.example.ui.theme.*
@@ -35,6 +37,7 @@ fun FluxProfilesScreen(
     onBack: () -> Unit = {},
     onNotificationClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     val activeProfile by viewModel.activeProfile.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
@@ -46,12 +49,13 @@ fun FluxProfilesScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // Spacer to clear the fixed top header
-            Spacer(modifier = Modifier.height(72.dp))
+            // Spacer to clear the fixed top header cleanly
+            Spacer(modifier = Modifier.height(68.dp))
 
             // 2. Back Button & Title Row
             Row(
@@ -88,6 +92,7 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Live Monitor",
                 onClick = {
                     viewModel.saveActiveProfile("Live Monitor")
+                    Toast.makeText(context, "Monitoring mode: Live Monitor", Toast.LENGTH_SHORT).show()
                 }
             )
 
@@ -102,6 +107,7 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Environment",
                 onClick = {
                     viewModel.saveActiveProfile("Environment")
+                    Toast.makeText(context, "Monitoring mode: Environment", Toast.LENGTH_SHORT).show()
                 }
             )
 
@@ -116,6 +122,7 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Liquid",
                 onClick = {
                     viewModel.saveActiveProfile("Liquid")
+                    Toast.makeText(context, "Monitoring mode: Liquid", Toast.LENGTH_SHORT).show()
                 }
             )
 
@@ -130,6 +137,7 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Fermentation",
                 onClick = {
                     viewModel.saveActiveProfile("Fermentation")
+                    Toast.makeText(context, "Monitoring mode: Fermentation", Toast.LENGTH_SHORT).show()
                 }
             )
 
