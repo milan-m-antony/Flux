@@ -87,7 +87,7 @@ fun FluxDiagnosticsScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    DiagRow("Target Peripheral", "Flux-Telemetry / ESP32-WROOM")
+                    DiagRow("Target Peripheral", "Flux1 / ESP32-WROOM")
                     DiagRow("Service UUID", "6E400011-B5A3-F393-E0A9-E50E24DCCA9E")
                     DiagRow("Telemetry Char UUID", "6E400009-B5A3-F393-E0A9-E50E24DCCA9E")
                     DiagRow("Command Char UUID", "6E400002-B5A3-F393-E0A9-E50E24DCCA9E")

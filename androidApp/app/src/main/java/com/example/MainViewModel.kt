@@ -31,6 +31,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.connectivity.FluxConnectivityCoordinator
+import com.example.connectivity.FluxConnectivityState
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     
@@ -156,6 +158,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val userWeight = settingsRepository.userWeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userHeight = settingsRepository.userHeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userPhotoUrl = settingsRepository.userPhotoUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    private val _lastTelemetryTimestamp = MutableStateFlow(System.currentTimeMillis())
+    val lastTelemetryTimestamp: StateFlow<Long> = _lastTelemetryTimestamp.asStateFlow()
+
+    private val _espWifiConnected = MutableStateFlow(true)
+    val espWifiConnected: StateFlow<Boolean> = _espWifiConnected.asStateFlow()
+
+    private val _espWifiRssi = MutableStateFlow<Int?>(-57)
+    val espWifiRssi: StateFlow<Int?> = _espWifiRssi.asStateFlow()
+
+    val connectivityCoordinator = FluxConnectivityCoordinator(
+        context = application,
+        scope = viewModelScope,
+        bleManager = bleManager,
+        espWifiConnected = _espWifiConnected,
+        espWifiRssi = _espWifiRssi,
+        lastTelemetryTimestamp = _lastTelemetryTimestamp,
+        cloudSyncStatus = supabaseSyncStatus
+    )
+    val connectivityState: StateFlow<FluxConnectivityState> = connectivityCoordinator.connectivityState
     
     init {
         firebaseAuth?.addAuthStateListener { auth ->
@@ -164,6 +186,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             bleManager.latestReading.collect { reading ->
                 if (reading != null) {
+                    _lastTelemetryTimestamp.value = System.currentTimeMillis()
+                    if (reading.wifiConnected) {
+                        _espWifiConnected.value = true
+                        if (reading.wifiRssi != 0) {
+                            _espWifiRssi.value = reading.wifiRssi
+                        }
+                    }
                     readingRepository.insert(
                         naValue = reading.na,
                         temperature = reading.temp,
@@ -183,7 +212,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     }
 
                     // Direct telemetry upload exclusively to Supabase (Zero writes to Firebase database)
-                    val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux-Sensor-01"
+                    val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux1"
                     supabaseRepository.uploadTelemetry(
                         supabaseUrl = supabaseUrl.value,
                         anonKey = supabaseAnonKey.value,
@@ -308,7 +337,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun fetchCloudHistory() {
         viewModelScope.launch {
-            val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux-Sensor-01"
+            val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux1"
             supabaseRepository.fetchHistoricalTelemetry(supabaseUrl.value, supabaseAnonKey.value, addr)
         }
     }
@@ -574,6 +603,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             supabaseRepository.flushOfflineQueueNow(supabaseUrl.value, supabaseAnonKey.value)
         }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        connectivityCoordinator.cleanup()
     }
 
     class Factory(private val application: Application) : ViewModelProvider.Factory {

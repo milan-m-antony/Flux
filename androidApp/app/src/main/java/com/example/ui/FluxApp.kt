@@ -124,7 +124,8 @@ fun FluxApp(viewModel: MainViewModel) {
 
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
-    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
+    val connectivityState by viewModel.connectivityState.collectAsState()
+    val isOnline = connectivityState.isOnline
 
     FluxBackground(darkTheme = isDarkTheme) {
         Scaffold(
@@ -322,9 +323,10 @@ fun FluxApp(viewModel: MainViewModel) {
                             .align(Alignment.TopCenter)
                     ) {
                         FluxHeader(
+                            connectivityState = connectivityState,
                             isOnline = isOnline,
                             isBleConnected = connectionState == com.example.ble.ConnectionState.CONNECTED,
-                            isWifiConnected = true,
+                            isWifiConnected = connectivityState.type == com.example.connectivity.ConnectionType.WIFI,
                             darkTheme = isDarkTheme,
                             hasUnreadAlerts = true,
                             onNotificationClick = {

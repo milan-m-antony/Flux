@@ -12,14 +12,17 @@ data class BLEStateData(
     val sodium: String = "---",
     val status: String = "Normal",
     val firmware: String = "v2.0.0",
-    val device: String = "Flux-Telemetry",
+    val device: String = "Flux1",
     val mode: String = "Live Monitor",
     val unit: String = "C",
     val minTemp: Double = 0.0,
     val maxTemp: Double = 0.0,
     val avgTemp: Double = 0.0,
     val elapsedSec: Long = 0L,
-    val alert: Boolean = false
+    val alert: Boolean = false,
+    val wifiConnected: Boolean = false,
+    val wifiRssi: Int = 0,
+    val wifiSsid: String = ""
 )
 
 object BLEParser {

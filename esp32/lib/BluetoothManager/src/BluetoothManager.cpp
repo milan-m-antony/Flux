@@ -23,12 +23,12 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
     if (state_ != nullptr) {
         state_->bluetoothConnected = false;
         state_->bluetoothEnabled = true;
-        state_->bluetoothName = "Flux-Telemetry";
+        state_->bluetoothName = "Flux1";
     }
 
     try {
         // Initialize BLE Device
-        BLEDevice::init("Flux-Telemetry");
+        BLEDevice::init("Flux1");
         
         // CRITICAL: Set ESP32 MTU to 512 so it can send strings longer than 20 bytes
         BLEDevice::setMTU(512);
@@ -67,7 +67,7 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
             pCharName_->setValue(state_->bluetoothName);
         } else {
             pCharFirmware_->setValue("v2.0.0");
-            pCharName_->setValue("Flux-Telemetry");
+            pCharName_->setValue("Flux1");
         }
 
         // Start Service
@@ -178,9 +178,9 @@ void BluetoothManager::notifyDataChange() noexcept {
 
     // 2. Format and send System JSON payload via 6E400009 characteristic
     unsigned long elapsedSec = (millis() - state_->sessionStartMs) / 1000UL;
-    char json[320];
+    char json[380];
     snprintf(json, sizeof(json),
-             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s}",
+             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s,\"wifiConnected\":%s,\"wifiRssi\":%d,\"wifiSsid\":\"%s\"}",
              state_->temperature,
              state_->batteryPercentage,
              state_->batteryVoltage,
@@ -195,7 +195,10 @@ void BluetoothManager::notifyDataChange() noexcept {
              (state_->maxTemperature < -900.0f) ? state_->temperature : state_->maxTemperature,
              state_->avgTemperature,
              elapsedSec,
-             state_->isThresholdAlert ? "true" : "false");
+             state_->isThresholdAlert ? "true" : "false",
+             state_->wifiConnected ? "true" : "false",
+             state_->wifiRSSI,
+             state_->wifiSSID ? state_->wifiSSID : "");
 
     pCharJson_->setValue(json);
     pCharJson_->notify();

@@ -28,29 +28,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.connectivity.FluxConnectivityState
+import com.example.ui.components.ConnectivityRing
 import com.example.ui.theme.*
 
 @Composable
 fun FluxHeader(
     modifier: Modifier = Modifier,
+    connectivityState: FluxConnectivityState = FluxConnectivityState(),
     isOnline: Boolean = true,
     isBleConnected: Boolean = true,
     isWifiConnected: Boolean = true,
     darkTheme: Boolean = false,
-    hasUnreadAlerts: Boolean = true,
+    showNotificationBell: Boolean = false,
+    hasUnreadAlerts: Boolean = false,
     onNotificationClick: () -> Unit = {}
 ) {
     // Pulse animation for online indicator & flame
     val infiniteTransition = rememberInfiniteTransition(label = "HeaderPulse")
-    val dotAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "DotAlpha"
-    )
     val flameScale by infiniteTransition.animateFloat(
         initialValue = 0.98f,
         targetValue = 1.03f,
@@ -61,7 +56,7 @@ fun FluxHeader(
         label = "FlameScale"
     )
 
-    // Reduced height & more curved (full capsule) header container
+    // Reduced height & curved capsule header container matching reference design
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -91,8 +86,8 @@ fun FluxHeader(
                 painter = painterResource(id = R.drawable.ic_flux_flame),
                 contentDescription = "Flux Logo",
                 modifier = Modifier
-                    .size(30.dp)
-                    .scale(if (isOnline) flameScale else 1f)
+                    .size(31.dp)
+                    .scale(if (connectivityState.isOnline) flameScale else 1f)
             )
 
             Spacer(modifier = Modifier.width(8.dp))
@@ -102,7 +97,7 @@ fun FluxHeader(
                 Text(
                     text = "Flux",
                     color = if (darkTheme) Color(0xFFF8FAFC) else FluxTextDark,
-                    fontSize = 17.5.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-0.5).sp
                 )
@@ -114,111 +109,61 @@ fun FluxHeader(
                 )
             }
 
+            // Balanced spacing before center divider
             Spacer(modifier = Modifier.weight(1f))
 
-            // 3. Device Indicator with device image, BLE & WiFi icons, and Online/Offline status
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Circular device image
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(if (darkTheme) Color(0xFF334155) else Color(0xFFF8FAFC))
-                        .border(0.5.dp, if (darkTheme) Color(0xFF475569) else Color(0xFFE2E8F0), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.device_image),
-                        contentDescription = "Flux Device",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(7.dp))
-
-                Column {
-                    // Small connection mode icons: Bluetooth and WiFi
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Bluetooth,
-                            contentDescription = "Bluetooth Status",
-                            tint = if (isBleConnected) Color(0xFF38BDF8) else (if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)),
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Icon(
-                            imageVector = Icons.Filled.Wifi,
-                            contentDescription = "WiFi Status",
-                            tint = if (isWifiConnected) Color(0xFF22C55E) else (if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)),
-                            modifier = Modifier.size(11.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(1.dp))
-
-                    // Status Indicator: Online or Offline (No ESP32 text)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isOnline) FluxGreenOnline.copy(alpha = dotAlpha) else Color(0xFF94A3B8)
-                                )
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                        Text(
-                            text = if (isOnline) "Online" else "Offline",
-                            color = if (isOnline) {
-                                if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A)
-                            } else {
-                                if (darkTheme) Color(0xFF94A3B8) else Color(0xFF64748B)
-                            },
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // 4. Circular Notification Bell Button with Badge
+            // 3. Center Divider Bar: |
             Box(
                 modifier = Modifier
-                    .size(34.dp)
-                    .shadow(
-                        elevation = 2.dp,
-                        shape = CircleShape,
-                        spotColor = Color(0x12000000)
-                    )
-                    .clip(CircleShape)
-                    .background(if (darkTheme) Color(0xFF334155) else Color.White)
-                    .border(0.5.dp, if (darkTheme) Color(0xFF475569) else Color(0xFFE2E8F0), CircleShape)
-                    .clickable { onNotificationClick() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "Alerts",
-                    tint = if (darkTheme) Color(0xFFF8FAFC) else FluxTextDark,
-                    modifier = Modifier.size(17.dp)
-                )
+                    .width(1.dp)
+                    .height(26.dp)
+                    .background(if (darkTheme) Color(0xFF334155) else Color(0xFFE2E8F0))
+            )
 
-                if (hasUnreadAlerts) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 6.dp, end = 6.dp)
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(FluxOrange)
+            // Balanced spacing after center divider
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 4. Dynamic Connectivity Ring & Status Indicator (Single dynamic animated icon + Flux1 + ● Online)
+            ConnectivityRing(
+                state = connectivityState,
+                darkTheme = darkTheme,
+                modifier = Modifier
+            )
+
+            // Optional Notification Bell Button (hidden by default to match reference design)
+            if (showNotificationBell) {
+                Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .shadow(
+                            elevation = 2.dp,
+                            shape = CircleShape,
+                            spotColor = Color(0x12000000)
+                        )
+                        .clip(CircleShape)
+                        .background(if (darkTheme) Color(0xFF334155) else Color.White)
+                        .border(0.5.dp, if (darkTheme) Color(0xFF475569) else Color(0xFFE2E8F0), CircleShape)
+                        .clickable { onNotificationClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Notifications,
+                        contentDescription = "Alerts",
+                        tint = if (darkTheme) Color(0xFFF8FAFC) else FluxTextDark,
+                        modifier = Modifier.size(17.dp)
                     )
+
+                    if (hasUnreadAlerts) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(top = 6.dp, end = 6.dp)
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(FluxOrange)
+                        )
+                    }
                 }
             }
         }

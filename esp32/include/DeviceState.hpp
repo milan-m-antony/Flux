@@ -73,10 +73,10 @@ struct DeviceState {
     const char* connectedDeviceName = "";
     unsigned long lastConnectionTime = 0UL;
     int signalStrength = -65;
-    const char* bluetoothName = "Flux-Telemetry";
+    const char* bluetoothName = "Flux1";
     
     bool wifiConnected = false;
-    const char* wifiSSID = "None";
+    const char* wifiSSID = "Flux1";
     int wifiRSSI = 0;
     
     const char* supabaseSyncState = "Ready";
@@ -90,7 +90,7 @@ struct DeviceState {
     
     // Metadata
     const char* firmwareVersion = "v2.0.0";
-    const char* deviceName = "Flux Telemetry v2";
+    const char* deviceName = "Flux1";
     
     // Backward compatibility helpers
     int sodiumValue = -1;

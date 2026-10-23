@@ -26,7 +26,7 @@ public:
     }
 
     const char* getDeviceName() const noexcept {
-        return "Flux-Telemetry";
+        return "Flux1";
     }
 
     int16_t getRSSI() const noexcept {

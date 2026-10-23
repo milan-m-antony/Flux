@@ -72,11 +72,15 @@ class BleManager(private val context: Context) {
                 maxTemp = data.maxTemp,
                 avgTemp = data.avgTemp,
                 elapsedSec = data.elapsedSec,
-                isAlert = data.alert
+                isAlert = data.alert,
+                wifiConnected = data.wifiConnected,
+                wifiRssi = data.wifiRssi,
+                wifiSsid = data.wifiSsid
             )
         }
     }.stateIn(scope, SharingStarted.Eagerly, null)
 
+    val rssi: StateFlow<Int?> = repository.rssi
     val latestMv: StateFlow<Double?> = latestReading.map { it?.mv }.stateIn(scope, SharingStarted.Eagerly, null)
 
     fun startScan() {
