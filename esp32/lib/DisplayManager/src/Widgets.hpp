@@ -9,7 +9,7 @@ namespace Flux {
 
 class HeaderWidget {
 public:
-    static void draw(Adafruit_SSD1306& display, int batteryPercent, bool isCharging, bool isBluetoothConnected, bool blinkState) noexcept;
+    static void draw(Adafruit_SSD1306& display, const DeviceState& state, bool blinkState) noexcept;
 };
 
 class FooterWidget {

@@ -2,20 +2,20 @@
 
 namespace Flux {
 
-void HeaderWidget::draw(Adafruit_SSD1306& display, int batteryPercent, bool isCharging, bool isBluetoothConnected, bool blinkState) noexcept {
+void HeaderWidget::draw(Adafruit_SSD1306& display, const DeviceState& state, bool blinkState) noexcept {
     // Top Bar is Y=0 to Y=11.
-    // Battery icon top left
-    IconLibrary::drawBattery(display, 2, 2, 14, 8, batteryPercent, isCharging, SSD1306_WHITE);
+    // 1. Top Left: WiFi icon (matching Bluetooth on right)
+    IconLibrary::drawWifi(display, 4, 1, 10, state.wifiConnected, blinkState, SSD1306_WHITE);
     
-    // Centered FLUX title
+    // 2. Centered FLUX title
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
     // "FLUX" is 4 chars. 4 * 6 = 24 px. (128 - 24) / 2 = 52.
     display.setCursor(52, 2);
     display.print("FLUX");
 
-    // Bluetooth icon top right
-    IconLibrary::drawBluetooth(display, 114, 1, 10, isBluetoothConnected, blinkState, SSD1306_WHITE);
+    // 3. Top Right: Bluetooth icon
+    IconLibrary::drawBluetooth(display, 114, 1, 10, state.bluetoothConnected, blinkState, SSD1306_WHITE);
 
     // Divider line at Y=11
     display.drawFastHLine(0, 11, 128, SSD1306_WHITE);
@@ -26,28 +26,22 @@ void FooterWidget::draw(Adafruit_SSD1306& display, const DeviceState& state) noe
     // Divider at Y=51
     display.drawFastHLine(0, 51, 128, SSD1306_WHITE);
 
-    // 1. Bottom Left: Clock icon + Live Time display (00:00:00)
-    IconLibrary::drawClock(display, 1, 53, 8, SSD1306_WHITE);
+    // 1. Bottom Left: Clock icon + Live Time display (HH:MM:SS)
+    IconLibrary::drawClock(display, 2, 53, 8, SSD1306_WHITE);
     char timeBuf[16];
     state.getFormattedTime(timeBuf, sizeof(timeBuf));
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
-    display.setCursor(11, 54);
+    display.setCursor(12, 54);
     display.print(timeBuf);
 
-    // 2. Center: Active Profile Tag (LIVE, ENV, LIQ, FERM)
-    const char* profileTag = "LIVE";
-    if (state.activeProfile == ProfileMode::Environment) profileTag = "ENV";
-    else if (state.activeProfile == ProfileMode::Liquid) profileTag = "LIQ";
-    else if (state.activeProfile == ProfileMode::Fermentation) profileTag = "FERM";
-    display.setCursor(64, 54);
-    display.print(profileTag);
+    // 2. Center: Empty (removed profile badge per user request)
 
-    // 3. Bottom Right: Battery % and icon
-    int batX = (state.batteryPercentage >= 100) ? 91 : 95;
+    // 3. Bottom Right: Battery % and Battery icon
+    int batX = (state.batteryPercentage >= 100) ? 90 : 94;
     display.setCursor(batX, 54);
     display.printf("%d%%", state.batteryPercentage);
-    IconLibrary::drawBattery(display, 116, 54, 10, 7, state.batteryPercentage, state.charging, SSD1306_WHITE);
+    IconLibrary::drawBattery(display, 114, 53, 12, 8, state.batteryPercentage, state.charging, SSD1306_WHITE);
 }
 
 void CardWidget::draw(Adafruit_SSD1306& display, int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) noexcept {

@@ -141,6 +141,7 @@ void DisplayManager::update() noexcept {
     int activeProfileInt = static_cast<int>(state_->activeProfile);
     bool isSensorConn = state_->sensorConnected;
     bool isAlert = state_->isThresholdAlert;
+    bool isWifiConn = state_->wifiConnected;
     
     bool transitioning = nav_ ? nav_->isTransitioning() : false;
     int16_t slideOffset = nav_ ? nav_->getSlideOffset() : 0;
@@ -150,12 +151,14 @@ void DisplayManager::update() noexcept {
     static int lastProfile = -1;
     static bool lastSensorConn = false;
     static bool lastAlert = false;
+    static bool lastWifiConn = false;
 
     bool stateChanged = (secondChanged ||
                          abs(tempCelsius - lastTemp_) > 0.05f ||
                          batteryPercent != lastBatPercent_ ||
                          abs(batteryVolts - lastBatVolts_) > 0.01f ||
                          isBluetoothConnected != lastBtConnected_ ||
+                         isWifiConn != lastWifiConn ||
                          activeScreen != lastActiveScreen_ ||
                          transitioning != lastTransitioning_ ||
                          slideOffset != lastSlideOffset_ ||
@@ -164,7 +167,7 @@ void DisplayManager::update() noexcept {
                          activeProfileInt != lastProfile ||
                          isSensorConn != lastSensorConn ||
                          isAlert != lastAlert ||
-                         (isBluetoothConnected == false && btBlinkState_ != lastBlinkState_));
+                         ((isBluetoothConnected == false || isWifiConn == false) && btBlinkState_ != lastBlinkState_));
 
     if (!stateChanged) {
         return; 
@@ -183,6 +186,7 @@ void DisplayManager::update() noexcept {
     lastProfile = activeProfileInt;
     lastSensorConn = isSensorConn;
     lastAlert = isAlert;
+    lastWifiConn = isWifiConn;
 
     display_.clearDisplay();
     uiMgr_->render(display_, *state_, btBlinkState_);

@@ -24,10 +24,10 @@ const char* getUnitSymbol(TempUnit unit) noexcept {
 }
 
 void drawArcGauge(Adafruit_SSD1306& display, int16_t cx, int16_t cy, int16_t radius, float progress) noexcept {
-    // startAngle = 135 deg (bottom-left), sweep = 270 deg over top to 45 deg (bottom-right)
+    // 270 degree sweep from 135 deg to 45 deg
     const float startAngle = 135.0f;
     const float sweepTotal = 270.0f;
-    const int steps = 20;
+    const int steps = 18;
 
     // 1. Inactive Background Track & Radial Ticks
     for (int i = 0; i <= steps; i++) {
@@ -38,7 +38,7 @@ void drawArcGauge(Adafruit_SSD1306& display, int16_t cx, int16_t cy, int16_t rad
         int16_t xInner = cx + (int16_t)(cos(rad) * (radius - 2));
         int16_t yInner = cy + (int16_t)(sin(rad) * (radius - 2));
 
-        if (i % 4 == 0) {
+        if (i % 3 == 0) {
             display.drawLine(xInner, yInner, xOuter, yOuter, SSD1306_WHITE);
         } else {
             int16_t xMid = cx + (int16_t)(cos(rad) * radius);
@@ -72,14 +72,14 @@ void drawArcGauge(Adafruit_SSD1306& display, int16_t cx, int16_t cy, int16_t rad
             prevY = currY;
         }
 
-        // Thumb knob indicator at arc endpoint
+        // Thumb indicator at tip
         float thumbRad = (startAngle + activeSweep) * 0.0174532925f;
         int16_t tx = cx + (int16_t)(cos(thumbRad) * radius);
         int16_t ty = cy + (int16_t)(sin(thumbRad) * radius);
         display.fillCircle(tx, ty, 2, SSD1306_WHITE);
     }
 
-    // Central pivot marker
+    // Center pivot
     display.fillCircle(cx, cy, 1, SSD1306_WHITE);
 }
 
@@ -89,7 +89,7 @@ void drawSparkline(Adafruit_SSD1306& display, int16_t x, int16_t y, int16_t w, i
 
     if (state.historyCount < 2) {
         display.setTextSize(1);
-        display.setCursor(x + 10, y + h / 2 - 3);
+        display.setCursor(x + 8, y + h / 2 - 3);
         display.print("SAMPLING...");
         return;
     }
@@ -162,39 +162,41 @@ void ScreenManager::drawDashboard(Adafruit_SSD1306& display, int16_t offsetX, co
     display.setTextColor(SSD1306_WHITE);
 
     // 1. Mini Circular Arc Gauge (Matching mobile app's circular gauge)
-    // Gauge center (20, 31), radius 13
     float progress = 0.0f;
     if (state.sensorConnected && state.temperature > -50.0f) {
         progress = (state.temperature - 16.0f) / (40.0f - 16.0f);
         if (progress < 0.0f) progress = 0.0f;
         if (progress > 1.0f) progress = 1.0f;
     }
-    drawArcGauge(display, 20 + offsetX, 31, 13, progress);
+    drawArcGauge(display, 24 + offsetX, 31, 12, progress);
 
-    // 2. Right Side: Title, Temperature, and Status
+    // 2. Right Side: Title, Temperature, and Status with comfortable spacing
     display.setTextSize(1);
-    display.setCursor(44 + offsetX, 13);
+    display.setCursor(48 + offsetX, 14);
     display.print("DASHBOARD");
 
     char tBuf[16];
     formatTemperature(state.temperature, state.preferredUnit, tBuf, sizeof(tBuf));
     display.setTextSize(2);
-    display.setCursor(44 + offsetX, 23);
+    display.setCursor(48 + offsetX, 25);
     display.print(tBuf);
 
-    // Small degree symbol and unit
+    // Degree symbol and unit
     display.setTextSize(1);
-    display.drawCircle(44 + 50 + offsetX, 24, 1, SSD1306_WHITE);
-    display.setCursor(44 + 54 + offsetX, 23);
+    display.drawCircle(48 + 50 + offsetX, 26, 1, SSD1306_WHITE);
+    display.setCursor(48 + 54 + offsetX, 25);
     display.print(getUnitSymbol(state.preferredUnit));
 
-    // Status Pill
+    // Status Indicator with clean dot
+    display.setTextSize(1);
+    display.fillCircle(50 + offsetX, 44, 2, SSD1306_WHITE);
+    display.setCursor(56 + offsetX, 41);
     if (!state.sensorConnected) {
-        StatusWidget::draw(display, 44 + offsetX, 39, "DISCONNECT", true);
+        display.print("NO PROBE");
     } else if (state.isThresholdAlert) {
-        StatusWidget::draw(display, 44 + offsetX, 39, "ALERT: HIGH", true);
+        display.print("HIGH ALERT");
     } else {
-        StatusWidget::draw(display, 44 + offsetX, 39, "STABLE", false);
+        display.print("STABLE");
     }
 }
 
@@ -202,30 +204,28 @@ void ScreenManager::drawLiveMonitor(Adafruit_SSD1306& display, int16_t offsetX, 
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
 
-    // Header Row
-    display.setCursor(4 + offsetX, 13);
+    // Header Row: Title on left, current reading on right
+    display.setCursor(4 + offsetX, 14);
     display.print("LIVE MONITOR");
 
-    // Realtime sparkline chart (X: 4 to 80, Y: 23 to 49)
-    drawSparkline(display, 4 + offsetX, 23, 76, 26, state);
+    char curBuf[8];
+    formatTemperature(state.temperature, state.preferredUnit, curBuf, sizeof(curBuf));
+    display.setCursor(82 + offsetX, 14);
+    display.printf("%s %s", curBuf, getUnitSymbol(state.preferredUnit));
 
-    // Right Column: Hi / Lo / Live
-    char maxBuf[8], minBuf[8], curBuf[8];
+    // Realtime sparkline chart (W=76, H=24)
+    drawSparkline(display, 4 + offsetX, 24, 76, 24, state);
+
+    // Right Column: Spacious 2 rows for High and Low peaks
+    char maxBuf[8], minBuf[8];
     formatTemperature(state.maxTemperature, state.preferredUnit, maxBuf, sizeof(maxBuf));
     formatTemperature(state.minTemperature, state.preferredUnit, minBuf, sizeof(minBuf));
-    formatTemperature(state.temperature, state.preferredUnit, curBuf, sizeof(curBuf));
 
-    display.setCursor(84 + offsetX, 13);
-    display.printf("%s%s", curBuf, getUnitSymbol(state.preferredUnit));
+    display.setCursor(86 + offsetX, 27);
+    display.printf("HI:%s", maxBuf);
 
-    display.setCursor(84 + offsetX, 25);
-    display.printf("H:%s", maxBuf);
-
-    display.setCursor(84 + offsetX, 34);
-    display.printf("L:%s", minBuf);
-
-    display.setCursor(84 + offsetX, 43);
-    display.print("RT:REC");
+    display.setCursor(86 + offsetX, 39);
+    display.printf("LO:%s", minBuf);
 }
 
 void ScreenManager::drawEnvironment(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
@@ -233,84 +233,62 @@ void ScreenManager::drawEnvironment(Adafruit_SSD1306& display, int16_t offsetX, 
     display.setTextColor(SSD1306_WHITE);
 
     // Header
-    display.setCursor(8 + offsetX, 13);
+    display.setCursor(8 + offsetX, 14);
     display.print("ENVIRONMENT [AIR]");
 
     // Large Reading
     char tBuf[16];
     formatTemperature(state.temperature, state.preferredUnit, tBuf, sizeof(tBuf));
     display.setTextSize(2);
-    display.setCursor(8 + offsetX, 23);
+    display.setCursor(8 + offsetX, 25);
     display.print(tBuf);
 
     display.setTextSize(1);
-    display.drawCircle(8 + 50 + offsetX, 24, 1, SSD1306_WHITE);
-    display.setCursor(8 + 54 + offsetX, 23);
+    display.drawCircle(8 + 50 + offsetX, 26, 1, SSD1306_WHITE);
+    display.setCursor(8 + 54 + offsetX, 25);
     display.print(getUnitSymbol(state.preferredUnit));
 
-    // Comfort Status Badge
+    // Target range and status - comfortable breathing room
+    display.setCursor(8 + offsetX, 42);
+    display.print("Target: 18-28 C");
+
     bool inBand = (state.temperature >= state.lowThreshold && state.temperature <= state.highThreshold);
-    if (inBand) {
-        StatusWidget::draw(display, 74 + offsetX, 23, "IN BAND", false);
-    } else {
-        StatusWidget::draw(display, 74 + offsetX, 23, "OUT BAND", true);
-    }
-
-    // Ambient Comfort Range Slider (10C to 40C)
-    display.drawRect(8 + offsetX, 41, 112, 6, SSD1306_WHITE);
-    // Low and High target markers
-    int16_t lowMark = 8 + offsetX + (int16_t)((state.lowThreshold - 10.0f) * 112.0f / 30.0f);
-    int16_t highMark = 8 + offsetX + (int16_t)((state.highThreshold - 10.0f) * 112.0f / 30.0f);
-    if (lowMark >= 8 + offsetX && lowMark <= 120 + offsetX) {
-        display.drawFastVLine(lowMark, 39, 10, SSD1306_WHITE);
-    }
-    if (highMark >= 8 + offsetX && highMark <= 120 + offsetX) {
-        display.drawFastVLine(highMark, 39, 10, SSD1306_WHITE);
-    }
-
-    // Current temp pin indicator
-    if (state.sensorConnected && state.temperature > -50.0f) {
-        int16_t curMark = 8 + offsetX + (int16_t)((state.temperature - 10.0f) * 112.0f / 30.0f);
-        if (curMark < 8 + offsetX) curMark = 8 + offsetX;
-        if (curMark > 118 + offsetX) curMark = 118 + offsetX;
-        display.fillRect(curMark - 1, 40, 3, 8, SSD1306_WHITE);
-    }
+    display.setCursor(102 + offsetX, 42);
+    display.print(inBand ? "[OK]" : "[WARN]");
 }
 
 void ScreenManager::drawLiquid(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
     display.setTextColor(SSD1306_WHITE);
 
     // Droplet Icon on left
-    IconLibrary::drawDroplet(display, 8 + offsetX, 16, 14, 20, true, SSD1306_WHITE);
-    // Subtle liquid surface ripple line
-    display.drawLine(4 + offsetX, 41, 26 + offsetX, 41, SSD1306_WHITE);
+    IconLibrary::drawDroplet(display, 10 + offsetX, 20, 12, 18, true, SSD1306_WHITE);
 
     // Header
     display.setTextSize(1);
-    display.setCursor(34 + offsetX, 13);
+    display.setCursor(32 + offsetX, 14);
     display.print("LIQUID PROBE");
 
     // Reading
     char tBuf[16];
     formatTemperature(state.temperature, state.preferredUnit, tBuf, sizeof(tBuf));
     display.setTextSize(2);
-    display.setCursor(34 + offsetX, 23);
+    display.setCursor(32 + offsetX, 25);
     display.print(tBuf);
 
     display.setTextSize(1);
-    display.drawCircle(34 + 50 + offsetX, 24, 1, SSD1306_WHITE);
-    display.setCursor(34 + 54 + offsetX, 23);
+    display.drawCircle(32 + 50 + offsetX, 26, 1, SSD1306_WHITE);
+    display.setCursor(32 + 54 + offsetX, 25);
     display.print(getUnitSymbol(state.preferredUnit));
 
-    // Submersion & Safety Alerts
+    // Submersion & Status
+    display.setCursor(32 + offsetX, 42);
     if (!state.sensorConnected) {
-        StatusWidget::draw(display, 34 + offsetX, 39, "DISCONNECTED", true);
+        display.print("Probe Disconnected");
     } else if (state.temperature >= 95.0f) {
-        StatusWidget::draw(display, 34 + offsetX, 39, "BOILING ALERT!", true);
+        display.print("ALERT: Boiling!");
     } else if (state.temperature <= 1.0f) {
-        StatusWidget::draw(display, 34 + offsetX, 39, "FREEZING WARN!", true);
+        display.print("WARN: Freezing!");
     } else {
-        display.setCursor(34 + offsetX, 40);
         display.print("Submerged: Normal");
     }
 }
@@ -320,48 +298,39 @@ void ScreenManager::drawFermentation(Adafruit_SSD1306& display, int16_t offsetX,
     display.setTextColor(SSD1306_WHITE);
 
     // Header
-    display.setCursor(8 + offsetX, 13);
-    display.print("FERMENTATION");
+    display.setCursor(8 + offsetX, 14);
+    display.print("FERMENTATION PROFILE");
 
     // Big Temp
     char tBuf[16];
     formatTemperature(state.temperature, state.preferredUnit, tBuf, sizeof(tBuf));
     display.setTextSize(2);
-    display.setCursor(8 + offsetX, 23);
+    display.setCursor(8 + offsetX, 25);
     display.print(tBuf);
 
     display.setTextSize(1);
-    display.drawCircle(8 + 50 + offsetX, 24, 1, SSD1306_WHITE);
-    display.setCursor(8 + 54 + offsetX, 23);
+    display.drawCircle(8 + 50 + offsetX, 26, 1, SSD1306_WHITE);
+    display.setCursor(8 + 54 + offsetX, 25);
     display.print(getUnitSymbol(state.preferredUnit));
 
     // Target 18-24C Yeast Band
     bool inYeastBand = (state.temperature >= 18.0f && state.temperature <= 24.0f);
-    if (inYeastBand) {
-        StatusWidget::draw(display, 72 + offsetX, 23, "IN 18-24C", false);
-    } else {
-        StatusWidget::draw(display, 72 + offsetX, 23, "OUT BAND!", true);
-    }
+    display.setCursor(68 + offsetX, 28);
+    display.print(inYeastBand ? "[18-24C OK]" : "[OUT BAND!]");
 
     // Active Fermentation Batch Duration
     unsigned long elapsedSec = (millis() - state.sessionStartMs) / 1000UL;
     unsigned long h = elapsedSec / 3600UL;
     unsigned long m = (elapsedSec % 3600UL) / 60UL;
-    display.setCursor(8 + offsetX, 40);
-    display.printf("Batch: %02luh %02lum | Yeast OK", h, m);
+    display.setCursor(8 + offsetX, 42);
+    display.printf("Batch Time: %02luh %02lum", h, m);
 }
 
 void ScreenManager::drawStatisticsTimer(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
 
-    // Header
-    display.setCursor(6 + offsetX, 13);
-    display.print("STATS & TIMER");
-    display.setCursor(84 + offsetX, 13);
-    display.print("[OK:RST]");
-
-    // Monotonic session timer
+    // Monotonic session timer duration
     unsigned long elapsedSec = (millis() - state.sessionStartMs) / 1000UL;
     unsigned long h = elapsedSec / 3600UL;
     unsigned long m = (elapsedSec % 3600UL) / 60UL;
@@ -372,52 +341,51 @@ void ScreenManager::drawStatisticsTimer(Adafruit_SSD1306& display, int16_t offse
     formatTemperature(state.maxTemperature, state.preferredUnit, maxBuf, sizeof(maxBuf));
     formatTemperature(state.avgTemperature, state.preferredUnit, avgBuf, sizeof(avgBuf));
 
-    display.setCursor(6 + offsetX, 23);
-    display.printf("T: %02lu:%02lu:%02lu  N:%u", h, m, s, state.sampleCount);
+    // Row 1: Session Timer & Sample count
+    display.setCursor(6 + offsetX, 14);
+    display.printf("TIMER: %02lu:%02lu:%02lu (N:%u)", h, m, s, state.sampleCount);
 
-    display.setCursor(6 + offsetX, 32);
-    display.printf("Min:%s  Avg:%s", minBuf, avgBuf);
+    // Row 2: Min & Max
+    display.setCursor(6 + offsetX, 27);
+    display.printf("MIN:%s  MAX:%s %s", minBuf, maxBuf, getUnitSymbol(state.preferredUnit));
 
-    display.setCursor(6 + offsetX, 41);
-    display.printf("Max:%s %s", maxBuf, getUnitSymbol(state.preferredUnit));
+    // Row 3: Avg & Reset hint
+    display.setCursor(6 + offsetX, 40);
+    display.printf("AVG:%s %s  [OK:RST]", avgBuf, getUnitSymbol(state.preferredUnit));
 }
 
 void ScreenManager::drawSystemStatus(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
 
-    // Header
-    display.setCursor(6 + offsetX, 13);
-    display.print("SYSTEM STATUS");
-    display.setCursor(84 + offsetX, 13);
-    display.print("[ONLINE]");
-
     // Row 1: BLE & RSSI
-    display.setCursor(6 + offsetX, 23);
+    display.setCursor(6 + offsetX, 14);
     display.printf("BLE: %s (%ddBm)", 
-                   state.bluetoothConnected ? "Connected" : "Advertising", 
+                   state.bluetoothConnected ? "CONNECTED" : "ADVERTISING", 
                    state.signalStrength);
 
-    // Row 2: Battery & Charging
-    display.setCursor(6 + offsetX, 32);
-    display.printf("Bat: %.2fV (%d%%) %s", 
-                   state.batteryVoltage, 
-                   state.batteryPercentage,
-                   state.charging ? "[CHG]" : "");
-
-    // Row 3: Uptime & Free Heap
-    unsigned long uptimeMin = millis() / 60000UL;
+    // Row 2: WiFi & Free Heap
     uint32_t freeHeapKb = ESP.getFreeHeap() / 1024U;
-    display.setCursor(6 + offsetX, 41);
-    display.printf("Up: %lum | Heap: %luK", uptimeMin, freeHeapKb);
+    display.setCursor(6 + offsetX, 27);
+    display.printf("WIFI: %s | HEAP: %luK", 
+                   state.wifiConnected ? "CONNECTED" : "READY", 
+                   freeHeapKb);
+
+    // Row 3: Device Uptime
+    unsigned long uptimeMin = millis() / 60000UL;
+    unsigned long upH = uptimeMin / 60UL;
+    unsigned long upM = uptimeMin % 60UL;
+    display.setCursor(6 + offsetX, 40);
+    display.printf("UPTIME: %02luh %02lum", upH, upM);
 }
 
 void ScreenManager::drawSettingsScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state, int settingsIndex) noexcept {
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
 
-    display.setCursor(6 + offsetX, 13);
-    display.print("SETTINGS [PRESS OK]");
+    // Header
+    display.setCursor(6 + offsetX, 14);
+    display.print("SETTINGS  [PRESS OK]");
 
     const char* options[4] = {
         (state.preferredUnit == TempUnit::Celsius) ? "Unit: [ Celsius ]" : "Unit: [ Fahrenheit ]",
@@ -428,21 +396,16 @@ void ScreenManager::drawSettingsScreen(Adafruit_SSD1306& display, int16_t offset
         "Action: [ Reset Stats ]"
     };
 
-    for (int i = 0; i < 3; i++) {
-        int idx = (settingsIndex % 4);
-        int y = 23 + (i * 9);
-        if (i == 0) {
-            display.fillRect(4 + offsetX, y - 1, 120, 9, SSD1306_WHITE);
-            display.setTextColor(SSD1306_BLACK);
-            display.setCursor(6 + offsetX, y);
-            display.print(options[idx]);
-            display.setTextColor(SSD1306_WHITE);
-        } else {
-            int nextIdx = (idx + i) % 4;
-            display.setCursor(6 + offsetX, y);
-            display.print(options[nextIdx]);
-        }
-    }
+    int curIdx = (settingsIndex % 4);
+    int nextIdx = (curIdx + 1) % 4;
+
+    // Row 1: Selected Item with cursor
+    display.setCursor(6 + offsetX, 27);
+    display.printf("> %s", options[curIdx]);
+
+    // Row 2: Next Item
+    display.setCursor(6 + offsetX, 40);
+    display.printf("  %s", options[nextIdx]);
 }
 
 } // namespace Flux

@@ -17,7 +17,7 @@ void UIManager::render(Adafruit_SSD1306& display, const DeviceState& state, bool
     float tempCelsius = state.temperature;
 
     // Draw static Top and Bottom bars
-    HeaderWidget::draw(display, batteryPercent, isCharging, isBluetoothConnected, btBlinkState);
+    HeaderWidget::draw(display, state, btBlinkState);
     FooterWidget::draw(display, state);
 
     bool transitioning = nav_->isTransitioning();

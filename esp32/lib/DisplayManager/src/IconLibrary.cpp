@@ -46,6 +46,37 @@ void drawBluetooth(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t h, b
     display.drawLine(cx + w, cy - h/4, cx - w, cy + h/4, color);
 }
 
+void drawWifi(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, bool connected, bool blinkState, uint16_t color) noexcept {
+    // When disconnected, blink to indicate advertising/searching
+    if (!connected && !blinkState) {
+        return;
+    }
+
+    int16_t cx = x + size / 2;
+    int16_t cy = y + size - 2;
+
+    // Center bottom dot
+    display.drawPixel(cx, cy, color);
+
+    // Inner wave
+    display.drawPixel(cx - 2, cy - 2, color);
+    display.drawPixel(cx - 1, cy - 3, color);
+    display.drawPixel(cx,     cy - 3, color);
+    display.drawPixel(cx + 1, cy - 3, color);
+    display.drawPixel(cx + 2, cy - 2, color);
+
+    // Outer wave
+    display.drawPixel(cx - 4, cy - 5, color);
+    display.drawPixel(cx - 3, cy - 6, color);
+    display.drawPixel(cx - 2, cy - 7, color);
+    display.drawPixel(cx - 1, cy - 7, color);
+    display.drawPixel(cx,     cy - 7, color);
+    display.drawPixel(cx + 1, cy - 7, color);
+    display.drawPixel(cx + 2, cy - 7, color);
+    display.drawPixel(cx + 3, cy - 6, color);
+    display.drawPixel(cx + 4, cy - 5, color);
+}
+
 void drawThermometer(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t h, uint16_t color) noexcept {
     uint8_t bulbRadius = h / 4;
     int16_t bulbX = x + bulbRadius;
