@@ -1,6 +1,6 @@
 #include "NavigationManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void NavigationManager::begin(DeviceState* state) noexcept {
     state_ = state;
@@ -143,4 +143,4 @@ void NavigationManager::update() noexcept {
     }
 }
 
-} // namespace NaTrack
+} // namespace Flux

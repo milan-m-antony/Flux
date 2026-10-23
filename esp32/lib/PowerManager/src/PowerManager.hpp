@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace NaTrack {
+namespace Flux {
 
 class PowerManager {
 public:
@@ -13,4 +13,4 @@ public:
     void update() noexcept;
 };
 
-} // namespace NaTrack
+} // namespace Flux

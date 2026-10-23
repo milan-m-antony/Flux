@@ -1,6 +1,6 @@
 #include "Widgets.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void HeaderWidget::draw(Adafruit_SSD1306& display, int batteryPercent, bool isCharging, bool isBluetoothConnected, bool blinkState) noexcept {
     // Top Bar is Y=0 to Y=11.
@@ -87,4 +87,4 @@ void ValueWidget::drawLarge(Adafruit_SSD1306& display, int16_t x, int16_t y, con
     display.print(unit);
 }
 
-} // namespace NaTrack
+} // namespace Flux

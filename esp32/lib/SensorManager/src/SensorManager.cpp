@@ -1,6 +1,6 @@
 #include "SensorManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void SensorManager::begin(DeviceState* state) noexcept {
     state_ = state;
@@ -85,4 +85,4 @@ void SensorManager::update() noexcept {
     }
 }
 
-} // namespace NaTrack
+} // namespace Flux

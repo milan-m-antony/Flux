@@ -1,7 +1,7 @@
 #include "ScreenManager.hpp"
 #include "IconLibrary.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 namespace {
 
@@ -282,4 +282,4 @@ void ScreenManager::drawSettingsScreen(Adafruit_SSD1306& display, int16_t offset
     }
 }
 
-} // namespace NaTrack
+} // namespace Flux

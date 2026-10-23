@@ -39,10 +39,9 @@ fun ProfileScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToEditProfile: () -> Unit,
     onNavigateToNotifications: () -> Unit,
-    onNavigateToHealthGoals: () -> Unit,
-    onNavigateToWaterIntake: () -> Unit,
+    onNavigateToAlerts: () -> Unit = {},
+    onNavigateToDiagnostics: () -> Unit = {},
     onNavigateToPrivacy: () -> Unit,
-    onNavigateToDoctorSharing: () -> Unit,
     onNavigateToHelpSupport: () -> Unit,
     onNavigateToAppVersion: () -> Unit,
     onNavigateToFcmToken: () -> Unit,
@@ -232,12 +231,11 @@ fun ProfileScreen(
                     )
                 }
             )
-            ProfileActionItem(icon = Icons.Default.Favorite, label = "Health Goals", onClick = onNavigateToHealthGoals)
-            ProfileActionItem(icon = Icons.Default.WaterDrop, label = "Water Intake Goal", onClick = onNavigateToWaterIntake)
-            ProfileActionItem(icon = Icons.Default.Notifications, label = "Notifications", onClick = onNavigateToNotifications)
+            ProfileActionItem(icon = Icons.Default.Notifications, label = "Threshold Alerts & Limits", onClick = onNavigateToAlerts)
+            ProfileActionItem(icon = Icons.Default.Info, label = "System Diagnostics", onClick = onNavigateToDiagnostics)
+            ProfileActionItem(icon = Icons.Default.Notifications, label = "Notifications List", onClick = onNavigateToNotifications)
             ProfileActionItem(icon = Icons.Default.Settings, label = "App Settings", onClick = onNavigateToSettings)
             ProfileActionItem(icon = Icons.Default.Security, label = "Privacy & Security", onClick = onNavigateToPrivacy)
-            ProfileActionItem(icon = Icons.Default.Share, label = "Doctor Sharing", onClick = onNavigateToDoctorSharing)
             ProfileActionItem(icon = Icons.Default.Help, label = "Help & Support", onClick = onNavigateToHelpSupport)
             ProfileActionItem(icon = Icons.Default.Info, label = "App Version Details", onClick = onNavigateToAppVersion)
             ProfileActionItem(icon = Icons.Default.Warning, label = "FCM Token (Test)", onClick = onNavigateToFcmToken)

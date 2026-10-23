@@ -1,6 +1,6 @@
 #include "ButtonManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void ButtonManager::begin() noexcept {
     for (auto& btn : buttons_) {
@@ -59,4 +59,4 @@ void ButtonManager::update() noexcept {
     }
 }
 
-} // namespace NaTrack
+} // namespace Flux

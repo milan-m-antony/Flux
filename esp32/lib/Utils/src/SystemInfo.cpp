@@ -1,6 +1,6 @@
 #include "SystemInfo.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 SystemInfo SystemInfoProvider::collect() noexcept {
     // Start with a default-constructed record and fill each field explicitly.
@@ -25,4 +25,4 @@ SystemInfo SystemInfoProvider::collect() noexcept {
     return info;
 }
 
-} // namespace NaTrack
+} // namespace Flux

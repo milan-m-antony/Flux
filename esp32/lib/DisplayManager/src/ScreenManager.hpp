@@ -5,7 +5,7 @@
 #include "DeviceState.hpp"
 #include "Widgets.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class ScreenManager {
 public:
@@ -23,4 +23,4 @@ private:
     void drawSettingsScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state, int settingsIndex) noexcept;
 };
 
-} // namespace NaTrack
+} // namespace Flux

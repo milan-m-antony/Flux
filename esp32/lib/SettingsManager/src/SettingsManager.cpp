@@ -1,6 +1,6 @@
 #include "SettingsManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void SettingsManager::begin(DeviceState* state) noexcept {
     state_ = state;
@@ -11,4 +11,4 @@ void SettingsManager::update() noexcept {
     // Future settings logic (EEPROM read/write, contrast control, sleep timeout)
 }
 
-} // namespace NaTrack
+} // namespace Flux

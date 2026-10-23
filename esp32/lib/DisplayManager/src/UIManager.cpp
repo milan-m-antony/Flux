@@ -1,6 +1,6 @@
 #include "UIManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void UIManager::begin(NavigationManager* nav) noexcept {
     nav_ = nav;
@@ -43,4 +43,4 @@ void UIManager::render(Adafruit_SSD1306& display, const DeviceState& state, bool
     }
 }
 
-} // namespace NaTrack
+} // namespace Flux

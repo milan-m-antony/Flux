@@ -8,12 +8,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Reading(
     @PrimaryKey
-    val id: String,
-    val naValue: Double,
-    val temperature: Double,
-    val millivolts: Double,
-    val status: String,
-    val timestamp: Long,
-    val calibrationE0: Double,
-    val calibrationSlope: Double
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val temperature: Double = 0.0,
+    val status: String = "OK",
+    val timestamp: Long = System.currentTimeMillis(),
+    val naValue: Double = 0.0,
+    val millivolts: Double = 0.0,
+    val calibrationE0: Double = 0.0,
+    val calibrationSlope: Double = 0.0
 )

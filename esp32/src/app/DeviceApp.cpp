@@ -1,6 +1,6 @@
 #include "DeviceApp.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void DeviceApp::begin() noexcept {
     // 1. Output concise production boot logs
@@ -84,4 +84,4 @@ void DeviceApp::update() noexcept {
     }
 }
 
-} // namespace NaTrack
+} // namespace Flux

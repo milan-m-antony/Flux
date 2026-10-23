@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace NaTrack {
+namespace Flux {
 
 enum class ButtonId : uint8_t {
     Left,
@@ -58,4 +58,4 @@ private:
     static constexpr unsigned long LongPressMs = 800UL;
 };
 
-} // namespace NaTrack
+} // namespace Flux

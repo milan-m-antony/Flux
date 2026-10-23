@@ -5,7 +5,7 @@
 #include "IconLibrary.hpp"
 #include "DeviceState.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class HeaderWidget {
 public:
@@ -32,4 +32,4 @@ public:
     static void drawLarge(Adafruit_SSD1306& display, int16_t x, int16_t y, const char* val, const char* unit) noexcept;
 };
 
-} // namespace NaTrack
+} // namespace Flux

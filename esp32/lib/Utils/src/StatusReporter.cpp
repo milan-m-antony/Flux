@@ -1,6 +1,6 @@
 #include "StatusReporter.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 StatusReporter::StatusReporter(Stream& output, unsigned long intervalMs) noexcept
     : output_{&output}, intervalMs_{intervalMs}, lastReportMs_{0UL} {}
@@ -76,4 +76,4 @@ void StatusReporter::printSnapshot() noexcept {
     output_->println();
 }
 
-} // namespace NaTrack
+} // namespace Flux

@@ -37,7 +37,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun DeviceScreen(viewModel: MainViewModel, onNavigateToCalibration: () -> Unit, onNavigateToLiveTemp: () -> Unit = {}) {
+fun DeviceScreen(viewModel: MainViewModel, onNavigateToDiagnostics: () -> Unit = {}, onNavigateToLiveTemp: () -> Unit = {}) {
     val connectionState by viewModel.connectionState.collectAsState()
     val darkTheme = MaterialTheme.colorScheme.background == Color(0xFF000000)
     val activeAccent = if (darkTheme) AccentCyan else Color(0xFF059669)
@@ -120,7 +120,7 @@ fun DeviceScreen(viewModel: MainViewModel, onNavigateToCalibration: () -> Unit, 
             Spacer(modifier = Modifier.height(16.dp))
             
             DeviceActionItem(icon = Icons.Default.Thermostat, label = "Live Temperature", darkTheme = darkTheme, onClick = onNavigateToLiveTemp)
-            DeviceActionItem(icon = Icons.Default.Tune, label = "Calibrate Sensor", darkTheme = darkTheme, onClick = onNavigateToCalibration)
+            DeviceActionItem(icon = Icons.Default.Tune, label = "System Diagnostics", darkTheme = darkTheme, onClick = onNavigateToDiagnostics)
             DeviceActionItem(icon = Icons.Default.SystemUpdate, label = "Firmware Update", darkTheme = darkTheme, onClick = { showFirmwareDialog = true })
             DeviceActionItem(icon = Icons.Default.Info, label = "Device Information", darkTheme = darkTheme, onClick = { showInfoDialog = true })
             DeviceActionItem(icon = Icons.Default.Build, label = "Run Diagnostics", darkTheme = darkTheme, onClick = {

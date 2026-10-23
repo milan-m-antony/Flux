@@ -5,7 +5,7 @@
 #include "FluxConfig.hpp"
 #include "SystemInfo.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class StatusReporter {
 public:
@@ -32,4 +32,4 @@ private:
     unsigned long lastReportMs_ = 0UL;
 };
 
-} // namespace NaTrack
+} // namespace Flux

@@ -1,6 +1,6 @@
 #include "BatteryManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void BatteryManager::begin(DeviceState* state) noexcept {
     state_ = state;
@@ -20,4 +20,4 @@ void BatteryManager::update() noexcept {
     // Future ADC battery read logic goes here
 }
 
-} // namespace NaTrack
+} // namespace Flux

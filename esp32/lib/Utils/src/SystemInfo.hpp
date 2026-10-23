@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace NaTrack {
+namespace Flux {
 
 struct SystemInfo {
     // Stores the number of bytes currently available in the ESP32 heap.
@@ -27,4 +27,4 @@ public:
     static SystemInfo collect() noexcept;
 };
 
-} // namespace NaTrack
+} // namespace Flux

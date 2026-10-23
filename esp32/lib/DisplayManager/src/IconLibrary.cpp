@@ -1,6 +1,6 @@
 #include "IconLibrary.hpp"
 
-namespace NaTrack::IconLibrary {
+namespace Flux::IconLibrary {
 
 void drawBattery(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t w, uint8_t h, uint8_t percent, bool charging, uint16_t color) noexcept {
     // Battery body outline
@@ -157,4 +157,4 @@ void drawArrow(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, bo
     }
 }
 
-} // namespace NaTrack::IconLibrary
+} // namespace Flux::IconLibrary

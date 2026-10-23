@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "DeviceState.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class BatteryManager {
 public:
@@ -15,4 +15,4 @@ private:
     unsigned long lastUpdateMs_ = 0UL;
 };
 
-} // namespace NaTrack
+} // namespace Flux

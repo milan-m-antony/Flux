@@ -10,7 +10,7 @@
 #include "DeviceState.hpp"
 #include "UIManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class NavigationManager;
 
@@ -54,4 +54,4 @@ private:
     bool btBlinkState_ = false;
 };
 
-} // namespace NaTrack
+} // namespace Flux

@@ -1,6 +1,6 @@
 #include "DisplayManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 void DisplayManager::begin(DeviceState* state, UIManager* uiMgr, NavigationManager* nav) noexcept {
     state_ = state;
@@ -145,4 +145,4 @@ void DisplayManager::update() noexcept {
     display_.display();
 }
 
-} // namespace NaTrack
+} // namespace Flux

@@ -6,7 +6,7 @@
 #include "ScreenManager.hpp"
 #include "NavigationManager.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class UIManager {
 public:
@@ -18,4 +18,4 @@ private:
     NavigationManager* nav_ = nullptr;
 };
 
-} // namespace NaTrack
+} // namespace Flux

@@ -72,12 +72,12 @@
 ## 4. Software Repository Structure
 
 ```
-Flux/NaTrack/
+Flux/
 ├── esp32/                               # PlatformIO ESP32 Firmware Project
 │   ├── platformio.ini                   # Target: esp32dev, Arduino framework
 │   ├── include/                         # Configuration and state headers
 │   │   ├── DeviceState.hpp              # Profiles, TempUnit, session stats, alarms
-│   │   ├── NaTrackConfig.hpp            # Hardware GPIO assignments & constants
+│   │   ├── FluxConfig.hpp               # Hardware GPIO assignments & constants
 │   │   └── DisplayManagerConfig.hpp     # OLED dimensions & timing
 │   ├── lib/
 │   │   ├── SensorManager/               # DS18B20 1-Wire non-blocking acquisition

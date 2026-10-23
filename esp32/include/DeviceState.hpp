@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace NaTrack {
+namespace Flux {
 
 enum class ProfileMode : uint8_t {
     Live = 0,
@@ -97,4 +97,4 @@ struct DeviceState {
     const char* sodiumStatus = "OK";
 };
 
-} // namespace NaTrack
+} // namespace Flux

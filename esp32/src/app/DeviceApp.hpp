@@ -13,7 +13,7 @@
 #include <SettingsManager.hpp>
 #include <UIManager.hpp>
 
-namespace NaTrack {
+namespace Flux {
 
 class DeviceApp {
 public:
@@ -35,4 +35,4 @@ private:
     UIManager* uiManager_ = nullptr;
 };
 
-} // namespace NaTrack
+} // namespace Flux

@@ -5,7 +5,7 @@
 namespace {
 
 // Holds the single application object that coordinates the firmware modules.
-NaTrack::DeviceApp app{};
+Flux::DeviceApp app{};
 
 } // namespace
 

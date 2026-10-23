@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include "DeviceState.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class SettingsManager {
 public:
@@ -23,4 +23,4 @@ private:
     int settingsIndex_ = 0;
 };
 
-} // namespace NaTrack
+} // namespace Flux

@@ -7,33 +7,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.MainViewModel
 import com.example.data.Reading
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.NeoButton
-import com.example.ui.theme.NeoTopBar
-import androidx.compose.ui.graphics.Color
-import com.example.ui.theme.StatusHigh
-import com.example.ui.theme.StatusLow
-import com.example.ui.theme.StatusNormal
-import com.example.ui.theme.neoCard
+import com.example.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -41,13 +31,15 @@ import java.util.*
 @Composable
 fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val allReadings by viewModel.historyReadings.collectAsState()
-    
-    val lowThreshold by viewModel.lowAlertThreshold.collectAsState()
-    val highThreshold by viewModel.highAlertThreshold.collectAsState()
+    val lowThreshold by viewModel.lowTempThreshold.collectAsState()
+    val highThreshold by viewModel.highTempThreshold.collectAsState()
+    val preferredUnit by viewModel.preferredUnit.collectAsState()
     
     val darkTheme = MaterialTheme.colorScheme.background == Color(0xFF000000)
     val activeAccent = if (darkTheme) AccentCyan else Color(0xFF059669)
-    
+    val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
+    fun dispTemp(c: Double) = if (preferredUnit == "F") (c * 9.0 / 5.0) + 32.0 else c
+
     val context = LocalContext.current
     var selectedReading by remember { mutableStateOf<Reading?>(null) }
     var searchQuery by remember { mutableStateOf("") }
@@ -56,22 +48,22 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
     val sheetState = rememberModalBottomSheetState()
     
     val filteredReadings: List<Reading> = allReadings.filter { r: Reading -> 
-        (searchQuery.isEmpty() || r.naValue.toString().contains(searchQuery) || r.status.contains(searchQuery, ignoreCase = true))
+        (searchQuery.isEmpty() || "%.1f".format(dispTemp(r.temperature)).contains(searchQuery) || r.status.contains(searchQuery, ignoreCase = true))
     }
 
     Scaffold(
         containerColor = Color.Transparent,
         topBar = { 
             NeoTopBar(
-                title = "History",
+                title = "Telemetry History",
                 onBackClick = onBack,
                 actions = {
                     com.example.ui.theme.NeoIconButton(
                         onClick = {
-                            val csvHeader = "Timestamp,NaValue(mmol/L),Temperature(C),Status\n"
+                            val csvHeader = "Timestamp,Temperature_C,Temperature_Disp,Status\n"
                             val csvData = allReadings.joinToString(separator = "\n") { r: Reading ->
                                 val date = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(r.timestamp))
-                                "${date},${r.naValue},${r.temperature},${r.status}"
+                                "${date},${r.temperature},${"%.2f".format(dispTemp(r.temperature))},${r.status}"
                             }
                             val csv = csvHeader + csvData
                             
@@ -79,7 +71,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                                 putExtra(Intent.EXTRA_TEXT, csv)
                                 type = "text/csv"
                             }
-                            val shareIntent = Intent.createChooser(sendIntent, "Export History")
+                            val shareIntent = Intent.createChooser(sendIntent, "Export Telemetry CSV")
                             context.startActivity(shareIntent)
                         },
                         icon = {
@@ -100,29 +92,25 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     .padding(horizontal = 24.dp)
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Search Bar
-                Box(modifier = Modifier.fillMaxWidth().neoCard(RoundedCornerShape(16.dp))) {
-                    TextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text("Search readings...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = activeAccent) }
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // Filters
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("Search by temperature or status...", color = TextGrey) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Search", tint = TextGrey) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = activeAccent,
+                        unfocusedBorderColor = if (darkTheme) Color.White.copy(alpha = 0.2f) else Color.Black.copy(alpha = 0.1f)
+                    ),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Quick Filters
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -135,7 +123,7 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                                 .height(40.dp)
                                 .neoCard(RoundedCornerShape(20.dp))
                                 .clickable { selectedFilter = filter }
-                                .background(if (selected) activeAccent.copy(alpha = 0.1f) else Color.Transparent),
+                                .background(if (selected) activeAccent.copy(alpha = 0.15f) else Color.Transparent),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -148,11 +136,11 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                     }
                 }
                 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 if (filteredReadings.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("No readings found.", color = com.example.ui.theme.TextGrey)
+                        Text("No telemetry readings recorded yet.", color = TextGrey)
                     }
                 } else {
                     LazyColumn(
@@ -160,62 +148,64 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
                         contentPadding = PaddingValues(bottom = 100.dp)
                     ) {
                         items(filteredReadings) { reading ->
-                        val statusColor = when {
-                            reading.naValue < lowThreshold -> StatusLow
-                            reading.naValue > highThreshold -> StatusHigh
-                            else -> StatusNormal
-                        }
-                        val statusText = when {
-                            reading.naValue < lowThreshold -> "LOW"
-                            reading.naValue > highThreshold -> "HIGH"
-                            else -> "NORMAL"
-                        }
+                            val isLow = reading.temperature < lowThreshold
+                            val isHigh = reading.temperature > highThreshold
+                            val statusColor = when {
+                                isLow -> StatusLow
+                                isHigh -> StatusHigh
+                                else -> StatusNormal
+                            }
+                            val statusText = when {
+                                isLow -> "BELOW MIN"
+                                isHigh -> "ABOVE MAX"
+                                else -> "OPTIMAL"
+                            }
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .neoCard()
-                                .clickable { selectedReading = reading }
-                        ) {
-                            Row(
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(vertical = 4.dp)
+                                    .neoCard()
+                                    .clickable { selectedReading = reading }
                             ) {
-                                Box(
+                                Row(
                                     modifier = Modifier
-                                        .size(12.dp)
-                                        .background(statusColor, CircleShape)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "${reading.naValue} mmol/L",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .background(statusColor, CircleShape)
                                     )
-                                    val dateText = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(reading.timestamp))
+                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "%.1f %s".format(dispTemp(reading.temperature), unitSymbol),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        val dateText = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault()).format(Date(reading.timestamp))
+                                        Text(
+                                            text = dateText,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextGrey
+                                        )
+                                    }
                                     Text(
-                                        text = dateText,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = com.example.ui.theme.TextGrey
+                                        text = statusText,
+                                        color = statusColor,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
-                                Text(
-                                    text = statusText,
-                                    color = statusColor,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
                         }
                     }
                 }
             }
-        }
         }
     }
 
@@ -227,21 +217,19 @@ fun HistoryScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
-                Text("Reading Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Telemetry Reading Details", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 val dateText = SimpleDateFormat("MMM dd, yyyy HH:mm:ss", Locale.getDefault()).format(Date(selectedReading!!.timestamp))
-                Text("Time: $dateText")
-                Text("Sodium (Na+): ${selectedReading!!.naValue} mmol/L")
-                Text("Temperature: ${selectedReading!!.temperature} °C")
-                Text("Voltage: ${selectedReading!!.millivolts} mV")
-                Text("Status: ${selectedReading!!.status}")
-                Text("Calibration E0: ${selectedReading!!.calibrationE0} mV")
-                Text("Calibration Slope: ${selectedReading!!.calibrationSlope} mV/decade")
+                Text("Timestamp: $dateText")
+                Text("Temperature (Celsius): ${"%.2f".format(selectedReading!!.temperature)} °C")
+                Text("Temperature (Fahrenheit): ${"%.2f".format((selectedReading!!.temperature * 9.0 / 5.0) + 32.0)} °F")
+                Text("Sensor Status: ${selectedReading!!.status}")
+                Text("Hardware Sensor: Dallas DS18B20 (12-bit)")
                 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(28.dp))
                 NeoButton(
                     onClick = { selectedReading = null },
                     modifier = Modifier.fillMaxWidth()

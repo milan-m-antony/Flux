@@ -11,7 +11,7 @@ The firmware is developed with PlatformIO on the Arduino framework targeting the
 
 ### 1.2 Build Commands
 
-From the firmware directory (`c:\projects\Flux\NaTrack\esp32`):
+From the firmware directory (`c:\projects\Flux\esp32`):
 
 ```bash
 # 1. Inspect project environment and libraries
@@ -52,7 +52,7 @@ The mobile application is built using native **Kotlin & Jetpack Compose** with A
 
 ### 2.2 Compilation & Packaging
 
-From the Android project directory (`c:\projects\Flux\NaTrack\androidApp`):
+From the Android project directory (`c:\projects\Flux\androidApp`):
 
 ```powershell
 # 1. Compile all debug Kotlin and Java sources

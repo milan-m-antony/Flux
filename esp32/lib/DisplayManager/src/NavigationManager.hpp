@@ -4,7 +4,7 @@
 #include "ButtonManager.hpp"
 #include "DeviceState.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class NavigationManager : public ButtonListener {
 public:
@@ -33,4 +33,4 @@ private:
     static constexpr unsigned long TransitionDurationMs = 200UL;
 };
 
-} // namespace NaTrack
+} // namespace Flux

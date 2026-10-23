@@ -1,6 +1,6 @@
 #include "TemperatureSensor.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 bool TemperatureSensor::begin() noexcept {
     // Enable internal pull-up resistor (can sometimes work instead of an external resistor for short wires)
@@ -53,4 +53,4 @@ bool TemperatureSensor::readTemperatureDiagnostics(uint8_t index, uint8_t* devic
     return true;
 }
 
-} // namespace NaTrack
+} // namespace Flux

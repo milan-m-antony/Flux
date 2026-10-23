@@ -7,7 +7,7 @@
 #include <BLE2902.h>
 #include "DeviceState.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class BluetoothManager : public BLEServerCallbacks, public BLECharacteristicCallbacks {
 public:
@@ -64,4 +64,4 @@ private:
     bool lastNotifiedCharging_ = false;
 };
 
-} // namespace NaTrack
+} // namespace Flux

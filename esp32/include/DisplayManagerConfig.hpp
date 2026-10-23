@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-namespace NaTrack::DisplayManagerConfig {
+namespace Flux::DisplayManagerConfig {
 
 // OLED panel width in pixels.
 constexpr int DisplayWidth = 128;
@@ -40,4 +40,4 @@ constexpr const char* ModePlaceholder = "Mode: Live";
 constexpr const char* BatteryPlaceholder = "Battery: --";
 constexpr const char* BluetoothPlaceholder = "BLE: Ready";
 
-} // namespace NaTrack::DisplayManagerConfig
+} // namespace Flux::DisplayManagerConfig

@@ -4,7 +4,7 @@
 #include "DeviceState.hpp"
 #include "TemperatureSensor.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class SensorManager {
 public:
@@ -20,4 +20,4 @@ private:
     static constexpr unsigned long ReadIntervalMs = 1000UL;
 };
 
-} // namespace NaTrack
+} // namespace Flux

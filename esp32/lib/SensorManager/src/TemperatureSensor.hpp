@@ -7,7 +7,7 @@
 
 #include "FluxConfig.hpp"
 
-namespace NaTrack {
+namespace Flux {
 
 class TemperatureSensor {
 public:
@@ -34,4 +34,4 @@ private:
     DallasTemperature sensor_{&oneWire_};
 };
 
-} // namespace NaTrack
+} // namespace Flux

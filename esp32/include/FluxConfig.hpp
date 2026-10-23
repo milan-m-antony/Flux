@@ -24,8 +24,3 @@ constexpr const char* BytesUnit = "bytes";
 constexpr const char* MillisecondsUnit = "ms";
 
 } // namespace Flux::Config
-
-// Backward compatibility alias
-namespace NaTrack {
-    namespace Config = Flux::Config;
-}

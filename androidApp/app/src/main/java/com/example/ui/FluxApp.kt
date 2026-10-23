@@ -15,7 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Watch
 import androidx.compose.material.icons.filled.Warning
@@ -73,8 +73,6 @@ object HomeRoute
 @Serializable
 object HistoryRoute
 @Serializable
-object MeasureRoute
-@Serializable
 object DeviceRoute
 @Serializable
 object ProfileRoute
@@ -83,19 +81,11 @@ object DeviceSetupRoute
 @Serializable
 object EditProfileRoute
 @Serializable
-object CalibrateRoute
-@Serializable
 object SettingsRoute
 @Serializable
 object NotificationRoute
 @Serializable
-object HealthGoalsRoute
-@Serializable
-object WaterIntakeGoalRoute
-@Serializable
 object PrivacySecurityRoute
-@Serializable
-object DoctorSharingRoute
 @Serializable
 object HelpSupportRoute
 @Serializable
@@ -258,15 +248,16 @@ fun FluxApp(viewModel: MainViewModel) {
             composable<HistoryRoute> {
                 HistoryScreen(viewModel, onBack = { navController.navigateUp() })
             }
-            composable<MeasureRoute> {
-                MeasureScreen(viewModel, onBack = { navController.navigateUp() })
-            }
             composable<DeviceRoute> {
-                DeviceScreen(viewModel, onNavigateToCalibration = {
-                    navController.navigate(CalibrateRoute)
-                }, onNavigateToLiveTemp = {
-                    navController.navigate(LiveTemperatureRoute)
-                })
+                DeviceScreen(
+                    viewModel = viewModel,
+                    onNavigateToDiagnostics = {
+                        navController.navigate(FluxDiagnosticsRoute)
+                    },
+                    onNavigateToLiveTemp = {
+                        navController.navigate(FluxLiveMonitorRoute)
+                    }
+                )
             }
             composable<LiveTemperatureRoute> {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -291,17 +282,14 @@ fun FluxApp(viewModel: MainViewModel) {
                     onNavigateToNotifications = {
                         navController.navigate(NotificationRoute)
                     },
-                    onNavigateToHealthGoals = {
-                        navController.navigate(HealthGoalsRoute)
+                    onNavigateToAlerts = {
+                        navController.navigate(FluxAlertSettingsRoute)
                     },
-                    onNavigateToWaterIntake = {
-                        navController.navigate(WaterIntakeGoalRoute)
+                    onNavigateToDiagnostics = {
+                        navController.navigate(FluxDiagnosticsRoute)
                     },
                     onNavigateToPrivacy = {
                         navController.navigate(PrivacySecurityRoute)
-                    },
-                    onNavigateToDoctorSharing = {
-                        navController.navigate(DoctorSharingRoute)
                     },
                     onNavigateToHelpSupport = {
                         navController.navigate(HelpSupportRoute)
@@ -320,9 +308,6 @@ fun FluxApp(viewModel: MainViewModel) {
                     }
                 )
             }
-            composable<CalibrateRoute> {
-                CalibrateScreen(viewModel, onBack = { navController.navigateUp() })
-            }
             composable<SettingsRoute> {
                 SettingsScreen(viewModel, onBack = { navController.navigateUp() })
             }
@@ -332,17 +317,8 @@ fun FluxApp(viewModel: MainViewModel) {
             composable<NotificationRoute> {
                 NotificationScreen(viewModel, onBack = { navController.navigateUp() })
             }
-            composable<HealthGoalsRoute> {
-                HealthGoalsScreen(onBack = { navController.navigateUp() })
-            }
-            composable<WaterIntakeGoalRoute> {
-                WaterIntakeScreen(viewModel, onBack = { navController.navigateUp() })
-            }
             composable<PrivacySecurityRoute> {
                 PrivacySecurityScreen(onBack = { navController.navigateUp() })
-            }
-            composable<DoctorSharingRoute> {
-                DoctorSharingScreen(onBack = { navController.navigateUp() })
             }
             composable<HelpSupportRoute> {
                 HelpSupportScreen(onBack = { navController.navigateUp() })
@@ -380,7 +356,7 @@ fun FluxApp(viewModel: MainViewModel) {
         val isMainTab = currentDestination?.hierarchy?.any { 
             it.route?.contains("HomeRoute") == true ||
             it.route?.contains("HistoryRoute") == true ||
-            it.route?.contains("MeasureRoute") == true ||
+            it.route?.contains("FluxLiveMonitorRoute") == true ||
             it.route?.contains("DeviceRoute") == true ||
             it.route?.contains("ProfileRoute") == true
         } == true
@@ -408,7 +384,7 @@ fun FluxApp(viewModel: MainViewModel) {
                     val navItems = listOf(
                         Triple("Home", Icons.Filled.Home, HomeRoute),
                         Triple("History", Icons.AutoMirrored.Filled.List, HistoryRoute),
-                        Triple("Measure", Icons.Filled.Add, MeasureRoute),
+                        Triple("Monitor", Icons.Filled.Thermostat, FluxLiveMonitorRoute),
                         Triple("Device", Icons.Filled.Bluetooth, DeviceRoute),
                         Triple("Profile", Icons.Filled.Person, ProfileRoute)
                     )
@@ -420,7 +396,7 @@ fun FluxApp(viewModel: MainViewModel) {
                             contentAlignment = androidx.compose.ui.Alignment.Center,
                             modifier = Modifier.weight(1f)
                         ) {
-                            if (route == MeasureRoute) {
+                            if (route == FluxLiveMonitorRoute) {
                                 // Special styling for center FAB
                                 com.example.ui.theme.NeoButton(
                                     onClick = {
