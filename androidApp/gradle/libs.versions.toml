@@ -42,6 +42,7 @@ roborazzi = "1.59.0"
 firebaseBom = "34.15.0"
 secretsGradlePlugin = "2.0.1"
 googleServices = "4.5.0"
+onesignal = "5.9.2"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -102,6 +103,7 @@ firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging
 firebase-config = { group = "com.google.firebase", name = "firebase-config" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version = "1.2.0-alpha05" }
 cloudinary-android = { group = "com.cloudinary", name = "cloudinary-android", version.ref = "cloudinary" }
+onesignal = { group = "com.onesignal", name = "OneSignal", version.ref = "onesignal" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

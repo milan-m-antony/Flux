@@ -14,9 +14,6 @@ import com.example.data.Reading
 import com.example.data.ReadingRepository
 import com.example.data.SettingsRepository
 import com.example.data.dataStore
-import com.example.data.HealthRepository
-import com.example.data.HealthSummary
-import com.example.data.TrendData
 import com.example.data.NotificationEntity
 import com.example.data.NotificationRepository
 import com.google.firebase.analytics.FirebaseAnalytics
@@ -45,7 +42,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val calibrationRepository = CalibrationRepository(database.calibrationDao())
     private val settingsRepository = SettingsRepository(application.dataStore)
     private val notificationRepository = NotificationRepository(database.notificationDao())
-    private val healthRepository = HealthRepository()
     private val supabaseRepository = com.example.data.SupabaseRepository(viewModelScope)
 
     private val firebaseAnalytics = try {
@@ -118,21 +114,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val latestMv = bleManager.latestMv
     val rawPayload = bleManager.rawPayload
     
-    val healthSummary = combine(
-        healthRepository.getHealthSummary(),
-        settingsRepository.waterIntakeMl,
-        settingsRepository.waterGoalMl
-    ) { baseSummary, intakeMl, goalMl ->
-        baseSummary.copy(
-            waterIntake = intakeMl / 1000.0,
-            waterGoal = goalMl / 1000.0
-        )
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = HealthSummary(0.0, 2.0, 0.0, 0, false, 0, 0)
-    )
-
     val allNotifications = notificationRepository.allNotifications.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -149,12 +130,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = 2500
-    )
-    
-    val weeklyTrends = healthRepository.getWeeklyTrends().stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList<TrendData>()
     )
     
     val allReadings = readingRepository.allReadings.stateIn(
@@ -180,16 +155,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val lowTempThreshold = settingsRepository.lowTempThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 18.0)
     val highTempThreshold = settingsRepository.highTempThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 28.0)
     val cloudUploadIntervalSec = settingsRepository.cloudUploadIntervalSec.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
-    val supabaseUrl = settingsRepository.supabaseUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val supabaseAnonKey = settingsRepository.supabaseAnonKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val onesignalAppId = settingsRepository.onesignalAppId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val supabaseUrl = settingsRepository.supabaseUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_SUPABASE_URL)
+    val supabaseAnonKey = settingsRepository.supabaseAnonKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_SUPABASE_ANON_KEY)
+    val onesignalAppId = settingsRepository.onesignalAppId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_ONESIGNAL_APP_ID)
 
     val supabaseSyncStatus = supabaseRepository.syncStatus
     val pendingOfflineRecords = supabaseRepository.pendingQueueCount
     val cloudHistoricalTelemetry = supabaseRepository.historicalTelemetry
 
-    val lowAlertThreshold = settingsRepository.lowAlertThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 135.0)
-    val highAlertThreshold = settingsRepository.highAlertThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 145.0)
+    val lowAlertThreshold = lowTempThreshold
+    val highAlertThreshold = highTempThreshold
     val isDarkTheme = settingsRepository.isDarkTheme.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     
     val userName = settingsRepository.userName.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
@@ -594,6 +569,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
         
         logFirebaseEvent("user_logout")
+    }
+
+    fun updateThresholds(low: Double, high: Double) {
+        viewModelScope.launch {
+            settingsRepository.saveThresholds(low, high)
+        }
+    }
+
+    fun flushOfflineQueue() {
+        viewModelScope.launch {
+            supabaseRepository.flushOfflineQueueNow(supabaseUrl.value, supabaseAnonKey.value)
+        }
     }
 
     class Factory(private val application: Application) : ViewModelProvider.Factory {

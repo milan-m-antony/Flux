@@ -231,4 +231,8 @@ class SupabaseRepository(
             Log.e("SupabaseRepo", "Failed to fetch telemetry history: ${e.message}")
         }
     }
+
+    suspend fun flushOfflineQueueNow(supabaseUrl: String, anonKey: String) {
+        flushOfflineQueue(supabaseUrl, anonKey)
+    }
 }

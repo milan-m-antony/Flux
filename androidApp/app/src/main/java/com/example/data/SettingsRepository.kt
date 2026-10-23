@@ -27,6 +27,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val SUPABASE_URL = stringPreferencesKey("supabase_url")
         val SUPABASE_ANON_KEY = stringPreferencesKey("supabase_anon_key")
         val ONESIGNAL_APP_ID = stringPreferencesKey("onesignal_app_id")
+
+        const val DEFAULT_SUPABASE_URL = "https://pivtrxrhxdqxzactcrrb.supabase.co"
+        const val DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpdnRyeHJoeGRxeHphY3RjcnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjAxMjEsImV4cCI6MjEwODMzNjEyMX0.LGOfzD6MVDQQ725kJEC8JEcfwKUQyxpt3V8RBB7HNxg"
+        const val DEFAULT_ONESIGNAL_APP_ID = "50847ad7-fc7f-4c89-85a9-c5d7f91cc2c8"
         
         val PUSH_ALERTS = booleanPreferencesKey("push_alerts")
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
@@ -49,9 +53,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val lowTempThreshold: Flow<Double> = dataStore.data.map { it[LOW_TEMP_THRESHOLD] ?: 18.0 }
     val highTempThreshold: Flow<Double> = dataStore.data.map { it[HIGH_TEMP_THRESHOLD] ?: 28.0 }
     val cloudUploadIntervalSec: Flow<Int> = dataStore.data.map { it[CLOUD_UPLOAD_INTERVAL_SEC] ?: 5 }
-    val supabaseUrl: Flow<String> = dataStore.data.map { it[SUPABASE_URL] ?: "" }
-    val supabaseAnonKey: Flow<String> = dataStore.data.map { it[SUPABASE_ANON_KEY] ?: "" }
-    val onesignalAppId: Flow<String> = dataStore.data.map { it[ONESIGNAL_APP_ID] ?: "" }
+    val supabaseUrl: Flow<String> = dataStore.data.map { it[SUPABASE_URL] ?: DEFAULT_SUPABASE_URL }
+    val supabaseAnonKey: Flow<String> = dataStore.data.map { it[SUPABASE_ANON_KEY] ?: DEFAULT_SUPABASE_ANON_KEY }
+    val onesignalAppId: Flow<String> = dataStore.data.map { it[ONESIGNAL_APP_ID] ?: DEFAULT_ONESIGNAL_APP_ID }
 
     val pushAlerts: Flow<Boolean> = dataStore.data.map { it[PUSH_ALERTS] ?: true }
     val soundAlerts: Flow<Boolean> = dataStore.data.map { it[SOUND_ALERTS] ?: true }

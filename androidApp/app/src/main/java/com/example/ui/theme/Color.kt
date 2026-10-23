@@ -30,6 +30,15 @@ val StatusNormal = Color(0xFF10B981) // Emerald Green
 val StatusLow = Color(0xFFF59E0B)    // Amber Orange
 val StatusHigh = Color(0xFFEF4444)   // Crimson Red
 
+// Color Aliases for Screen Compatibility
+val AlertRed = DangerRed
+val ElevatedSurface = DarkSurfaceLight
+val TextSecondary = TextGrey
+val SurfaceDark = DarkSurface
+val TextPrimary = TextWhite
+val AccentGreen = FluxPrimary
+val BackgroundDark = DarkBackground
+
 // Light Theme Colors
 val LightBackground = Color(0xFFF8FAFC)
 val LightSurface = Color(0xFFFFFFFF)
