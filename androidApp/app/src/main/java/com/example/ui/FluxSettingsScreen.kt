@@ -27,8 +27,12 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,7 +51,8 @@ import com.example.ui.theme.*
 @Composable
 fun FluxSettingsScreen(
     viewModel: MainViewModel,
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    onNavigateToDevice: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lowThreshold by viewModel.lowTempThreshold.collectAsState()
@@ -55,6 +60,11 @@ fun FluxSettingsScreen(
     val preferredUnit by viewModel.preferredUnit.collectAsState()
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
+    val reading by viewModel.latestReading.collectAsState()
+    val connectivityState by viewModel.connectivityState.collectAsState()
+    val batteryPercent = reading?.battery ?: 88
+    val signalPercent = connectivityState.signalPercent ?: 82
+    val signalDbm = connectivityState.signalDbm ?: -57
 
     var alertsEnabled by remember { mutableStateOf(true) }
     var currentMinLimit by remember(lowThreshold) { mutableStateOf(lowThreshold.toInt()) }
@@ -565,7 +575,27 @@ fun FluxSettingsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 6. Card 4 — Device Information (With Angled ESP32 Board Image)
+            // 6. Card 4 — Device Information (With Animated ESP32 Board Image & Telemetry)
+            val infiniteTransition = rememberInfiniteTransition(label = "SettingsDeviceAnim")
+            val boardFloatY by infiniteTransition.animateFloat(
+                initialValue = -3f,
+                targetValue = 3f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(2400, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "BoardFloatY"
+            )
+            val boardGlow by infiniteTransition.animateFloat(
+                initialValue = 0.25f,
+                targetValue = 0.60f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1800, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "BoardGlow"
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -573,6 +603,7 @@ fun FluxSettingsScreen(
                     .clip(RoundedCornerShape(26.dp))
                     .background(colors.cardBg)
                     .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
+                    .clickable { onNavigateToDevice() }
                     .padding(18.dp)
             ) {
                 Column {
@@ -583,16 +614,16 @@ fun FluxSettingsScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(40.dp)
                                 .clip(CircleShape)
-                                .background(if (isDarkTheme) Color(0xFF334155) else Color(0xFFF1F5F9)),
+                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.esp32_board),
+                            Icon(
+                                imageVector = Icons.Outlined.MonitorHeart,
                                 contentDescription = null,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                                tint = FluxOrange,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
 
@@ -602,11 +633,11 @@ fun FluxSettingsScreen(
                             Text(
                                 text = "Device Information",
                                 color = colors.textPrimary,
-                                fontSize = 15.sp,
+                                fontSize = 15.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "View your connected device details",
+                                text = "ESP32 telemetry, battery & signal",
                                 color = colors.textSecondary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Medium
@@ -625,21 +656,21 @@ fun FluxSettingsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Detail items on the left and Angled Board on the right
+                    // Detail items on the left and Animated Board on the right
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            // Row 1: Device
+                            // Row 1: Device Name
                             DeviceDetailRow(
                                 icon = Icons.Outlined.Wifi,
                                 label = "Device",
-                                value = "Flux1",
+                                value = connectivityState.deviceName.ifBlank { "Flux1" },
                                 colors = colors
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
                             // Row 2: Status
                             Row(
@@ -661,49 +692,79 @@ fun FluxSettingsScreen(
                                 )
                                 Spacer(modifier = Modifier.weight(1f))
                                 Row(verticalAlignment = Alignment.CenterVertically) {
+                                    val isOnline = connectivityState.isOnline
                                     Box(
                                         modifier = Modifier
                                             .size(6.dp)
                                             .clip(CircleShape)
-                                            .background(FluxGreenOnline)
+                                            .background(if (isOnline) FluxGreenOnline else Color(0xFFDC2626))
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "Online",
-                                        color = colors.textPrimary,
+                                        text = if (isOnline) "Online" else "Offline",
+                                        color = if (isOnline) FluxGreenOnline else Color(0xFFDC2626),
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
 
-                            // Row 3: Device ID
+                            // Row 3: Battery %
                             DeviceDetailRow(
-                                icon = Icons.Outlined.LocationOn,
-                                label = "Device ID",
-                                value = "DS18B20 • Flux1",
+                                icon = Icons.Outlined.Thermostat,
+                                label = "Battery",
+                                value = "$batteryPercent% • Healthy",
+                                colors = colors
+                            )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Row 4: Signal
+                            DeviceDetailRow(
+                                icon = Icons.Outlined.Wifi,
+                                label = "Signal",
+                                value = "$signalPercent% ($signalDbm dBm)",
                                 colors = colors
                             )
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // Right: Angled photo of the ESP32 board
+                        // Right: Animated floating photo of the ESP32 board with ambient glow
                         Box(
                             modifier = Modifier
                                 .size(105.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                                .offset(y = boardFloatY.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.esp32_board),
-                                contentDescription = "ESP32 Microcontroller",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
+                            // Subtle radial glow
+                            Box(
+                                modifier = Modifier
+                                    .size(95.dp)
+                                    .scale(1.15f)
+                                    .alpha(boardGlow)
+                                    .clip(CircleShape)
+                                    .background(FluxOrange.copy(alpha = 0.35f))
                             )
+
+                            // Image container
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color(0x18000000))
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB))
+                                    .border(1.dp, FluxOrange.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                            ) {
+                                Image(
+                                    painter = painterResource(id = R.drawable.esp32_board),
+                                    contentDescription = "ESP32 Microcontroller",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            }
                         }
                     }
                 }

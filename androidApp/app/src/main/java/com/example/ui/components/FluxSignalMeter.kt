@@ -31,7 +31,11 @@ fun FluxSignalMeter(
     state: FluxConnectivityState,
     darkTheme: Boolean,
     modifier: Modifier = Modifier,
-    isOnline: Boolean = state.isOnline
+    isOnline: Boolean = state.isOnline,
+    barHeights: List<Dp>? = null,
+    barWidth: Dp = 4.dp,
+    barSpacing: Dp = 2.2.dp,
+    fontSize: androidx.compose.ui.unit.TextUnit = 9.sp
 ) {
     // Determine active bar count and label based on state
     val (activeBars, qualityLabel, labelColor) = when {
@@ -71,10 +75,8 @@ fun FluxSignalMeter(
     // Inactive bar color: soft slate-lavender matching reference [191, 196, 215]
     val inactiveBarColor = if (darkTheme) Color(0xFF334155) else Color(0xFFCBD5E1)
 
-    // Bar heights ascending (8dp, 13dp, 18dp, 23dp)
-    val barHeights = listOf(8.dp, 13.dp, 18.dp, 23.dp)
-    val barWidth = 4.5.dp
-    val barSpacing = 2.5.dp
+    // Bar heights ascending (compact dimensions matching reduced header)
+    val heights = barHeights ?: listOf(7.dp, 11.5.dp, 16.dp, 20.5.dp)
 
     Column(
         modifier = modifier,
@@ -96,14 +98,14 @@ fun FluxSignalMeter(
                 )
 
                 SignalBar(
-                    height = barHeights[index],
+                    height = heights[index],
                     width = barWidth,
                     color = animatedColor
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(2.5.dp))
+        Spacer(modifier = Modifier.height(2.dp))
 
         // "Signal: Poor" text with muted prefix and colored status label
         Text(
@@ -125,7 +127,7 @@ fun FluxSignalMeter(
                     append(qualityLabel)
                 }
             },
-            fontSize = 9.5.sp,
+            fontSize = fontSize,
             letterSpacing = (-0.1).sp,
             maxLines = 1
         )
@@ -145,3 +147,4 @@ private fun SignalBar(
             .background(color)
     )
 }
+

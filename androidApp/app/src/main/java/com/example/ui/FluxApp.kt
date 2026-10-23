@@ -224,6 +224,9 @@ fun FluxApp(viewModel: MainViewModel) {
                             viewModel = viewModel,
                             onNotificationClick = {
                                 navController.navigate(AlertsRoute)
+                            },
+                            onNavigateToDevice = {
+                                navController.navigate(DeviceRoute)
                             }
                         )
                     }
@@ -272,7 +275,11 @@ fun FluxApp(viewModel: MainViewModel) {
                         )
                     }
                     composable<DeviceRoute> {
-                        FluxSettingsScreen(viewModel)
+                        FluxDeviceScreen(
+                            viewModel = viewModel,
+                            onBack = { navController.navigateUp() },
+                            onNavigateToDiagnostics = { navController.navigate(FluxDiagnosticsRoute) }
+                        )
                     }
                     composable<FluxLiveMonitorRoute> {
                         FluxLiveMonitorScreen(viewModel, onBack = { navController.navigateUp() })
@@ -331,6 +338,9 @@ fun FluxApp(viewModel: MainViewModel) {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
+                            },
+                            onDeviceClick = {
+                                navController.navigate(DeviceRoute)
                             }
                         )
                     }
