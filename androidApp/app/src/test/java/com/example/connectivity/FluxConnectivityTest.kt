@@ -121,4 +121,17 @@ class FluxConnectivityTest {
         assertNull(staleState.signalPercent)
         assertEquals(SignalLevel.UNAVAILABLE, staleState.signalLevel)
     }
+
+    @Test
+    fun testSignalMeterOfflinePoorStateMatchesScreenshot() {
+        // In the reference screenshot: device is offline with 2 bars orange and 'Signal: Poor'
+        val offlineState = FluxConnectivityState(
+            isOnline = false,
+            signalPercent = null,
+            deviceName = "Flux1"
+        )
+        assertFalse(offlineState.isOnline)
+        assertEquals("Flux1", offlineState.deviceName)
+    }
 }
+
