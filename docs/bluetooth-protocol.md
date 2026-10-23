@@ -2,7 +2,7 @@
 
 ## 1. Overview & GATT Profile
 
-Flux uses **Bluetooth Low Energy (BLE)** to establish a fast, non-blocking telemetry link between the ESP32 firmware and the Android companion app. The protocol maintains 100% backward compatibility with legacy NaTrack clients while extending the payload to deliver Flux telemetry profiles, units, session statistics, and alarms.
+Flux uses **Bluetooth Low Energy (BLE)** to establish a fast, non-blocking telemetry link between the ESP32 firmware and the Android companion app, delivering Flux telemetry profiles, units, session statistics, and alarms.
 
 ```
 +--------------------+                     +--------------------+
@@ -37,7 +37,7 @@ Flux uses **Bluetooth Low Energy (BLE)** to establish a fast, non-blocking telem
 ## 3. Advertising Parameters
 
 - **Advertised Local Name:** `"Flux-Telemetry"`
-- **Fallback Matching (Android BLE Scanner):** Matches any device whose name starts with `"Flux"` OR `"NaTrack"`.
+- **Android BLE Scanner Matching:** Matches any device whose name starts with `"Flux"` or advertises the telemetry service UUID.
 - **Advertising Interval:** 100 ms (Min: 0x20, Max: 0x40).
 - **Auto-Restart:** Advertising automatically resumes upon client disconnection without resetting MCU state.
 

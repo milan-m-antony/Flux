@@ -77,7 +77,7 @@ fun LiveTemperatureScreen(
             // Connection Card
             ConnectionCard(
                 connectionState = connectionState,
-                deviceName = deviceName.ifEmpty { "NaTrack" },
+                deviceName = deviceName.ifEmpty { "Flux ESP32" },
                 rssi = rssi,
                 activeAccent = activeAccent
             )

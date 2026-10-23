@@ -141,7 +141,7 @@ fun SetupStepOne(onStartSearch: () -> Unit, viewModel: MainViewModel) {
         Spacer(modifier = Modifier.height(16.dp))
         
         Text(
-            "Turn on your NaTrack device and keep it close to your phone to begin setup.",
+            "Turn on your Flux ESP32 device and keep it close to your phone to begin setup.",
             color = TextGrey,
             fontSize = 16.sp,
             textAlign = TextAlign.Center,

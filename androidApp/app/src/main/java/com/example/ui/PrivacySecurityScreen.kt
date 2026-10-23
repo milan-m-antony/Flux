@@ -126,7 +126,7 @@ fun PrivacySecurityScreen(onBack: () -> Unit) {
                     SecurityToggleRow(
                         icon = Icons.Default.Share,
                         title = "Anonymous Diagnostics",
-                        subtitle = "Permit NaTrack to share encrypted Bluetooth signal levels and calibration timeouts to help bug-fix.",
+                        subtitle = "Permit Flux to share encrypted Bluetooth signal levels and calibration timeouts to help bug-fix.",
                         checked = analyticsSharing,
                         onCheckedChange = { analyticsSharing = it },
                         activeAccent = activeAccent,

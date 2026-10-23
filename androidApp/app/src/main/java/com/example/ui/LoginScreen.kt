@@ -246,7 +246,7 @@ fun LoginScreen(viewModel: MainViewModel, onLoginSuccess: () -> Unit, onNavigate
         ) {
             Spacer(modifier = Modifier.height(32.dp))
             
-            NaTLogo(modifier = Modifier.padding(16.dp))
+            FluxLogo(modifier = Modifier.padding(16.dp))
             
             Spacer(modifier = Modifier.height(24.dp))
             
@@ -257,7 +257,7 @@ fun LoginScreen(viewModel: MainViewModel, onLoginSuccess: () -> Unit, onNavigate
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                "Sign in to your NaTrack account",
+                "Sign in to your Flux account",
                 color = TextGrey,
                 fontSize = 16.sp
             )

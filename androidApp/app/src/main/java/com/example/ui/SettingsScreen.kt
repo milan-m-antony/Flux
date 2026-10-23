@@ -164,10 +164,10 @@ fun SettingsScreen(viewModel: MainViewModel, onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxWidth().neoCard().padding(16.dp)) {
                 Column {
-                    Text("NaTrack v1.0", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                    Text("Flux Smart Telemetry v1.0", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Disclaimer: NaTrack is a prototype device for educational and research purposes. Not FDA/CDSCO approved. Not for clinical diagnosis. Consult a medical professional for health decisions.",
+                        text = "Flux is a high-precision smart telemetry system for environment, liquid, and fermentation temperature monitoring.",
                         style = MaterialTheme.typography.bodySmall,
                         color = TextGrey
                     )

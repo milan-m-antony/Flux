@@ -35,7 +35,7 @@ The **Flux** verification suite validates edge-to-cloud reliability across three
 | **Unit Conversion** | `C_TO_F(c)` | $25.0^\circ\text{C} \times 9/5 + 32 = 77.0^\circ\text{F}$; $0.0^\circ\text{C} \to 32.0^\circ\text{F}$; $-10.0^\circ\text{C} \to 14.0^\circ\text{F}$ | **Verified** |
 | **Session Analytics** | `SensorManager::updateStats()` | Correct calculation of session minimum, maximum, and cumulative running average across $N$ valid samples | **Verified** |
 | **Monotonic Timer** | Monotonic Clock Delta | Accurate conversion of `millis()` into `HH:MM:SS` independent of wall-clock NTP adjustments | **Verified** |
-| **BLE Deserialization** | `BLEParser.parse()` | Full JSON parsing with `ignoreUnknownKeys = true`, accommodating both legacy NaTrack and Flux extended fields | **Verified** |
+| **BLE Deserialization** | `BLEParser.parse()` | Full JSON parsing with `ignoreUnknownKeys = true`, accommodating Flux extended telemetry fields | **Verified** |
 | **Offline Buffering** | `SupabaseRepository` | Bounded queue retains up to 500 records; oldest discarded when full; auto-flushed when network is restored | **Verified** |
 | **Anti-Flap Hysteresis** | `flux-alert-evaluator` | Suppresses duplicate push notifications within a 15-minute sliding window for continuous threshold breaches | **Verified** |
 

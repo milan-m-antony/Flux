@@ -39,7 +39,7 @@ class BLEConnectionManager(
     private val _rssi = MutableStateFlow<Int?>(null)
     val rssi: StateFlow<Int?> = _rssi.asStateFlow()
 
-    private val sharedPrefs = context.getSharedPreferences("NaTrackBLEPrefs", Context.MODE_PRIVATE)
+    private val sharedPrefs = context.getSharedPreferences("FluxBLEPrefs", Context.MODE_PRIVATE)
 
     private val SERVICE_UUID = UUID.fromString("6E400011-B5A3-F393-E0A9-E50E24DCCA9E")
     private val JSON_CHAR_UUID = UUID.fromString("6E400009-B5A3-F393-E0A9-E50E24DCCA9E")
@@ -61,7 +61,7 @@ class BLEConnectionManager(
 
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 _connectionState.value = BLEState.CONNECTED
-                _deviceName.value = gatt.device.name ?: "NaTrack"
+                _deviceName.value = gatt.device.name ?: "Flux ESP32"
                 discoveryStarted = false
                 // Save last successful connected device
                 sharedPrefs.edit().putString("last_address", gatt.device.address).apply()

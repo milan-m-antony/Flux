@@ -10,12 +10,14 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import com.example.ui.theme.FluxBgLight
+import com.example.ui.theme.FluxOrange
 import com.example.ui.theme.FluxWaveOrange
 import com.example.ui.theme.FluxWavePeach
 
 @Composable
 fun FluxBackground(
     modifier: Modifier = Modifier,
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -23,10 +25,11 @@ fun FluxBackground(
             val width = size.width
             val height = size.height
 
-            // 1. Base clean cool background
-            drawRect(color = FluxBgLight)
+            // 1. Base background
+            val baseColor = if (darkTheme) Color(0xFF0F172A) else FluxBgLight
+            drawRect(color = baseColor)
 
-            // 2. Upper diagonal flowing peach/orange wave gradients
+            // 2. Wave 1
             val wave1 = Path().apply {
                 moveTo(width * 0.2f, 0f)
                 cubicTo(
@@ -37,18 +40,27 @@ fun FluxBackground(
                 lineTo(width, 0f)
                 close()
             }
+            val wave1Colors = if (darkTheme) {
+                listOf(
+                    FluxOrange.copy(alpha = 0.12f),
+                    Color(0xFF1E293B).copy(alpha = 0.6f)
+                )
+            } else {
+                listOf(
+                    FluxWaveOrange.copy(alpha = 0.55f),
+                    FluxWavePeach.copy(alpha = 0.40f)
+                )
+            }
             drawPath(
                 path = wave1,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        FluxWaveOrange.copy(alpha = 0.55f),
-                        FluxWavePeach.copy(alpha = 0.40f)
-                    ),
+                    colors = wave1Colors,
                     start = Offset(width * 0.3f, 0f),
                     end = Offset(width, height * 0.16f)
                 )
             )
 
+            // 3. Wave 2
             val wave2 = Path().apply {
                 moveTo(0f, height * 0.18f)
                 cubicTo(
@@ -64,19 +76,29 @@ fun FluxBackground(
                 )
                 close()
             }
+            val wave2Colors = if (darkTheme) {
+                listOf(
+                    Color(0xFF1E293B).copy(alpha = 0.5f),
+                    FluxOrange.copy(alpha = 0.08f),
+                    Color.Transparent
+                )
+            } else {
+                listOf(
+                    FluxWavePeach.copy(alpha = 0.45f),
+                    FluxWaveOrange.copy(alpha = 0.25f),
+                    Color.Transparent
+                )
+            }
             drawPath(
                 path = wave2,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        FluxWavePeach.copy(alpha = 0.45f),
-                        FluxWaveOrange.copy(alpha = 0.25f),
-                        Color.Transparent
-                    ),
+                    colors = wave2Colors,
                     start = Offset(0f, height * 0.15f),
                     end = Offset(width, height * 0.35f)
                 )
             )
 
+            // 4. Wave 3
             val wave3 = Path().apply {
                 moveTo(width * 0.35f, height * 0.46f)
                 cubicTo(
@@ -92,14 +114,23 @@ fun FluxBackground(
                 )
                 close()
             }
+            val wave3Colors = if (darkTheme) {
+                listOf(
+                    Color.Transparent,
+                    FluxOrange.copy(alpha = 0.07f),
+                    Color(0xFF1E293B).copy(alpha = 0.3f)
+                )
+            } else {
+                listOf(
+                    Color.Transparent,
+                    FluxWaveOrange.copy(alpha = 0.30f),
+                    FluxWavePeach.copy(alpha = 0.20f)
+                )
+            }
             drawPath(
                 path = wave3,
                 brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        FluxWaveOrange.copy(alpha = 0.30f),
-                        FluxWavePeach.copy(alpha = 0.20f)
-                    ),
+                    colors = wave3Colors,
                     start = Offset(width * 0.3f, height * 0.45f),
                     end = Offset(width, height * 0.62f)
                 )

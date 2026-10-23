@@ -11,11 +11,7 @@ object RemoteConfigManager {
             .setMinimumFetchIntervalInSeconds(3600) // 1 hour
             .build()
         remoteConfig.setConfigSettingsAsync(configSettings)
-        remoteConfig.setDefaultsAsync(mapOf(
-            "CLOUDINARY_API_KEY" to "",
-            "CLOUDINARY_CLOUD_NAME" to "",
-            "CLOUDINARY_PRESET" to ""
-        ))
+        remoteConfig.setDefaultsAsync(emptyMap())
     }
     
     fun fetchAndActivate(onComplete: (Boolean) -> Unit) {

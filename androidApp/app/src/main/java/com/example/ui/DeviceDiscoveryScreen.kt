@@ -92,13 +92,13 @@ fun DeviceDiscoveryScreen(
                 Spacer(modifier = Modifier.height(32.dp))
 
                 Text(
-                    text = "NaTrack Device Discovery",
+                    text = "Flux Device Discovery",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = "Pair with your NaTrack sensor to read measurements",
+                    text = "Pair with your Flux ESP32 sensor to stream telemetry",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -148,7 +148,7 @@ fun DeviceDiscoveryScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = if (connectionState == ConnectionState.SCANNING) "Scanning..." else "Found NaTrack Sensors",
+                    text = if (connectionState == ConnectionState.SCANNING) "Scanning..." else "Found Flux Sensors",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.Start)

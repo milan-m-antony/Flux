@@ -6,7 +6,7 @@ import org.junit.Assert.*
 class BLEParserTest {
     @Test
     fun testJsonParsing() {
-        val payload = """{"temperature":25.0,"battery":100,"batteryVoltage":4.20,"charging":false,"sodium":"---","status":"Normal","firmware":"1.0.0","device":"NaTrack"}"""
+        val payload = """{"temperature":25.0,"battery":100,"batteryVoltage":4.20,"charging":false,"sodium":"---","status":"Normal","firmware":"1.0.0","device":"Flux ESP32"}"""
         val result = BLEParser.parse(payload)
         
         assertNotNull("Result should not be null", result)
@@ -17,6 +17,6 @@ class BLEParserTest {
         assertEquals("---", result?.sodium)
         assertEquals("Normal", result?.status)
         assertEquals("1.0.0", result?.firmware)
-        assertEquals("NaTrack", result?.device)
+        assertEquals("Flux ESP32", result?.device)
     }
 }

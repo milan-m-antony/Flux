@@ -22,7 +22,6 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
-import com.cloudinary.Cloudinary
 import android.os.Bundle
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.asStateFlow
@@ -66,24 +65,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         null
     }
 
-    private var cloudinary: Cloudinary? = null
-
     init {
         // Fetch RemoteConfig credentials
-        com.example.data.RemoteConfigManager.fetchAndActivate { success ->
-            if (success) {
-                val apiKey = com.example.data.RemoteConfigManager.getString("CLOUDINARY_API_KEY")
-                val cloudName = com.example.data.RemoteConfigManager.getString("CLOUDINARY_CLOUD_NAME")
-                
-                if (apiKey.isNotEmpty() && cloudName.isNotEmpty()) {
-                    val config = mapOf(
-                        "cloud_name" to cloudName,
-                        "api_key" to apiKey
-                    )
-                    cloudinary = Cloudinary(config)
-                }
-            }
-        }
+        com.example.data.RemoteConfigManager.fetchAndActivate { }
     }
     
     private val _currentUser = MutableStateFlow<FirebaseUser?>(firebaseAuth?.currentUser)
@@ -364,20 +348,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (bytes != null) {
                     var url: String? = null
                     try {
-                        val result = cloudinary?.uploader()?.upload(bytes, com.cloudinary.utils.ObjectUtils.asMap("resource_type", "image"))
-                        url = result?.get("secure_url") as? String
+                        val fallbackFile = java.io.File(context.filesDir, "profile_pic_${System.currentTimeMillis()}.jpg")
+                        fallbackFile.writeBytes(bytes)
+                        url = android.net.Uri.fromFile(fallbackFile).toString()
                     } catch (e: Exception) {
-                        android.util.Log.e("MainViewModel", "Cloudinary upload failed", e)
-                    }
-                    
-                    if (url == null) {
-                        try {
-                            val fallbackFile = java.io.File(context.filesDir, "profile_pic_${System.currentTimeMillis()}.jpg")
-                            fallbackFile.writeBytes(bytes)
-                            url = android.net.Uri.fromFile(fallbackFile).toString()
-                        } catch (e: Exception) {
-                            android.util.Log.e("MainViewModel", "Local save failed", e)
-                        }
+                        android.util.Log.e("MainViewModel", "Local profile pic save failed", e)
                     }
                     
                     kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
@@ -507,11 +482,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     user?.updateProfile(profileUpdates)?.addOnCompleteListener {
                         logFirebaseEvent("signup_success")
                         syncToFirebase("profile", mapOf("name" to nameStr, "email" to emailStr))
-                        createNotification("Account Created", "Welcome to NaTrack, $nameStr!", "INFO")
+                        createNotification("Account Created", "Welcome to Flux, $nameStr!", "INFO")
                         onSuccess()
                     } ?: run {
                         logFirebaseEvent("signup_success")
-                        createNotification("Account Created", "Welcome to NaTrack!", "INFO")
+                        createNotification("Account Created", "Welcome to Flux!", "INFO")
                         onSuccess()
                     }
                 } else {

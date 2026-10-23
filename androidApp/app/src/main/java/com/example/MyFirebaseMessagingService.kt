@@ -67,7 +67,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         val channelId = "default_channel_id"
         val builder = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title ?: "NaTrack Notification")
+            .setContentTitle(title ?: "Flux Notification")
             .setContentText(message)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -80,7 +80,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             Log.d(TAG, "Creating notification channel (API 26+)")
             val channel = NotificationChannel(
                 channelId,
-                "NaTrack Default Channel",
+                "Flux Default Channel",
                 NotificationManager.IMPORTANCE_HIGH
             )
             // Configure additional channel settings here if needed

@@ -47,30 +47,24 @@ fun FluxHistoryScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
 
+    val darkTheme by viewModel.isDarkTheme.collectAsState()
+    val colors = rememberFluxColors(darkTheme)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 1. Shared Flux Header
-            FluxHeader(
-                isOnline = isOnline,
-                hasUnreadAlerts = true,
-                onNotificationClick = onNotificationClick
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            // Spacer to clear the fixed top header
+            Spacer(modifier = Modifier.height(72.dp))
 
             // 2. Title & Subtitle
             Text(
                 text = "History",
-                color = FluxTextDark,
+                color = colors.textPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = (-0.5).sp
@@ -78,7 +72,7 @@ fun FluxHistoryScreen(
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = "View past data and device activity",
-                color = FluxTextMuted,
+                color = colors.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -90,8 +84,8 @@ fun FluxHistoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
-                    .background(Color.White, RoundedCornerShape(26.dp))
-                    .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(26.dp))
+                    .background(colors.cardBg, RoundedCornerShape(26.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
                     .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -109,13 +103,13 @@ fun FluxHistoryScreen(
                     Icon(
                         imageVector = Icons.Filled.Thermostat,
                         contentDescription = null,
-                        tint = if (selectedTab == "Temperature") Color.White else FluxTextMuted,
+                        tint = if (selectedTab == "Temperature") Color.White else colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Temperature",
-                        color = if (selectedTab == "Temperature") Color.White else FluxTextDark,
+                        color = if (selectedTab == "Temperature") Color.White else colors.textPrimary,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -135,13 +129,13 @@ fun FluxHistoryScreen(
                     Icon(
                         imageVector = Icons.Outlined.BarChart,
                         contentDescription = null,
-                        tint = if (selectedTab == "Device Activity") Color.White else FluxTextMuted,
+                        tint = if (selectedTab == "Device Activity") Color.White else colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(5.dp))
                     Text(
                         text = "Device Activity",
-                        color = if (selectedTab == "Device Activity") Color.White else FluxTextDark,
+                        color = if (selectedTab == "Device Activity") Color.White else colors.textPrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -161,13 +155,13 @@ fun FluxHistoryScreen(
                     Icon(
                         imageVector = Icons.Outlined.Warning,
                         contentDescription = null,
-                        tint = if (selectedTab == "Alerts") Color.White else FluxTextMuted,
+                        tint = if (selectedTab == "Alerts") Color.White else colors.textSecondary,
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = "Alerts",
-                        color = if (selectedTab == "Alerts") Color.White else FluxTextDark,
+                        color = if (selectedTab == "Alerts") Color.White else colors.textPrimary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -186,21 +180,21 @@ fun FluxHistoryScreen(
                 Row(
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
-                        .background(Color.White, RoundedCornerShape(20.dp))
-                        .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                        .background(colors.pillBg, RoundedCornerShape(20.dp))
+                        .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
                         .padding(horizontal = 14.dp, vertical = 9.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.CalendarToday,
                         contentDescription = null,
-                        tint = FluxTextDark,
+                        tint = colors.textPrimary,
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "20 Oct 2026",
-                        color = FluxTextDark,
+                        color = colors.textPrimary,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -208,7 +202,7 @@ fun FluxHistoryScreen(
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
                         contentDescription = null,
-                        tint = FluxTextDark,
+                        tint = colors.textPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -217,8 +211,8 @@ fun FluxHistoryScreen(
                 Row(
                     modifier = Modifier
                         .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
-                        .background(Color.White, RoundedCornerShape(20.dp))
-                        .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                        .background(colors.pillBg, RoundedCornerShape(20.dp))
+                        .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
                         .padding(3.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -233,7 +227,7 @@ fun FluxHistoryScreen(
                     ) {
                         Text(
                             text = "Day",
-                            color = if (selectedRange == "Day") Color.White else FluxTextMuted,
+                            color = if (selectedRange == "Day") Color.White else colors.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -250,7 +244,7 @@ fun FluxHistoryScreen(
                     ) {
                         Text(
                             text = "Week",
-                            color = if (selectedRange == "Week") Color.White else FluxTextMuted,
+                            color = if (selectedRange == "Week") Color.White else colors.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -267,7 +261,7 @@ fun FluxHistoryScreen(
                     ) {
                         Text(
                             text = "Month",
-                            color = if (selectedRange == "Month") Color.White else FluxTextMuted,
+                            color = if (selectedRange == "Month") Color.White else colors.textSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -282,8 +276,8 @@ fun FluxHistoryScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                    .background(Color.White, RoundedCornerShape(24.dp))
-                    .border(0.5.dp, Color(0xFFF1F5F9), RoundedCornerShape(24.dp))
+                    .background(colors.cardBg, RoundedCornerShape(24.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
                     .padding(18.dp)
             ) {
                 Column {
@@ -297,7 +291,7 @@ fun FluxHistoryScreen(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFFFF2EB)),
+                                    .background(if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -311,13 +305,13 @@ fun FluxHistoryScreen(
                             Column {
                                 Text(
                                     text = "Temperature Trend",
-                                    color = FluxTextDark,
+                                    color = colors.textPrimary,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
                                     text = "20 Oct 2026 • Hourly",
-                                    color = FluxTextMuted,
+                                    color = colors.textSecondary,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -329,7 +323,7 @@ fun FluxHistoryScreen(
                             // Max badge
                             Column(
                                 modifier = Modifier
-                                    .background(Color(0xFFFEE2E2), RoundedCornerShape(12.dp))
+                                    .background(if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -350,7 +344,7 @@ fun FluxHistoryScreen(
                             // Min badge
                             Column(
                                 modifier = Modifier
-                                    .background(Color(0xFFDBEAFE), RoundedCornerShape(12.dp))
+                                    .background(if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE), RoundedCornerShape(12.dp))
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
@@ -378,7 +372,10 @@ fun FluxHistoryScreen(
                             .fillMaxWidth()
                             .height(140.dp)
                     ) {
-                        HistoryChartCanvas(modifier = Modifier.fillMaxSize())
+                        HistoryChartCanvas(
+                            modifier = Modifier.fillMaxSize(),
+                            darkTheme = darkTheme
+                        )
                     }
                 }
             }
@@ -394,14 +391,14 @@ fun FluxHistoryScreen(
                 Column {
                     Text(
                         text = "Data Log",
-                        color = FluxTextDark,
+                        color = colors.textPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Recorded temperature readings",
-                        color = FluxTextMuted,
+                        color = colors.textSecondary,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -409,7 +406,7 @@ fun FluxHistoryScreen(
 
                 Text(
                     text = "20 Oct 2026",
-                    color = FluxTextMuted,
+                    color = colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -420,48 +417,52 @@ fun FluxHistoryScreen(
             // 4 Spacious Horizontal Data Log Cards
             DataLogCard(
                 iconTint = Color(0xFFEF4444),
-                iconBg = Color(0xFFFEE2E2),
+                iconBg = if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2),
                 time = "12:00 PM",
                 value = "30.8°C",
                 statusLabel = "High",
-                statusBg = Color(0xFFFEE2E2),
-                statusColor = Color(0xFFDC2626)
+                statusBg = if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2),
+                statusColor = Color(0xFFDC2626),
+                colors = colors
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             DataLogCard(
                 iconTint = FluxOrange,
-                iconBg = Color(0xFFFFF2EB),
+                iconBg = if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB),
                 time = "08:00 AM",
                 value = "24.1°C",
                 statusLabel = "Normal",
-                statusBg = Color(0xFFDCFCE7),
-                statusColor = Color(0xFF16A34A)
+                statusBg = if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7),
+                statusColor = if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A),
+                colors = colors
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             DataLogCard(
                 iconTint = Color(0xFF3B82F6),
-                iconBg = Color(0xFFDBEAFE),
+                iconBg = if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE),
                 time = "04:00 AM",
                 value = "19.6°C",
                 statusLabel = "Low",
-                statusBg = Color(0xFFDBEAFE),
-                statusColor = Color(0xFF2563EB)
+                statusBg = if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE),
+                statusColor = Color(0xFF2563EB),
+                colors = colors
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
             DataLogCard(
                 iconTint = FluxOrange,
-                iconBg = Color(0xFFFFF2EB),
+                iconBg = if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB),
                 time = "12:00 AM",
                 value = "20.2°C",
                 statusLabel = "Normal",
-                statusBg = Color(0xFFDCFCE7),
-                statusColor = Color(0xFF16A34A)
+                statusBg = if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7),
+                statusColor = if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A),
+                colors = colors
             )
 
             Spacer(modifier = Modifier.height(110.dp))
@@ -477,14 +478,15 @@ private fun DataLogCard(
     value: String,
     statusLabel: String,
     statusBg: Color,
-    statusColor: Color
+    statusColor: Color,
+    colors: FluxColors = rememberFluxColors(false)
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(3.dp, RoundedCornerShape(18.dp), spotColor = Color(0x0C000000))
-            .background(Color.White, RoundedCornerShape(18.dp))
-            .border(0.5.dp, Color(0xFFF1F5F9), RoundedCornerShape(18.dp))
+            .background(colors.cardBg, RoundedCornerShape(18.dp))
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -509,7 +511,7 @@ private fun DataLogCard(
         // Time
         Text(
             text = time,
-            color = FluxTextMuted,
+            color = colors.textSecondary,
             fontSize = 12.5.sp,
             fontWeight = FontWeight.Medium
         )
@@ -519,7 +521,7 @@ private fun DataLogCard(
         // Value in bold
         Text(
             text = value,
-            color = FluxTextDark,
+            color = colors.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold
         )
@@ -547,14 +549,17 @@ private fun DataLogCard(
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
-            tint = Color(0xFF94A3B8),
+            tint = colors.textSecondary,
             modifier = Modifier.size(18.dp)
         )
     }
 }
 
 @Composable
-private fun HistoryChartCanvas(modifier: Modifier = Modifier) {
+private fun HistoryChartCanvas(
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = false
+) {
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
@@ -569,7 +574,7 @@ private fun HistoryChartCanvas(modifier: Modifier = Modifier) {
         for (i in ySteps.indices) {
             val y = (chartHeight * i / (ySteps.size - 1))
             drawLine(
-                color = Color(0xFFEDF2F7),
+                color = if (darkTheme) Color(0xFF334155) else Color(0xFFEDF2F7),
                 start = Offset(leftPadding, y),
                 end = Offset(width, y),
                 strokeWidth = 1f,

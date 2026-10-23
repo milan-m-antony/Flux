@@ -77,7 +77,7 @@ fun DeviceScreen(viewModel: MainViewModel, onNavigateToDiagnostics: () -> Unit =
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = if (connectionState == ConnectionState.CONNECTED) "NaTrack v1 Connected" else "Disconnected",
+                        text = if (connectionState == ConnectionState.CONNECTED) "Flux ESP32 Connected" else "Disconnected",
                         style = MaterialTheme.typography.titleLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -173,7 +173,7 @@ fun DeviceScreen(viewModel: MainViewModel, onNavigateToDiagnostics: () -> Unit =
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("${(firmwareProgress * 100).toInt()}%", fontWeight = FontWeight.Bold, color = AccentCyan)
                             } else {
-                                Text("A new firmware version (v1.1.0) is available for your NaTrack sensor.")
+                                Text("A new firmware version (v1.1.0) is available for your Flux ESP32 sensor.")
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text("Current Version: v1.0.0", color = TextGrey, fontSize = 14.sp)
                                 Text("New Version: v1.1.0", color = AccentCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold)
@@ -219,7 +219,7 @@ fun DeviceScreen(viewModel: MainViewModel, onNavigateToDiagnostics: () -> Unit =
                     text = {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             val infoList = listOf(
-                                "Model Name" to (reading?.deviceName ?: "NaTrack Pro v1.0"),
+                                "Model Name" to (reading?.deviceName ?: "Flux Pro v1.0"),
                                 "Hardware Version" to "v1.2",
                                 "Firmware Version" to "v${reading?.firmware ?: "1.0.0"}",
                                 "Battery Chemistry" to "Lithium Polymer"

@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 // Flux Official Theme Palette (Sampled directly from Reference Screenshots)
 val FluxOrange = Color(0xFFFF6332)          // Primary Vibrant Orange
+val FluxOrangeFlame = FluxOrange
 val FluxOrangeGradientStart = Color(0xFFFF7A45)
 val FluxOrangeGradientEnd = Color(0xFFFF521D)
 val FluxOrangeSoft = Color(0xFFFFF2EB)      // Soft badge orange

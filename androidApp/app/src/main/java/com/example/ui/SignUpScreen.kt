@@ -119,7 +119,7 @@ fun SignUpScreen(viewModel: MainViewModel, onSignUpSuccess: () -> Unit, onBack: 
                 fontWeight = FontWeight.ExtraBold
             )
             Text(
-                "Join NaTrack for precise sodium tracking",
+                "Join Flux for smart temperature telemetry",
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 16.sp
             )

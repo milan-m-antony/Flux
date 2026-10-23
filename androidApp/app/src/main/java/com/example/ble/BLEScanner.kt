@@ -37,7 +37,7 @@ class BLEScanner(private val context: Context) {
                 uuidStr.equals(targetServiceUuid1, ignoreCase = true) || uuidStr.equals(targetServiceUuid2, ignoreCase = true)
             } == true
             
-            if (name.contains("Flux", ignoreCase = true) || name.contains("NaTrack", ignoreCase = true) || hasTargetService) {
+            if (name.contains("Flux", ignoreCase = true) || hasTargetService) {
                 val displayName = if (name == "Unknown") "Flux Telemetry" else name
                 val newDevice = DiscoveredDevice(device, displayName, device.address, result.rssi)
                 val currentList = _discoveredDevices.value.toMutableList()

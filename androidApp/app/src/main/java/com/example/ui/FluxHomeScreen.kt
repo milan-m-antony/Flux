@@ -59,25 +59,19 @@ fun FluxHomeScreen(
 
     val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
 
+    val darkTheme by viewModel.isDarkTheme.collectAsState()
+    val colors = rememberFluxColors(darkTheme)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 1. Shared Flux Header
-            FluxHeader(
-                isOnline = isOnline,
-                hasUnreadAlerts = true,
-                onNotificationClick = onNotificationClick
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            // Spacer to clear the fixed top header
+            Spacer(modifier = Modifier.height(72.dp))
 
             // 2. Large Circular Temperature Gauge
             TemperatureGauge(
@@ -86,6 +80,8 @@ fun FluxHomeScreen(
                 maxTemp = 40f,
                 unitSymbol = unitSymbol,
                 displayTempStr = String.format("%.1f", displayTemp),
+                darkTheme = darkTheme,
+                colors = colors,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(290.dp)
@@ -105,15 +101,15 @@ fun FluxHomeScreen(
                 Row(
                     modifier = Modifier
                         .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                        .background(Color.White.copy(alpha = 0.9f), RoundedCornerShape(24.dp))
-                        .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(24.dp))
+                        .background(colors.cardBg, RoundedCornerShape(24.dp))
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
                         .padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (selectedUnit == "C") Color(0xFF111827) else Color.Transparent)
+                            .background(if (selectedUnit == "C") (if (darkTheme) FluxOrange else Color(0xFF111827)) else Color.Transparent)
                             .clickable {
                                 selectedUnit = "C"
                                 viewModel.setPreferredUnit("C")
@@ -123,7 +119,7 @@ fun FluxHomeScreen(
                     ) {
                         Text(
                             text = "°C",
-                            color = if (selectedUnit == "C") Color.White else FluxTextMuted,
+                            color = if (selectedUnit == "C") Color.White else colors.textSecondary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -132,7 +128,7 @@ fun FluxHomeScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(if (selectedUnit == "F") Color(0xFF111827) else Color.Transparent)
+                            .background(if (selectedUnit == "F") (if (darkTheme) FluxOrange else Color(0xFF111827)) else Color.Transparent)
                             .clickable {
                                 selectedUnit = "F"
                                 viewModel.setPreferredUnit("F")
@@ -142,7 +138,7 @@ fun FluxHomeScreen(
                     ) {
                         Text(
                             text = "°F",
-                            color = if (selectedUnit == "F") Color.White else FluxTextMuted,
+                            color = if (selectedUnit == "F") Color.White else colors.textSecondary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -155,15 +151,15 @@ fun FluxHomeScreen(
                         .size(46.dp)
                         .shadow(4.dp, CircleShape, spotColor = Color(0x12000000))
                         .clip(CircleShape)
-                        .background(Color.White)
-                        .border(0.5.dp, Color(0xFFE2E8F0), CircleShape)
+                        .background(colors.cardBg)
+                        .border(0.5.dp, colors.cardBorder, CircleShape)
                         .clickable { onNavigateToHistory() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.BarChart,
                         contentDescription = "View Trend",
-                        tint = FluxTextDark,
+                        tint = colors.textPrimary,
                         modifier = Modifier.size(24.dp)
                     )
                 }
@@ -173,6 +169,8 @@ fun FluxHomeScreen(
 
             // 4. Temperature Trend Card
             TemperatureTrendCard(
+                darkTheme = darkTheme,
+                colors = colors,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -189,7 +187,9 @@ private fun TemperatureGauge(
     maxTemp: Float,
     unitSymbol: String,
     displayTempStr: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = false,
+    colors: FluxColors = rememberFluxColors(darkTheme)
 ) {
     val progress = ((temperature - minTemp) / (maxTemp - minTemp)).coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(
@@ -211,7 +211,7 @@ private fun TemperatureGauge(
         ) {
             Text(
                 text = "Medium",
-                color = FluxTextDark,
+                color = colors.textPrimary,
                 fontSize = 11.5.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -223,7 +223,7 @@ private fun TemperatureGauge(
                     lineTo(size.width, 0f)
                     close()
                 }
-                drawPath(p, color = Color(0xFF111827))
+                drawPath(p, color = colors.textPrimary)
             }
         }
 
@@ -326,8 +326,8 @@ private fun TemperatureGauge(
                     ambientColor = Color(0x0A000000)
                 )
                 .clip(CircleShape)
-                .background(Color.White)
-                .border(1.dp, Color(0xFFF1F5F9), CircleShape),
+                .background(colors.cardBg)
+                .border(1.dp, colors.cardBorder, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -338,7 +338,7 @@ private fun TemperatureGauge(
                 Icon(
                     imageVector = Icons.Outlined.Thermostat,
                     contentDescription = null,
-                    tint = FluxTextDark,
+                    tint = colors.textPrimary,
                     modifier = Modifier.size(24.dp)
                 )
 
@@ -347,7 +347,7 @@ private fun TemperatureGauge(
                 // Big bold reading
                 Text(
                     text = "$displayTempStr$unitSymbol",
-                    color = FluxTextDark,
+                    color = colors.textPrimary,
                     fontSize = 42.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-1).sp
@@ -403,7 +403,9 @@ private fun TemperatureGauge(
 
 @Composable
 private fun TemperatureTrendCard(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = false,
+    colors: FluxColors = rememberFluxColors(darkTheme)
 ) {
     Box(
         modifier = modifier
@@ -412,8 +414,8 @@ private fun TemperatureTrendCard(
                 shape = RoundedCornerShape(24.dp),
                 spotColor = Color(0x12000000)
             )
-            .background(Color.White, RoundedCornerShape(24.dp))
-            .border(0.5.dp, Color(0xFFF1F5F9), RoundedCornerShape(24.dp))
+            .background(colors.cardBg, RoundedCornerShape(24.dp))
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
             .padding(18.dp)
     ) {
         Column {
@@ -426,14 +428,14 @@ private fun TemperatureTrendCard(
                 Column {
                     Text(
                         text = "Temperature Trend",
-                        color = FluxTextDark,
+                        color = colors.textPrimary,
                         fontSize = 15.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = "Live temperature over the last 1 hour",
-                        color = FluxTextMuted,
+                        color = colors.textSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -442,21 +444,21 @@ private fun TemperatureTrendCard(
                 // Dropdown capsule "Last 1 Hour ⌵"
                 Row(
                     modifier = Modifier
-                        .background(Color(0xFFF8FAFC), RoundedCornerShape(16.dp))
-                        .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
+                        .background(colors.pillBg, RoundedCornerShape(16.dp))
+                        .border(0.5.dp, colors.pillBorder, RoundedCornerShape(16.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "Last 1 Hour",
-                        color = FluxTextDark,
+                        color = colors.textPrimary,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Icon(
                         imageVector = Icons.Filled.ArrowDropDown,
                         contentDescription = null,
-                        tint = FluxTextMuted,
+                        tint = colors.textSecondary,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -470,7 +472,10 @@ private fun TemperatureTrendCard(
                     .fillMaxWidth()
                     .height(140.dp)
             ) {
-                TrendChartCanvas(modifier = Modifier.fillMaxSize())
+                TrendChartCanvas(
+                    modifier = Modifier.fillMaxSize(),
+                    darkTheme = darkTheme
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -485,12 +490,13 @@ private fun TemperatureTrendCard(
                         Icon(
                             imageVector = Icons.Outlined.Thermostat,
                             contentDescription = null,
-                            tint = FluxTextDark,
+                            tint = colors.textPrimary,
                             modifier = Modifier.size(20.dp)
                         )
                     },
                     value = "26.1°C",
                     label = "Min",
+                    colors = colors,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -500,7 +506,7 @@ private fun TemperatureTrendCard(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFFFF2EB)),
+                                .background(if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -513,6 +519,7 @@ private fun TemperatureTrendCard(
                     },
                     value = "30.8°C",
                     label = "Max",
+                    colors = colors,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -522,19 +529,20 @@ private fun TemperatureTrendCard(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFF1F5F9)),
+                                .background(if (darkTheme) Color(0xFF334155) else Color(0xFFF1F5F9)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.BarChart,
                                 contentDescription = null,
-                                tint = FluxTextDark,
+                                tint = colors.textPrimary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
                     },
                     value = "28.3°C",
                     label = "Avg",
+                    colors = colors,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -547,12 +555,13 @@ private fun SummaryStatPill(
     icon: @Composable () -> Unit,
     value: String,
     label: String,
+    colors: FluxColors,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
-            .background(Color(0xFFF8FAFC), RoundedCornerShape(16.dp))
-            .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
+            .background(colors.pillBg, RoundedCornerShape(16.dp))
+            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(16.dp))
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -561,13 +570,13 @@ private fun SummaryStatPill(
         Column {
             Text(
                 text = value,
-                color = FluxTextDark,
+                color = colors.textPrimary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )
             Text(
                 text = label,
-                color = FluxTextMuted,
+                color = colors.textSecondary,
                 fontSize = 10.5.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -576,7 +585,10 @@ private fun SummaryStatPill(
 }
 
 @Composable
-private fun TrendChartCanvas(modifier: Modifier = Modifier) {
+private fun TrendChartCanvas(
+    modifier: Modifier = Modifier,
+    darkTheme: Boolean = false
+) {
     Canvas(modifier = modifier) {
         val width = size.width
         val height = size.height
@@ -591,7 +603,7 @@ private fun TrendChartCanvas(modifier: Modifier = Modifier) {
         for (i in ySteps.indices) {
             val y = (chartHeight * i / (ySteps.size - 1))
             drawLine(
-                color = Color(0xFFEDF2F7),
+                color = if (darkTheme) Color(0xFF334155) else Color(0xFFEDF2F7),
                 start = Offset(leftPadding, y),
                 end = Offset(width, y),
                 strokeWidth = 1f,

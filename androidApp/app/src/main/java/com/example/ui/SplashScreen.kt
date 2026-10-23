@@ -59,7 +59,7 @@ fun SplashScreen(viewModel: MainViewModel, onNavigateToNext: (Boolean) -> Unit) 
                 BiometricHelper.promptBiometricAuth(
                     activity = activity,
                     title = "App Lock",
-                    subtitle = "Unlock NaTrack using your biometric credentials",
+                    subtitle = "Unlock Flux using your biometric credentials",
                     onSuccess = {
                         onNavigateToNext(true)
                     },
@@ -122,23 +122,27 @@ fun SplashScreen(viewModel: MainViewModel, onNavigateToNext: (Boolean) -> Unit) 
                     .scale(scale),
                 contentAlignment = Alignment.Center
             ) {
-                NaTLogo(modifier = Modifier.fillMaxSize())
+                Image(
+                    painter = painterResource(id = R.drawable.ic_flux_flame),
+                    contentDescription = "Flux Logo",
+                    modifier = Modifier.fillMaxSize()
+                )
             }
             
             Spacer(modifier = Modifier.height(40.dp))
             
             Text(
-                text = "NaTrack",
+                text = "Flux",
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.ExtraBold,
-                color = AccentCyan,
-                letterSpacing = 6.sp
+                color = com.example.ui.theme.FluxOrangeFlame,
+                letterSpacing = 2.sp
             )
             
             Spacer(modifier = Modifier.height(12.dp))
             
             Text(
-                text = "PRECISION ELECTROLYTE TRACKING",
+                text = "SMART TELEMETRY SYSTEM",
                 style = MaterialTheme.typography.labelMedium,
                 color = com.example.ui.theme.TextGrey,
                 letterSpacing = 4.sp

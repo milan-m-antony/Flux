@@ -11,10 +11,10 @@
 
 ## 1. System Overview
 
-**Flux** is an evolution of the NaTrack IoT project into a high-reliability, edge-to-cloud smart temperature telemetry platform. Engineered for real-world environmental monitoring, liquid probe tracking, and biological fermentation processes, Flux provides:
+**Flux** is a high-reliability, edge-to-cloud smart temperature telemetry platform. Engineered for real-world environmental monitoring, liquid probe tracking, and biological fermentation processes, Flux provides:
 
 - **Autonomous Edge Monitoring:** Operates 100% offline if network connectivity is lost. An ESP32 reads a Dallas DS18B20 1-Wire probe and renders real-time metrics, animations, and session statistics on an SSD1306 OLED display with physical 3-button tactile navigation.
-- **BLE Telemetry Streaming:** Bluetooth Low Energy GATT server streams single-packet JSON telemetry payloads (512-byte MTU) at 1.0 Hz, maintaining backward compatibility with legacy NaTrack UUIDs while adding Flux session metrics and alarms.
+- **BLE Telemetry Streaming:** Bluetooth Low Energy GATT server streams single-packet JSON telemetry payloads (512-byte MTU) at 1.0 Hz with comprehensive Flux session metrics and alarms.
 - **Native Android Companion App:** Jetpack Compose mobile dashboard featuring modern dark-mode ergonomics (`#020617` background, lime green and sky blue accents), Celsius/Fahrenheit conversion, profile switching, real-time Bézier curve trend graphs, and a 500-record bounded offline synchronization buffer.
 - **Dedicated Supabase Cloud Backend:** PostgreSQL database with Row Level Security (RLS) policies and Logical Replication Realtime streaming for historical charting and latest state synchronization, completely replacing Firebase telemetry writes.
 - **Zero-Leak Server-Side Push Alerts:** High/low threshold breaches trigger a PostgreSQL database trigger and a Supabase Edge Function (`flux-alert-evaluator`) which dispatches push notifications via OneSignal's REST API using secure server-side secrets with 15-minute anti-flap hysteresis.
@@ -171,6 +171,6 @@ Operating at the default **5-second cloud upload rate** ($17,280\text{ readings/
 | **ESP32 Firmware** | **Verified & Built** | Compiles cleanly via PlatformIO (`firmware.bin` generated; RAM 12.3%, Flash 90.1%). |
 | **OLED Interface** | **Verified & Built** | 8 screens with 3-button debounced navigation and 1.8s startup animation. |
 | **Android UI & Navigation** | **Verified & Built** | Complete Flux Jetpack Compose dark UI with 7 dedicated screens and Bézier trend chart. |
-| **BLE Protocol** | **Verified & Built** | 512 MTU JSON streaming; backward compatible with legacy NaTrack UUIDs. |
+| **BLE Protocol** | **Verified & Built** | 512 MTU JSON streaming with session metrics and alerts. |
 | **Supabase Cloud Backend** | **Verified by Design** | Migration script and trigger ready; zero writes to Firebase. |
 | **OneSignal Push Pipeline** | **Verified by Design** | Server-side Edge Function created with 15-minute anti-flap hysteresis. |

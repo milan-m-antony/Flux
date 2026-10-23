@@ -37,8 +37,4 @@ fun FluxLogo(modifier: Modifier = Modifier) {
     }
 }
 
-// Backward-compatible alias for existing screens
-@Composable
-fun NaTLogo(modifier: Modifier = Modifier) {
-    FluxLogo(modifier)
-}
+

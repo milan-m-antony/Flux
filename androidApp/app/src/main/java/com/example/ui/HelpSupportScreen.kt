@@ -43,16 +43,16 @@ fun HelpSupportScreen(onBack: () -> Unit) {
 
     val faqs = listOf(
         FAQItem(
-            question = "How do I pair my NaTrack device over Bluetooth?",
-            answer = "Switch on Bluetooth in your system settings, then make sure the NaTrack wearable is powered on and within range. Navigate to the 'Device' tab in this app and click 'Search Device' to pair instantly."
+            question = "How do I pair my Flux ESP32 device over Bluetooth?",
+            answer = "Switch on Bluetooth in your system settings, then make sure the Flux device is powered on and within range. Navigate to the 'Device' tab in this app and click 'Search Device' to pair instantly."
         ),
         FAQItem(
-            question = "What should I do if my sodium reading seems inaccurate?",
-            answer = "Ensure the sensor contact face is clean and flush against your wrist. Navigate to the 'Device' screen, choose 'Calibrate Sensor' from the action list, enter your laboratory reference mV, and save calibration."
+            question = "What should I do if my telemetry reading seems inaccurate?",
+            answer = "Ensure the temperature probe contact face is clean and properly submerged or placed. Navigate to the 'Device' screen to verify sensor calibration."
         ),
         FAQItem(
-            question = "How is battery life optimized on the NaTrack wearable?",
-            answer = "The hardware will automatically power down BLE advertising channels when not performing readings. Charging to 100% takes about 45 minutes and typically powers continuous background state tracking for 5 days."
+            question = "How is battery life optimized on the Flux device?",
+            answer = "The hardware will automatically power down BLE advertising channels when not streaming readings. Battery provides long continuous background state tracking."
         ),
         FAQItem(
             question = "How do I secure my historical health journals?",
@@ -158,7 +158,7 @@ fun HelpSupportScreen(onBack: () -> Unit) {
                     SupportRow(
                         icon = Icons.Default.Email,
                         title = "Email Support",
-                        value = "support@natrack.io",
+                        value = "support@fluxtelemetry.io",
                         activeAccent = activeAccent
                     )
                     Divider(color = if (darkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f))

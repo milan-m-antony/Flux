@@ -96,7 +96,7 @@ fun BluetoothSettingsScreen(
                             Spacer(modifier = Modifier.width(16.dp))
                             Column {
                                 Text("Device Name", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("NaTrack Sensor", fontWeight = FontWeight.Bold)
+                                Text("Flux ESP32 Sensor", fontWeight = FontWeight.Bold)
                             }
                         }
 

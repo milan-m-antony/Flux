@@ -251,7 +251,7 @@ fun ProfileScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "NaTrack v1.0.4", 
+                text = "Flux v1.0.4", 
                 fontSize = 12.sp, 
                 color = TextGrey,
                 modifier = Modifier.clickable { onNavigateToAppVersion() }

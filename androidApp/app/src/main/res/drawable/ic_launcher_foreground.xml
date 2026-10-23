@@ -4,31 +4,18 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Letter N (White) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 24,42 L 29,42 L 37,61 L 37,42 L 42,42 L 42,66 L 37,66 L 29,47 L 29,66 L 24,66 Z" />
-        
-    <!-- Letter a (White) -->
-    <!-- Bowl (EvenOdd) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:fillType="evenOdd"
-        android:pathData="M 51.5,52 C 48.5,52 46,54.5 46,57.5 C 46,60.5 48.5,63 51.5,63 C 54.5,63 57,60.5 57,57.5 C 57,54.5 54.5,52 51.5,52 Z M 51.5,55 C 53,55 54,56 54,57.5 C 54,59 53,60 51.5,60 C 50,60 49,59 49,57.5 C 49,56 50,55 51.5,55 Z" />
-    <!-- Stem -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M 57,52 L 62,52 L 62,66 L 57,66 Z" />
-        
-    <!-- Letter T (AccentCyan: #00E5FF) -->
-    <!-- Crossbar -->
-    <path
-        android:fillColor="#00E5FF"
-        android:pathData="M 66,42 L 84,42 L 84,47 L 66,47 Z" />
-    <!-- Stem -->
-    <path
-        android:fillColor="#00E5FF"
-        android:pathData="M 72.5,47 L 77.5,47 L 77.5,66 L 72.5,66 Z" />
-        
+    <group
+        android:scaleX="1.6"
+        android:scaleY="1.6"
+        android:translateX="27.4"
+        android:translateY="25.5">
+        <!-- Outer Vibrant Orange Flame -->
+        <path
+            android:fillColor="#FF6332"
+            android:pathData="M18,3 C19.5,7 23,10 25.5,14 C28,18 28.5,23 26,27 C23.5,31 19,33 14,32 C9,31 5,27 6,21 C6.5,18 8.5,15.5 11,14 C10.5,17 12,19.5 14,20.5 C15.5,21.5 17,21 17.5,19 C18.5,15.5 15,12 15,9 C15,6 16.5,4 18,3 Z" />
+        <!-- Inner Dark Charcoal Core -->
+        <path
+            android:fillColor="#1E232A"
+            android:pathData="M16.5,16 C18,17 19.5,19 19,21.5 C18.5,24 16.5,25.5 14,25 C12,24.5 10.5,23 11,21 C11.5,19 13.5,17.5 15,16 C15.5,15.5 16,15.5 16.5,16 Z" />
+    </group>
 </vector>

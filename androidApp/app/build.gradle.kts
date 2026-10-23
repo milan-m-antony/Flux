@@ -88,7 +88,6 @@ dependencies {
   implementation(libs.firebase.config)
   implementation(libs.firebase.messaging)
   implementation(libs.play.services.auth)
-  implementation(libs.cloudinary.android)
   implementation(libs.accompanist.permissions)
   implementation(libs.androidx.activity.compose)
   implementation(libs.androidx.biometric)
@@ -131,5 +130,27 @@ dependencies {
   debugImplementation(libs.androidx.compose.ui.test.manifest)
   debugImplementation(libs.androidx.compose.ui.tooling)
   "ksp"(libs.androidx.room.compiler)
+}
 
+tasks.register("copyRootDeviceImage") {
+    doLast {
+        val rootDevice = file("${rootDir}/../device.png")
+        val appDevice = file("${rootDir}/device.png")
+        val targetPng = file("${projectDir}/src/main/res/drawable/device_image.png")
+        val fallbackJpg = file("${projectDir}/src/main/res/drawable/device_image.jpg")
+        val sourceFile = when {
+            rootDevice.exists() -> rootDevice
+            appDevice.exists() -> appDevice
+            else -> null
+        }
+        if (sourceFile != null) {
+            if (fallbackJpg.exists()) fallbackJpg.delete()
+            sourceFile.copyTo(targetPng, overwrite = true)
+            println("Flux: Auto-copied device.png to drawable/device_image.png")
+        }
+    }
+}
+
+tasks.named("preBuild") {
+    dependsOn("copyRootDeviceImage")
 }

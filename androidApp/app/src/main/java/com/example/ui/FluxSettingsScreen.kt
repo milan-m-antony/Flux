@@ -59,32 +59,23 @@ fun FluxSettingsScreen(
     var selectedTheme by remember(isDarkTheme) { mutableStateOf(if (isDarkTheme) "Dark" else "Light") }
     var selectedUnit by remember(preferredUnit) { mutableStateOf(preferredUnit) }
 
-    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
+    val colors = rememberFluxColors(isDarkTheme)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 1. Shared Flux Header
-            FluxHeader(
-                isOnline = isOnline,
-                hasUnreadAlerts = true,
-                onNotificationClick = onNotificationClick
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            // Spacer to clear the fixed top header
+            Spacer(modifier = Modifier.height(72.dp))
 
             // 2. Title & Subtitle
             Text(
                 text = "Settings",
-                color = FluxTextDark,
+                color = colors.textPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = (-0.5).sp
@@ -92,7 +83,7 @@ fun FluxSettingsScreen(
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = "Personalize your Flux experience",
-                color = FluxTextMuted,
+                color = colors.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -104,8 +95,8 @@ fun FluxSettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
-                    .background(Color.White, RoundedCornerShape(26.dp))
-                    .border(0.5.dp, Color(0xFFF1F5F9), RoundedCornerShape(26.dp))
+                    .background(colors.cardBg, RoundedCornerShape(26.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
                     .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -117,7 +108,7 @@ fun FluxSettingsScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFFFF2EB)),
+                            .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -133,13 +124,13 @@ fun FluxSettingsScreen(
                     Column {
                         Text(
                             text = "App Theme",
-                            color = FluxTextDark,
+                            color = colors.textPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Choose how Flux looks",
-                            color = FluxTextMuted,
+                            color = colors.textSecondary,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -150,8 +141,8 @@ fun FluxSettingsScreen(
                     // Light / Dark Toggle Capsule
                     Row(
                         modifier = Modifier
-                            .background(Color(0xFFF8FAFC), RoundedCornerShape(20.dp))
-                            .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                            .background(colors.pillBg, RoundedCornerShape(20.dp))
+                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
                             .padding(3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -159,12 +150,7 @@ fun FluxSettingsScreen(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (selectedTheme == "Light") Color.White else Color.Transparent)
-                                .border(
-                                    width = if (selectedTheme == "Light") 1.dp else 0.dp,
-                                    color = if (selectedTheme == "Light") FluxOrange else Color.Transparent,
-                                    shape = RoundedCornerShape(16.dp)
-                                )
+                                .background(if (selectedTheme == "Light") (if (isDarkTheme) Color(0xFF334155) else FluxOrange) else Color.Transparent)
                                 .clickable {
                                     selectedTheme = "Light"
                                     viewModel.setDarkTheme(false)
@@ -175,13 +161,13 @@ fun FluxSettingsScreen(
                             Icon(
                                 imageVector = Icons.Outlined.LightMode,
                                 contentDescription = null,
-                                tint = if (selectedTheme == "Light") FluxOrange else FluxTextMuted,
+                                tint = if (selectedTheme == "Light") Color.White else colors.textSecondary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Light",
-                                color = if (selectedTheme == "Light") FluxOrange else FluxTextMuted,
+                                color = if (selectedTheme == "Light") Color.White else colors.textSecondary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -191,7 +177,7 @@ fun FluxSettingsScreen(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (selectedTheme == "Dark") Color.White else Color.Transparent)
+                                .background(if (selectedTheme == "Dark") FluxOrange else Color.Transparent)
                                 .clickable {
                                     selectedTheme = "Dark"
                                     viewModel.setDarkTheme(true)
@@ -202,15 +188,15 @@ fun FluxSettingsScreen(
                             Icon(
                                 imageVector = Icons.Outlined.DarkMode,
                                 contentDescription = null,
-                                tint = if (selectedTheme == "Dark") FluxTextDark else FluxTextMuted,
+                                tint = if (selectedTheme == "Dark") Color.White else colors.textSecondary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Dark",
-                                color = if (selectedTheme == "Dark") FluxTextDark else FluxTextMuted,
+                                color = if (selectedTheme == "Dark") Color.White else colors.textSecondary,
                                 fontSize = 11.5.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -224,8 +210,8 @@ fun FluxSettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(4.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
-                    .background(Color.White, RoundedCornerShape(26.dp))
-                    .border(0.5.dp, Color(0xFFF1F5F9), RoundedCornerShape(26.dp))
+                    .background(colors.cardBg, RoundedCornerShape(26.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
                     .padding(horizontal = 18.dp, vertical = 14.dp)
             ) {
                 Row(
@@ -237,7 +223,7 @@ fun FluxSettingsScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFDBEAFE)),
+                            .background(if (isDarkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -253,13 +239,13 @@ fun FluxSettingsScreen(
                     Column {
                         Text(
                             text = "Temperature Unit",
-                            color = FluxTextDark,
+                            color = colors.textPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "Display temperature in",
-                            color = FluxTextMuted,
+                            color = colors.textSecondary,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -270,15 +256,15 @@ fun FluxSettingsScreen(
                     // °C / °F Pill
                     Row(
                         modifier = Modifier
-                            .background(Color(0xFFF8FAFC), RoundedCornerShape(20.dp))
-                            .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(20.dp))
+                            .background(colors.pillBg, RoundedCornerShape(20.dp))
+                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
                             .padding(3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (selectedUnit == "C") Color(0xFF111827) else Color.Transparent)
+                                .background(if (selectedUnit == "C") (if (isDarkTheme) FluxOrange else Color(0xFF111827)) else Color.Transparent)
                                 .clickable {
                                     selectedUnit = "C"
                                     viewModel.setPreferredUnit("C")
@@ -288,7 +274,7 @@ fun FluxSettingsScreen(
                         ) {
                             Text(
                                 text = "°C",
-                                color = if (selectedUnit == "C") Color.White else FluxTextMuted,
+                                color = if (selectedUnit == "C") Color.White else colors.textSecondary,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -297,7 +283,7 @@ fun FluxSettingsScreen(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (selectedUnit == "F") Color(0xFF111827) else Color.Transparent)
+                                .background(if (selectedUnit == "F") (if (isDarkTheme) FluxOrange else Color(0xFF111827)) else Color.Transparent)
                                 .clickable {
                                     selectedUnit = "F"
                                     viewModel.setPreferredUnit("F")
@@ -307,7 +293,7 @@ fun FluxSettingsScreen(
                         ) {
                             Text(
                                 text = "°F",
-                                color = if (selectedUnit == "F") Color.White else FluxTextMuted,
+                                color = if (selectedUnit == "F") Color.White else colors.textSecondary,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -326,10 +312,18 @@ fun FluxSettingsScreen(
                     .clip(RoundedCornerShape(26.dp))
                     .background(
                         brush = Brush.verticalGradient(
-                            colors = listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC))
+                            colors = if (isDarkTheme) {
+                                listOf(Color(0xFF2A2420), Color(0xFF1E1E28))
+                            } else {
+                                listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC))
+                            }
                         )
                     )
-                    .border(0.5.dp, Color(0xFFFFD9C7), RoundedCornerShape(26.dp))
+                    .border(
+                        0.5.dp,
+                        if (isDarkTheme) FluxOrange.copy(alpha = 0.35f) else Color(0xFFFFD9C7),
+                        RoundedCornerShape(26.dp)
+                    )
                     .padding(18.dp)
             ) {
                 Column {
@@ -342,7 +336,7 @@ fun FluxSettingsScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(Color.White),
+                                .background(if (isDarkTheme) Color(0xFF332014) else Color.White),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -358,13 +352,13 @@ fun FluxSettingsScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Temperature Alerts",
-                                color = FluxTextDark,
+                                color = colors.textPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Get notified when temperature is out of range",
-                                color = FluxTextMuted,
+                                color = colors.textSecondary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -384,7 +378,10 @@ fun FluxSettingsScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    Divider(color = Color(0xFFFFD9C7).copy(alpha = 0.6f), thickness = 0.5.dp)
+                    Divider(
+                        color = if (isDarkTheme) Color(0xFF334155) else Color(0xFFFFD9C7).copy(alpha = 0.6f),
+                        thickness = 0.5.dp
+                    )
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -397,7 +394,7 @@ fun FluxSettingsScreen(
                         Column {
                             Text(
                                 text = "Min Limit",
-                                color = FluxTextMuted,
+                                color = colors.textSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -408,8 +405,8 @@ fun FluxSettingsScreen(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White)
-                                        .border(0.5.dp, Color(0xFFE2E8F0), CircleShape)
+                                        .background(if (isDarkTheme) Color(0xFF334155) else Color.White)
+                                        .border(0.5.dp, colors.cardBorder, CircleShape)
                                         .clickable {
                                             if (currentMinLimit > 0) {
                                                 currentMinLimit--
@@ -421,7 +418,7 @@ fun FluxSettingsScreen(
                                     Icon(
                                         imageVector = Icons.Filled.Remove,
                                         contentDescription = null,
-                                        tint = FluxTextDark,
+                                        tint = colors.textPrimary,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -430,7 +427,7 @@ fun FluxSettingsScreen(
 
                                 Text(
                                     text = "$currentMinLimit°C",
-                                    color = FluxTextDark,
+                                    color = colors.textPrimary,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -465,7 +462,7 @@ fun FluxSettingsScreen(
                         Column {
                             Text(
                                 text = "Max Limit",
-                                color = FluxTextMuted,
+                                color = colors.textSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -476,8 +473,8 @@ fun FluxSettingsScreen(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(Color.White)
-                                        .border(0.5.dp, Color(0xFFE2E8F0), CircleShape)
+                                        .background(if (isDarkTheme) Color(0xFF334155) else Color.White)
+                                        .border(0.5.dp, colors.cardBorder, CircleShape)
                                         .clickable {
                                             if (currentMaxLimit > currentMinLimit + 1) {
                                                 currentMaxLimit--
@@ -489,7 +486,7 @@ fun FluxSettingsScreen(
                                     Icon(
                                         imageVector = Icons.Filled.Remove,
                                         contentDescription = null,
-                                        tint = FluxTextDark,
+                                        tint = colors.textPrimary,
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
@@ -498,7 +495,7 @@ fun FluxSettingsScreen(
 
                                 Text(
                                     text = "$currentMaxLimit°C",
-                                    color = FluxTextDark,
+                                    color = colors.textPrimary,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -540,8 +537,8 @@ fun FluxSettingsScreen(
                     .fillMaxWidth()
                     .shadow(6.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
                     .clip(RoundedCornerShape(26.dp))
-                    .background(Color.White)
-                    .border(0.5.dp, Color(0xFFF1F5F9), RoundedCornerShape(26.dp))
+                    .background(colors.cardBg)
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
                     .padding(18.dp)
             ) {
                 Column {
@@ -554,7 +551,7 @@ fun FluxSettingsScreen(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFF1F5F9)),
+                                .background(if (isDarkTheme) Color(0xFF334155) else Color(0xFFF1F5F9)),
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
@@ -570,13 +567,13 @@ fun FluxSettingsScreen(
                         Column {
                             Text(
                                 text = "Device Information",
-                                color = FluxTextDark,
+                                color = colors.textPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "View your connected device details",
-                                color = FluxTextMuted,
+                                color = colors.textSecondary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -587,7 +584,7 @@ fun FluxSettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
-                            tint = Color(0xFF94A3B8),
+                            tint = colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -604,7 +601,8 @@ fun FluxSettingsScreen(
                             DeviceDetailRow(
                                 icon = Icons.Outlined.Wifi,
                                 label = "Device",
-                                value = "ESP32"
+                                value = "ESP32",
+                                colors = colors
                             )
 
                             Spacer(modifier = Modifier.height(12.dp))
@@ -617,13 +615,13 @@ fun FluxSettingsScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.MonitorHeart,
                                     contentDescription = null,
-                                    tint = Color(0xFF94A3B8),
+                                    tint = colors.textSecondary,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
                                     text = "Status",
-                                    color = FluxTextMuted,
+                                    color = colors.textSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -638,7 +636,7 @@ fun FluxSettingsScreen(
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = "Online",
-                                        color = FluxTextDark,
+                                        color = colors.textPrimary,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium
                                     )
@@ -651,7 +649,8 @@ fun FluxSettingsScreen(
                             DeviceDetailRow(
                                 icon = Icons.Outlined.LocationOn,
                                 label = "Device ID",
-                                value = "DS18B20 • ESP32"
+                                value = "DS18B20 • ESP32",
+                                colors = colors
                             )
                         }
 
@@ -662,7 +661,7 @@ fun FluxSettingsScreen(
                             modifier = Modifier
                                 .size(105.dp)
                                 .clip(RoundedCornerShape(18.dp))
-                                .background(Color(0xFFFFF2EB)),
+                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
@@ -685,7 +684,8 @@ fun FluxSettingsScreen(
 private fun DeviceDetailRow(
     icon: ImageVector,
     label: String,
-    value: String
+    value: String,
+    colors: FluxColors = rememberFluxColors(false)
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -694,20 +694,20 @@ private fun DeviceDetailRow(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = Color(0xFF94A3B8),
+            tint = colors.textSecondary,
             modifier = Modifier.size(16.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = label,
-            color = FluxTextMuted,
+            color = colors.textSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
             text = value,
-            color = FluxTextDark,
+            color = colors.textPrimary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )

@@ -39,25 +39,19 @@ fun FluxProfilesScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
 
+    val darkTheme by viewModel.isDarkTheme.collectAsState()
+    val colors = rememberFluxColors(darkTheme)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // 1. Shared Flux Header
-            FluxHeader(
-                isOnline = isOnline,
-                hasUnreadAlerts = true,
-                onNotificationClick = onNotificationClick
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            // Spacer to clear the fixed top header
+            Spacer(modifier = Modifier.height(72.dp))
 
             // 2. Back Button & Title Row
             Row(
@@ -67,7 +61,7 @@ fun FluxProfilesScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                     contentDescription = "Back",
-                    tint = FluxTextDark,
+                    tint = colors.textPrimary,
                     modifier = Modifier
                         .size(32.dp)
                         .clip(RoundedCornerShape(8.dp))
@@ -76,7 +70,7 @@ fun FluxProfilesScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Monitoring Profiles",
-                    color = FluxTextDark,
+                    color = colors.textPrimary,
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = (-0.5).sp
@@ -89,7 +83,8 @@ fun FluxProfilesScreen(
             ProfileCardItem(
                 title = "Live Monitor",
                 imageRes = R.drawable.probe_temp,
-                gradientColors = listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC)),
+                darkTheme = darkTheme,
+                colors = colors,
                 isActive = activeProfile == "Live Monitor",
                 onClick = {
                     viewModel.saveActiveProfile("Live Monitor")
@@ -102,7 +97,8 @@ fun FluxProfilesScreen(
             ProfileCardItem(
                 title = "Environment",
                 imageRes = R.drawable.plant_env,
-                gradientColors = listOf(Color(0xFFF7FDF9), Color(0xFFDCFCE7)),
+                darkTheme = darkTheme,
+                colors = colors,
                 isActive = activeProfile == "Environment",
                 onClick = {
                     viewModel.saveActiveProfile("Environment")
@@ -115,7 +111,8 @@ fun FluxProfilesScreen(
             ProfileCardItem(
                 title = "Liquid",
                 imageRes = R.drawable.glass_water,
-                gradientColors = listOf(Color(0xFFF8FAFC), Color(0xFFDBEAFE)),
+                darkTheme = darkTheme,
+                colors = colors,
                 isActive = activeProfile == "Liquid",
                 onClick = {
                     viewModel.saveActiveProfile("Liquid")
@@ -128,7 +125,8 @@ fun FluxProfilesScreen(
             ProfileCardItem(
                 title = "Fermentation",
                 imageRes = R.drawable.ferment_jar,
-                gradientColors = listOf(Color(0xFFFFFDF8), Color(0xFFFFEDD5)),
+                darkTheme = darkTheme,
+                colors = colors,
                 isActive = activeProfile == "Fermentation",
                 onClick = {
                     viewModel.saveActiveProfile("Fermentation")
@@ -144,10 +142,27 @@ fun FluxProfilesScreen(
 private fun ProfileCardItem(
     title: String,
     imageRes: Int,
-    gradientColors: List<Color>,
+    darkTheme: Boolean,
+    colors: FluxColors,
     isActive: Boolean,
     onClick: () -> Unit
 ) {
+    val gradientColors = if (darkTheme) {
+        when (title) {
+            "Live Monitor" -> listOf(Color(0xFF2A201A), Color(0xFF1E1E28))
+            "Environment" -> listOf(Color(0xFF132B1C), Color(0xFF131D24))
+            "Liquid" -> listOf(Color(0xFF14243A), Color(0xFF131B28))
+            else -> listOf(Color(0xFF2B2014), Color(0xFF1E1B24))
+        }
+    } else {
+        when (title) {
+            "Live Monitor" -> listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC))
+            "Environment" -> listOf(Color(0xFFF7FDF9), Color(0xFFDCFCE7))
+            "Liquid" -> listOf(Color(0xFFF8FAFC), Color(0xFFDBEAFE))
+            else -> listOf(Color(0xFFFFFDF8), Color(0xFFFFEDD5))
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -163,7 +178,7 @@ private fun ProfileCardItem(
             )
             .border(
                 width = if (isActive) 1.5.dp else 0.5.dp,
-                color = if (isActive) FluxOrange else Color(0xFFF1F5F9),
+                color = if (isActive) FluxOrange else (if (darkTheme) Color(0xFF334155) else Color(0xFFF1F5F9)),
                 shape = RoundedCornerShape(26.dp)
             )
             .clickable { onClick() }
@@ -194,7 +209,7 @@ private fun ProfileCardItem(
             // Center Title
             Text(
                 text = title,
-                color = FluxTextDark,
+                color = colors.textPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.3).sp
@@ -206,7 +221,7 @@ private fun ProfileCardItem(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = FluxTextDark,
+                tint = colors.textPrimary,
                 modifier = Modifier.size(24.dp)
             )
         }

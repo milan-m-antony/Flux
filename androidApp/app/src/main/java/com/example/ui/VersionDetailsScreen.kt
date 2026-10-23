@@ -54,12 +54,12 @@ fun VersionDetailsScreen(onBack: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             
             // Brand Logo & Animation
-            NaTLogo(modifier = Modifier.size(120.dp))
+            FluxLogo(modifier = Modifier.size(120.dp))
             
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "NaTrack Mobile",
+                text = "Flux Telemetry Mobile",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface

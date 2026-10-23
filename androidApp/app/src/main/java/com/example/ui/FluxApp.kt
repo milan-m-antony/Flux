@@ -5,6 +5,9 @@ import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -14,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -118,7 +122,11 @@ fun FluxApp(viewModel: MainViewModel) {
         else -> null
     }
 
-    FluxBackground {
+    val isDarkTheme by viewModel.isDarkTheme.collectAsState()
+    val connectionState by viewModel.connectionState.collectAsState()
+    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
+
+    FluxBackground(darkTheme = isDarkTheme) {
         Scaffold(
             containerColor = Color.Transparent
         ) { innerPadding ->
@@ -126,7 +134,11 @@ fun FluxApp(viewModel: MainViewModel) {
                 NavHost(
                     navController = navController,
                     startDestination = HomeRoute,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    enterTransition = { androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240)) },
+                    exitTransition = { androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) },
+                    popEnterTransition = { androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240)) },
+                    popExitTransition = { androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) }
                 ) {
                     // 1. Screen 1 — Home (Exact match to Reference Screenshot 1)
                     composable<HomeRoute> {
@@ -300,6 +312,32 @@ fun FluxApp(viewModel: MainViewModel) {
                     }
                 }
 
+                // Shared Fixed Top Header (Rendered permanently on all 5 main screens)
+                if (activeScreen != null) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .align(Alignment.TopCenter)
+                    ) {
+                        FluxHeader(
+                            isOnline = isOnline,
+                            isBleConnected = connectionState == com.example.ble.ConnectionState.CONNECTED,
+                            isWifiConnected = true,
+                            darkTheme = isDarkTheme,
+                            hasUnreadAlerts = true,
+                            onNotificationClick = {
+                                navController.navigate(AlertsRoute) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                        )
+                    }
+                }
+
                 // Shared Floating Bottom Navigation Bar (Rendered on all 5 main screens)
                 if (activeScreen != null) {
                     FluxBottomNavigation(
@@ -320,7 +358,8 @@ fun FluxApp(viewModel: MainViewModel) {
                                 restoreState = true
                             }
                         },
-                        modifier = Modifier.align(Alignment.BottomCenter)
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                        darkTheme = isDarkTheme
                     )
                 }
             }
