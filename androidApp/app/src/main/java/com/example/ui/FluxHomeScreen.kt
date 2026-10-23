@@ -129,10 +129,10 @@ fun FluxHomeScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 1. Spacer to cleanly clear the fixed top header without excessive gap
-            Spacer(modifier = Modifier.height(52.dp))
+            // 1. Spacer to cleanly clear the fixed top header with generous breathing room
+            Spacer(modifier = Modifier.height(84.dp))
 
-            // 2. Large Circular Temperature Gauge (Reduced height to 204.dp to fit 1-page without scrolling)
+            // 2. Large Circular Temperature Gauge (Slightly reduced from 290.dp to 265.dp to preserve generous size)
             TemperatureGauge(
                 temperature = currentTempC.toFloat(),
                 minTemp = 16f,
@@ -143,12 +143,12 @@ fun FluxHomeScreen(
                 colors = colors,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(204.dp)
+                    .height(265.dp)
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // 3. Segmented Unit Selector (°C / °F) and History/Trend Button Row (Height ~ 36.dp)
+            // 3. Segmented Unit Selector (°C / °F) and History/Trend Button Row (Comfortable height ~ 40.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -173,13 +173,13 @@ fun FluxHomeScreen(
                                 selectedUnit = "C"
                                 viewModel.setPreferredUnit("C")
                             }
-                            .padding(horizontal = 18.dp, vertical = 6.dp),
+                            .padding(horizontal = 20.dp, vertical = 7.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "°C",
                             color = if (selectedUnit == "C") Color.White else colors.textSecondary,
-                            fontSize = 13.sp,
+                            fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -192,22 +192,22 @@ fun FluxHomeScreen(
                                 selectedUnit = "F"
                                 viewModel.setPreferredUnit("F")
                             }
-                            .padding(horizontal = 18.dp, vertical = 6.dp),
+                            .padding(horizontal = 20.dp, vertical = 7.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "°F",
                             color = if (selectedUnit == "F") Color.White else colors.textSecondary,
-                            fontSize = 13.sp,
+                            fontSize = 13.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Trend/Chart Action Button (Square-round circular button with vertical bar chart icon)
+                // Trend/Chart Action Button (Circular button with vertical bar chart icon)
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(40.dp)
                         .shadow(3.dp, CircleShape, spotColor = Color(0x10000000))
                         .clip(CircleShape)
                         .background(colors.cardBg)
@@ -219,12 +219,12 @@ fun FluxHomeScreen(
                         imageVector = Icons.Outlined.BarChart,
                         contentDescription = "View Trend",
                         tint = colors.textPrimary,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // 4. Temperature Trend Card (Interactive Graph, Filter, Min/Max/Avg Stat Cards)
             TemperatureTrendCard(
@@ -236,7 +236,7 @@ fun FluxHomeScreen(
             )
 
             // 5. Bottom clearance padding to keep content above floating navigation bar
-            Spacer(modifier = Modifier.height(72.dp))
+            Spacer(modifier = Modifier.height(78.dp))
         }
     }
 }
@@ -259,6 +259,10 @@ private fun TemperatureGauge(
         label = "gauge_progress"
     )
 
+    // Accurate min/max labels converting properly for Fahrenheit
+    val minDisplay = if (unitSymbol == "°F") "${((minTemp * 9 / 5) + 32).toInt()}°F" else "${minTemp.toInt()}°C"
+    val maxDisplay = if (unitSymbol == "°F") "${((maxTemp * 9 / 5) + 32).toInt()}°F" else "${maxTemp.toInt()}°C"
+
     BoxWithConstraints(
         modifier = modifier,
         contentAlignment = Alignment.Center
@@ -268,22 +272,22 @@ private fun TemperatureGauge(
         val centerX = totalWidth / 2
         val centerY = totalHeight / 2 - 2.dp
 
-        val radiusDp = 84.dp
+        val radiusDp = 104.dp
         // 135° (bottom left) and 45° (bottom right)
         // cos(45°) = 0.7071f, sin(45°) = 0.7071f
         val arcOffsetX = radiusDp * 0.7071f
         val arcOffsetY = radiusDp * 0.7071f
-        val labelYDp = centerY + arcOffsetY + 10.dp
+        val labelYDp = centerY + arcOffsetY + 12.dp
 
         // 1. Top "Medium" needle marker label directly above the 12 o'clock apex
         Text(
             text = "Medium",
             color = colors.textPrimary,
-            fontSize = 11.5.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (centerY - radiusDp - 18.dp).coerceAtLeast(0.dp))
+                .offset(y = (centerY - radiusDp - 20.dp).coerceAtLeast(0.dp))
         )
 
         // 2. Circular Gauge Canvas (Outer Radial Ticks, Track, Active Arc, Knob)
@@ -295,9 +299,9 @@ private fun TemperatureGauge(
             val sweepTotalAngle = 270f
 
             // A. Outer Concentric Ring of Fine Radial Ticks
-            val numTicks = 46
-            val tickRadiusOuter = radius + 15.dp.toPx()
-            val tickRadiusInner = radius + 10.dp.toPx()
+            val numTicks = 48
+            val tickRadiusOuter = radius + 18.dp.toPx()
+            val tickRadiusInner = radius + 12.dp.toPx()
             val tickColor = if (darkTheme) Color(0xFF475569) else Color(0xFFCBD5E1)
 
             for (i in 0..numTicks) {
@@ -315,7 +319,7 @@ private fun TemperatureGauge(
                     color = tickColor,
                     start = p1,
                     end = p2,
-                    strokeWidth = 1.2.dp.toPx(),
+                    strokeWidth = 1.3.dp.toPx(),
                     cap = StrokeCap.Round
                 )
             }
@@ -329,7 +333,7 @@ private fun TemperatureGauge(
                 useCenter = false,
                 topLeft = Offset(center.x - radius, center.y - radius),
                 size = Size(radius * 2, radius * 2),
-                style = Stroke(width = 14.dp.toPx(), cap = StrokeCap.Round)
+                style = Stroke(width = 18.dp.toPx(), cap = StrokeCap.Round)
             )
 
             // C. Active Orange Gradient Arc
@@ -343,7 +347,7 @@ private fun TemperatureGauge(
                     useCenter = false,
                     topLeft = Offset(center.x - radius, center.y - radius),
                     size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = 18.dp.toPx(), cap = StrokeCap.Round)
+                    style = Stroke(width = 22.dp.toPx(), cap = StrokeCap.Round)
                 )
 
                 // Main vibrant orange gradient stroke
@@ -361,7 +365,7 @@ private fun TemperatureGauge(
                     useCenter = false,
                     topLeft = Offset(center.x - radius, center.y - radius),
                     size = Size(radius * 2, radius * 2),
-                    style = Stroke(width = 14.dp.toPx(), cap = StrokeCap.Round)
+                    style = Stroke(width = 18.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
 
@@ -374,24 +378,24 @@ private fun TemperatureGauge(
             // Outer white thumb with crisp orange border
             drawCircle(
                 color = Color.White,
-                radius = 8.5.dp.toPx(),
+                radius = 10.dp.toPx(),
                 center = thumbPos
             )
             drawCircle(
                 color = FluxOrange,
-                radius = 8.5.dp.toPx(),
+                radius = 10.dp.toPx(),
                 center = thumbPos,
-                style = Stroke(width = 2.8.dp.toPx())
+                style = Stroke(width = 3.dp.toPx())
             )
         }
 
-        // 3. Inner Elevated White/Card Circle
+        // 3. Inner Elevated White/Card Circle (Comfortably sized at 158.dp)
         Box(
             modifier = Modifier
-                .size(132.dp)
+                .size(158.dp)
                 .offset(y = (-2).dp)
                 .shadow(
-                    elevation = 8.dp,
+                    elevation = 9.dp,
                     shape = CircleShape,
                     spotColor = Color(0x16000000),
                     ambientColor = Color(0x08000000)
@@ -410,21 +414,21 @@ private fun TemperatureGauge(
                     imageVector = Icons.Outlined.Thermostat,
                     contentDescription = null,
                     tint = colors.textPrimary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(22.dp)
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 // Big bold reading
                 Text(
                     text = "$displayTempStr$unitSymbol",
                     color = colors.textPrimary,
-                    fontSize = 30.sp,
+                    fontSize = 38.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-0.5).sp
                 )
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(3.dp))
 
                 // Stable status with orange dot
                 Row(
@@ -432,15 +436,15 @@ private fun TemperatureGauge(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
+                            .size(6.5.dp)
                             .clip(CircleShape)
                             .background(FluxOrange)
                     )
-                    Spacer(modifier = Modifier.width(5.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Stable",
                         color = FluxTextMuted,
-                        fontSize = 11.5.sp,
+                        fontSize = 12.5.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -457,9 +461,9 @@ private fun TemperatureGauge(
                 )
         ) {
             Text(
-                text = "${minTemp.toInt()}$unitSymbol",
+                text = minDisplay,
                 color = FluxTextMuted,
-                fontSize = 11.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -469,14 +473,14 @@ private fun TemperatureGauge(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .offset(
-                    x = (centerX + arcOffsetX - 14.dp).coerceAtMost(totalWidth - 30.dp),
+                    x = (centerX + arcOffsetX - 16.dp).coerceAtMost(totalWidth - 36.dp),
                     y = labelYDp
                 )
         ) {
             Text(
-                text = "${maxTemp.toInt()}$unitSymbol",
+                text = maxDisplay,
                 color = FluxTextMuted,
-                fontSize = 11.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -508,7 +512,7 @@ private fun TemperatureTrendCard(
             )
             .background(colors.cardBg, RoundedCornerShape(20.dp))
             .border(0.5.dp, colors.cardBorder, RoundedCornerShape(20.dp))
-            .padding(12.dp)
+            .padding(14.dp)
     ) {
         Column {
             // Header Row: Title + Dropdown Selector
@@ -521,14 +525,14 @@ private fun TemperatureTrendCard(
                     Text(
                         text = "Temperature Trend",
                         color = colors.textPrimary,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(1.dp))
                     Text(
                         text = selectedFilter.subtitle,
                         color = colors.textSecondary,
-                        fontSize = 10.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -541,16 +545,16 @@ private fun TemperatureTrendCard(
                             .background(colors.pillBg)
                             .border(0.5.dp, colors.pillBorder, RoundedCornerShape(14.dp))
                             .clickable { dropdownExpanded = true }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(horizontal = 9.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = selectedFilter.label,
                             color = colors.textPrimary,
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
                         )
-                        Spacer(modifier = Modifier.width(2.dp))
+                        Spacer(modifier = Modifier.width(3.dp))
                         Icon(
                             imageVector = Icons.Filled.ArrowDropDown,
                             contentDescription = "Select Time Range",
@@ -584,13 +588,13 @@ private fun TemperatureTrendCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Smooth Wavy Spline Chart with Interactive Touch Scrubbing & Tooltip
+            // Smooth Wavy Spline Chart with Interactive Touch Scrubbing & Tooltip (Height ~ 125.dp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(105.dp)
+                    .height(125.dp)
             ) {
                 InteractiveTrendChart(
                     filter = selectedFilter,
@@ -602,12 +606,12 @@ private fun TemperatureTrendCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Summary row: Min, Max, Average pills (Equal width weight 1f)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Min Card: Light blue container + blue thermometer
                 SummaryStatCard(
@@ -660,12 +664,12 @@ private fun SummaryStatCard(
         modifier = modifier
             .background(colors.pillBg, RoundedCornerShape(12.dp))
             .border(0.5.dp, colors.pillBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 7.dp, vertical = 7.dp),
+            .padding(horizontal = 8.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(26.dp)
+                .size(28.dp)
                 .clip(CircleShape)
                 .background(iconBgColor),
             contentAlignment = Alignment.Center
@@ -674,7 +678,7 @@ private fun SummaryStatCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(15.dp)
+                modifier = Modifier.size(16.dp)
             )
         }
         Spacer(modifier = Modifier.width(6.dp))
@@ -682,14 +686,14 @@ private fun SummaryStatCard(
             Text(
                 text = label,
                 color = colors.textSecondary,
-                fontSize = 9.5.sp,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1
             )
             Text(
                 text = value,
                 color = colors.textPrimary,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1
             )
@@ -796,7 +800,7 @@ private fun InteractiveTrendChart(
             val chartWidth = width - leftPadding - rightPadding
             val chartHeight = height - topPadding - bottomPadding
 
-            // 1. Horizontal dashed grid lines for Y levels (40, 30, 20, 10)
+            // 1. Horizontal dashed grid lines for Y levels
             val gridLineColor = if (darkTheme) Color(0xFF334155) else Color(0xFFEDF2F7)
             val yLevels = listOf(40f, 30f, 20f, 10f)
             for (i in yLevels.indices) {
@@ -865,7 +869,7 @@ private fun InteractiveTrendChart(
                 drawPath(
                     path = fullSplinePath,
                     color = FluxOrange,
-                    style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+                    style = Stroke(width = 2.8.dp.toPx(), cap = StrokeCap.Round)
                 )
             }
 
@@ -880,22 +884,22 @@ private fun InteractiveTrendChart(
                 color = if (darkTheme) Color(0xFF64748B) else Color(0xFFCBD5E1),
                 start = Offset(pointPos.x, pointPos.y),
                 end = Offset(pointPos.x, topPadding + chartHeight),
-                strokeWidth = 1.2.dp.toPx(),
+                strokeWidth = 1.3.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f)
             )
 
             // Outer white circle + orange border knob
-            drawCircle(color = Color.White, radius = 5.dp.toPx(), center = pointPos)
+            drawCircle(color = Color.White, radius = 5.5.dp.toPx(), center = pointPos)
             drawCircle(
                 color = FluxOrange,
-                radius = 5.dp.toPx(),
+                radius = 5.5.dp.toPx(),
                 center = pointPos,
-                style = Stroke(width = 2.dp.toPx())
+                style = Stroke(width = 2.2.dp.toPx())
             )
 
             // Floating dark tooltip badge with downward triangle pointer
-            val badgeW = 44.dp.toPx()
-            val badgeH = 19.dp.toPx()
+            val badgeW = 46.dp.toPx()
+            val badgeH = 20.dp.toPx()
             val badgeX = (pointPos.x - badgeW / 2f).coerceIn(leftPadding, width - rightPadding - badgeW)
             val badgeY = pointPos.y - badgeH - 6.dp.toPx()
 
@@ -917,7 +921,8 @@ private fun InteractiveTrendChart(
             drawPath(path = trianglePath, color = Color(0xFF1E232A))
         }
 
-        // Static Overlay for Y-Axis labels (40, 30, 20, 10)
+        // Static Overlay for Y-Axis labels (40, 30, 20, 10 or Fahrenheit equivalent)
+        val yLabels = if (isFahrenheit) listOf("104", "86", "68", "50") else listOf("40", "30", "20", "10")
         Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -925,10 +930,9 @@ private fun InteractiveTrendChart(
                 .padding(top = 22.dp, bottom = 18.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("40", color = FluxTextLight, fontSize = 8.5.sp, fontWeight = FontWeight.Medium)
-            Text("30", color = FluxTextLight, fontSize = 8.5.sp, fontWeight = FontWeight.Medium)
-            Text("20", color = FluxTextLight, fontSize = 8.5.sp, fontWeight = FontWeight.Medium)
-            Text("10", color = FluxTextLight, fontSize = 8.5.sp, fontWeight = FontWeight.Medium)
+            yLabels.forEach { label ->
+                Text(label, color = FluxTextLight, fontSize = 8.5.sp, fontWeight = FontWeight.Medium)
+            }
         }
 
         // X-Axis Timestamps (e.g. 10:20, 10:30, 10:40, 10:50, 11:00)
@@ -963,8 +967,8 @@ private fun InteractiveTrendChart(
             val normalizedActiveY = 1f - ((rawTempC - 10f) / 30f).coerceIn(0f, 1f)
             val activeYPx = topPaddingPx + (chartH * normalizedActiveY)
 
-            val badgeWPx = 44.dp
-            val badgeHPx = 19.dp
+            val badgeWPx = 46.dp
+            val badgeHPx = 20.dp
             val badgeLeft = (activeXPx - badgeWPx / 2).coerceIn(leftPaddingPx, maxWidth - rightPaddingPx - badgeWPx)
             val badgeTop = activeYPx - badgeHPx - 6.dp
 
