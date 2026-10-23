@@ -34,66 +34,32 @@ bool DisplayManager::tryInitializeDisplay(uint8_t address) noexcept {
 void DisplayManager::drawBootAnimation(unsigned long elapsed) noexcept {
     display_.clearDisplay();
 
-    // Stage 1: 0 - 600ms: Flame Ignition & Pulsing Rings
-    if (elapsed < 600) {
-        int16_t ringR = (int16_t)((elapsed / 25) % 24);
-        if (ringR > 2) {
-            display_.drawCircle(64, 24, ringR, SSD1306_WHITE);
-        }
-        uint8_t flameSize = (elapsed < 400) ? (uint8_t)(6 + (elapsed * 6 / 400)) : 12;
-        IconLibrary::drawFlame(display_, 64, 24, flameSize, SSD1306_WHITE);
-        display_.display();
-        return;
-    }
+    // 1. Centered Flame Icon at top
+    IconLibrary::drawFlame(display_, 64, 13, 11, SSD1306_WHITE);
 
-    // Stage 2: 600ms - 1500ms: Flame + FLUX Typography
-    if (elapsed < 1500) {
-        // Glowing flame with breathing pulse
-        uint8_t pulse = ((elapsed / 150) % 2 == 0) ? 12 : 13;
-        IconLibrary::drawFlame(display_, 64, 18, pulse, SSD1306_WHITE);
-        display_.drawCircle(64, 18, 17, SSD1306_WHITE);
-
-        // Bold Title
-        display_.setTextSize(2);
-        display_.setTextColor(SSD1306_WHITE);
-        display_.setCursor(40, 34);
-        display_.print("FLUX");
-
-        // Subtitle
-        display_.setTextSize(1);
-        display_.setCursor(18, 52);
-        display_.print("SMART TELEMETRY");
-        display_.display();
-        return;
-    }
-
-    // Stage 3: 1500ms - 2400ms: Hardware Diagnostics & Progress Bar Loading
-    // Flame & Title compact layout
-    IconLibrary::drawFlame(display_, 64, 13, 10, SSD1306_WHITE);
+    // 2. Bold "Flux" Typography (Size 2)
     display_.setTextSize(2);
     display_.setTextColor(SSD1306_WHITE);
-    display_.setCursor(40, 24);
-    display_.print("FLUX");
+    display_.setCursor(40, 26);
+    display_.print("Flux");
 
-    // Dynamic status text
+    // 3. Rounded Pill Progress Bar: (X=18, Y=43, W=92, H=8, r=3)
+    display_.drawRoundRect(18, 43, 92, 8, 3, SSD1306_WHITE);
+
+    // Dynamic Progress Fill: 0 to 86 px width
+    uint8_t fillW = 0;
+    if (elapsed > 300) {
+        fillW = (elapsed >= 2200) ? 86 : (uint8_t)((elapsed - 300) * 86 / 1900);
+    }
+    if (fillW > 0) {
+        display_.fillRoundRect(21, 45, fillW, 4, 2, SSD1306_WHITE);
+    }
+
+    // 4. Centered "Initializing..." Status Text (Size 1)
     display_.setTextSize(1);
-    if (elapsed < 1800) {
-        display_.setCursor(18, 41);
-        display_.print("INITIALIZING BLE...");
-    } else if (elapsed < 2100) {
-        display_.setCursor(24, 41);
-        display_.print("PROBE SENSORS OK");
-    } else {
-        display_.setCursor(26, 41);
-        display_.print("SYSTEM ONLINE");
-    }
-
-    // Progress bar fills across 1500ms -> 2400ms
-    display_.drawRoundRect(16, 52, 96, 7, 2, SSD1306_WHITE);
-    uint8_t prog = (elapsed >= 2400) ? 92 : (uint8_t)((elapsed - 1500) * 92 / 900);
-    if (prog > 2) {
-        display_.fillRoundRect(18, 54, prog - 2, 3, 1, SSD1306_WHITE);
-    }
+    display_.setTextColor(SSD1306_WHITE);
+    display_.setCursor(22, 54);
+    display_.print("Initializing...");
 
     display_.display();
 }

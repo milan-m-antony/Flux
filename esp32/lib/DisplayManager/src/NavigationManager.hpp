@@ -20,6 +20,9 @@ public:
 
     int16_t getSlideOffset() const noexcept;
     int getSettingsIndex() const noexcept {
+        if (state_ && state_->activeScreen == ScreenId::ModeSelection) {
+            return modeIndex_;
+        }
         return settingsIndex_;
     }
 
@@ -29,6 +32,7 @@ private:
     unsigned long transitionStartMs_ = 0UL;
     bool slideLeft_ = true; // true = slide left (next), false = slide right (prev)
     int settingsIndex_ = 0;
+    int modeIndex_ = 0;
 
     static constexpr unsigned long TransitionDurationMs = 200UL;
 };

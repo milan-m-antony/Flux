@@ -11,26 +11,15 @@ void UIManager::render(Adafruit_SSD1306& display, const DeviceState& state, bool
         return;
     }
 
-    int batteryPercent = state.batteryPercentage;
-    bool isCharging = state.charging;
-    bool isBluetoothConnected = state.bluetoothConnected;
-    float tempCelsius = state.temperature;
-
-    // Draw static Top and Bottom bars
+    // 1. Draw persistent top header (Flame + bold Flux + Bluetooth + Wi-Fi + divider line)
     HeaderWidget::draw(display, state, btBlinkState);
-    FooterWidget::draw(display, state);
 
     bool transitioning = nav_->isTransitioning();
     int16_t slideOffset = nav_->getSlideOffset();
     int settingsIndex = nav_->getSettingsIndex();
 
     if (transitioning) {
-        int16_t prevOffset = 0;
-        if (slideOffset > 0) {
-            prevOffset = slideOffset - 128;
-        } else {
-            prevOffset = slideOffset + 128;
-        }
+        int16_t prevOffset = (slideOffset > 0) ? (slideOffset - 128) : (slideOffset + 128);
 
         // Draw previous screen content
         screenMgr_.drawScreen(display, state.previousScreen, prevOffset, state, settingsIndex);

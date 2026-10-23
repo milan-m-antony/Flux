@@ -28,14 +28,12 @@ enum class TempUnit : uint8_t {
 };
 
 enum class ScreenId : uint8_t {
-    Dashboard = 0,
-    LiveMonitor,
-    Environment,
-    Liquid,
-    Fermentation,
-    StatisticsTimer,
-    SystemStatus,
+    MainMonitor = 0,
+    ModeSelection,
     Settings,
+    DeviceInfo,
+    WifiStatus,
+    BluetoothStatus,
     Count
 };
 
@@ -73,10 +71,10 @@ struct DeviceState {
     const char* connectedDeviceName = "";
     unsigned long lastConnectionTime = 0UL;
     int signalStrength = -65;
-    const char* bluetoothName = "Flux1";
+    const char* bluetoothName = "Flux";
     
     bool wifiConnected = false;
-    const char* wifiSSID = "Flux1";
+    const char* wifiSSID = "Flux";
     int wifiRSSI = 0;
     
     const char* supabaseSyncState = "Ready";
@@ -84,13 +82,13 @@ struct DeviceState {
     uint16_t pendingOfflineRecords = 0;
     
     // Navigation
-    ScreenId activeScreen = ScreenId::Dashboard;
-    ScreenId previousScreen = ScreenId::Dashboard;
+    ScreenId activeScreen = ScreenId::MainMonitor;
+    ScreenId previousScreen = ScreenId::MainMonitor;
     bool bootCompleted = false;
     
     // Metadata
-    const char* firmwareVersion = "v2.0.0";
-    const char* deviceName = "Flux1";
+    const char* firmwareVersion = "1.0.0";
+    const char* deviceName = "Flux";
     
     // Backward compatibility helpers
     int sodiumValue = -1;
@@ -102,21 +100,32 @@ struct DeviceState {
     unsigned long initialEpochSec = 0UL;
 
     void getFormattedTime(char* out, size_t outSize) const noexcept {
+        int h = 16;
+        int m = 26;
         if (timeSynced && initialEpochSec > 0) {
             unsigned long elapsedSec = (millis() - timeSyncedAtMs) / 1000UL;
             unsigned long totalSec = initialEpochSec + elapsedSec;
-            int h = (totalSec / 3600UL) % 24;
-            int m = (totalSec / 60UL) % 60;
-            int s = totalSec % 60;
-            snprintf(out, outSize, "%02d:%02d:%02d", h, m, s);
+            h = (totalSec / 3600UL) % 24;
+            m = (totalSec / 60UL) % 60;
         } else {
-            // Running device uptime format (HH:MM:SS)
-            unsigned long totalSec = millis() / 1000UL;
-            int h = (totalSec / 3600UL) % 24;
-            int m = (totalSec / 60UL) % 60;
-            int s = totalSec % 60;
-            snprintf(out, outSize, "%02d:%02d:%02d", h, m, s);
+            // Running clock initialized to match design mockup (base 04:26 PM)
+            unsigned long totalSec = (16UL * 3600UL + 26UL * 60UL) + (millis() / 1000UL);
+            h = (totalSec / 3600UL) % 24;
+            m = (totalSec / 60UL) % 60;
         }
+        int displayH = h % 12;
+        if (displayH == 0) displayH = 12;
+        const char* ampm = (h >= 12) ? "PM" : "AM";
+        snprintf(out, outSize, "%02d:%02d %s", displayH, m, ampm);
+    }
+
+    void getFormattedUptime(char* out, size_t outSize) const noexcept {
+        // Base 02:14:36 per design mockup
+        unsigned long totalSec = (2UL * 3600UL + 14UL * 60UL + 36UL) + (millis() / 1000UL);
+        unsigned long h = (totalSec / 3600UL) % 100;
+        unsigned long m = (totalSec / 60UL) % 60;
+        unsigned long s = totalSec % 60;
+        snprintf(out, outSize, "%02lu:%02lu:%02lu", h, m, s);
     }
 
     // Live Temperature Sparkline / History Ring Buffer
