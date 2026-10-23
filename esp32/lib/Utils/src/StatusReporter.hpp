@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "NaTrackConfig.hpp"
+#include "FluxConfig.hpp"
 #include "SystemInfo.hpp"
 
 namespace NaTrack {

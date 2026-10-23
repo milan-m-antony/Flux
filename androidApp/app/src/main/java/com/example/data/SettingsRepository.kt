@@ -6,8 +6,8 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,8 +19,15 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     companion object {
         val LAST_DEVICE_ADDRESS = stringPreferencesKey("last_device_address")
         val LAST_DEVICE_NAME = stringPreferencesKey("last_device_name")
-        val LOW_ALERT_THRESHOLD = doublePreferencesKey("low_alert_threshold")
-        val HIGH_ALERT_THRESHOLD = doublePreferencesKey("high_alert_threshold")
+        val PREFERRED_UNIT = stringPreferencesKey("preferred_unit") // "C" or "F"
+        val ACTIVE_PROFILE = stringPreferencesKey("active_profile") // "Live Monitor", "Environment", "Liquid Probe", "Fermentation"
+        val LOW_TEMP_THRESHOLD = doublePreferencesKey("low_temp_threshold")
+        val HIGH_TEMP_THRESHOLD = doublePreferencesKey("high_temp_threshold")
+        val CLOUD_UPLOAD_INTERVAL_SEC = intPreferencesKey("cloud_upload_interval_sec")
+        val SUPABASE_URL = stringPreferencesKey("supabase_url")
+        val SUPABASE_ANON_KEY = stringPreferencesKey("supabase_anon_key")
+        val ONESIGNAL_APP_ID = stringPreferencesKey("onesignal_app_id")
+        
         val PUSH_ALERTS = booleanPreferencesKey("push_alerts")
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
         val VIBRATION_ALERTS = booleanPreferencesKey("vibration_alerts")
@@ -37,21 +44,26 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     val lastDeviceAddress: Flow<String?> = dataStore.data.map { it[LAST_DEVICE_ADDRESS] }
     val lastDeviceName: Flow<String?> = dataStore.data.map { it[LAST_DEVICE_NAME] }
-    
-    val lowAlertThreshold: Flow<Double> = dataStore.data.map { it[LOW_ALERT_THRESHOLD] ?: 135.0 }
-    val highAlertThreshold: Flow<Double> = dataStore.data.map { it[HIGH_ALERT_THRESHOLD] ?: 145.0 }
-    
+    val preferredUnit: Flow<String> = dataStore.data.map { it[PREFERRED_UNIT] ?: "C" }
+    val activeProfile: Flow<String> = dataStore.data.map { it[ACTIVE_PROFILE] ?: "Live Monitor" }
+    val lowTempThreshold: Flow<Double> = dataStore.data.map { it[LOW_TEMP_THRESHOLD] ?: 18.0 }
+    val highTempThreshold: Flow<Double> = dataStore.data.map { it[HIGH_TEMP_THRESHOLD] ?: 28.0 }
+    val cloudUploadIntervalSec: Flow<Int> = dataStore.data.map { it[CLOUD_UPLOAD_INTERVAL_SEC] ?: 5 }
+    val supabaseUrl: Flow<String> = dataStore.data.map { it[SUPABASE_URL] ?: "" }
+    val supabaseAnonKey: Flow<String> = dataStore.data.map { it[SUPABASE_ANON_KEY] ?: "" }
+    val onesignalAppId: Flow<String> = dataStore.data.map { it[ONESIGNAL_APP_ID] ?: "" }
+
     val pushAlerts: Flow<Boolean> = dataStore.data.map { it[PUSH_ALERTS] ?: true }
     val soundAlerts: Flow<Boolean> = dataStore.data.map { it[SOUND_ALERTS] ?: true }
     val vibrationAlerts: Flow<Boolean> = dataStore.data.map { it[VIBRATION_ALERTS] ?: true }
-    
+
     val userName: Flow<String> = dataStore.data.map { it[USER_NAME] ?: "" }
     val userAge: Flow<String> = dataStore.data.map { it[USER_AGE] ?: "" }
     val userWeight: Flow<String> = dataStore.data.map { it[USER_WEIGHT] ?: "" }
     val userHeight: Flow<String> = dataStore.data.map { it[USER_HEIGHT] ?: "" }
     val userPhotoUrl: Flow<String> = dataStore.data.map { it[USER_PHOTO_URL] ?: "" }
     val userNotes: Flow<String> = dataStore.data.map { it[USER_NOTES] ?: "" }
-    val isDarkTheme: Flow<Boolean> = dataStore.data.map { it[IS_DARK_THEME] ?: false }
+    val isDarkTheme: Flow<Boolean> = dataStore.data.map { it[IS_DARK_THEME] ?: true } // Flux defaults to sleek dark theme
     val waterIntakeMl: Flow<Int> = dataStore.data.map { it[WATER_INTAKE_ML] ?: 1250 }
     val waterGoalMl: Flow<Int> = dataStore.data.map { it[WATER_GOAL_ML] ?: 2500 }
 
@@ -69,10 +81,36 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun saveUnit(unit: String) {
+        dataStore.edit { prefs ->
+            prefs[PREFERRED_UNIT] = unit
+        }
+    }
+
+    suspend fun saveProfile(profile: String) {
+        dataStore.edit { prefs ->
+            prefs[ACTIVE_PROFILE] = profile
+        }
+    }
+
     suspend fun saveThresholds(low: Double, high: Double) {
         dataStore.edit { prefs ->
-            prefs[LOW_ALERT_THRESHOLD] = low
-            prefs[HIGH_ALERT_THRESHOLD] = high
+            prefs[LOW_TEMP_THRESHOLD] = low
+            prefs[HIGH_TEMP_THRESHOLD] = high
+        }
+    }
+
+    suspend fun saveUploadInterval(seconds: Int) {
+        dataStore.edit { prefs ->
+            prefs[CLOUD_UPLOAD_INTERVAL_SEC] = seconds
+        }
+    }
+
+    suspend fun saveCloudCredentials(url: String, key: String, onesignalId: String) {
+        dataStore.edit { prefs ->
+            prefs[SUPABASE_URL] = url
+            prefs[SUPABASE_ANON_KEY] = key
+            prefs[ONESIGNAL_APP_ID] = onesignalId
         }
     }
 

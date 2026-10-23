@@ -30,13 +30,15 @@ class BLEScanner(private val context: Context) {
             val name = device.name ?: result.scanRecord?.deviceName ?: "Unknown"
             
             // The ESP32 broadcasts this specific Service UUID
-            val targetServiceUuid = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+            val targetServiceUuid1 = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
+            val targetServiceUuid2 = "6E400011-B5A3-F393-E0A9-E50E24DCCA9E"
             val hasTargetService = result.scanRecord?.serviceUuids?.any { 
-                it.uuid.toString().equals(targetServiceUuid, ignoreCase = true) 
+                val uuidStr = it.uuid.toString()
+                uuidStr.equals(targetServiceUuid1, ignoreCase = true) || uuidStr.equals(targetServiceUuid2, ignoreCase = true)
             } == true
             
-            if (name.contains("NaTrack", ignoreCase = true) || hasTargetService) {
-                val displayName = if (name == "Unknown") "NaTrack Sensor" else name
+            if (name.contains("Flux", ignoreCase = true) || name.contains("NaTrack", ignoreCase = true) || hasTargetService) {
+                val displayName = if (name == "Unknown") "Flux Telemetry" else name
                 val newDevice = DiscoveredDevice(device, displayName, device.address, result.rssi)
                 val currentList = _discoveredDevices.value.toMutableList()
                 val existingIndex = currentList.indexOfFirst { it.address == device.address }

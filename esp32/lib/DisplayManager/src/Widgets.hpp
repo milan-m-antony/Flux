@@ -3,6 +3,7 @@
 #include <Arduino.h>
 #include <Adafruit_SSD1306.h>
 #include "IconLibrary.hpp"
+#include "DeviceState.hpp"
 
 namespace NaTrack {
 
@@ -13,7 +14,7 @@ public:
 
 class FooterWidget {
 public:
-    static void draw(Adafruit_SSD1306& display, float temperature, int batteryPercent, bool isCharging) noexcept;
+    static void draw(Adafruit_SSD1306& display, float temperature, TempUnit unit, int batteryPercent, bool isCharging) noexcept;
 };
 
 class CardWidget {

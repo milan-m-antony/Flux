@@ -9,10 +9,17 @@ data class BLEStateData(
     val battery: Int,
     val batteryVoltage: Double,
     val charging: Boolean,
-    val sodium: String,
-    val status: String,
-    val firmware: String,
-    val device: String
+    val sodium: String = "---",
+    val status: String = "Normal",
+    val firmware: String = "v2.0.0",
+    val device: String = "Flux-Telemetry",
+    val mode: String = "Live Monitor",
+    val unit: String = "C",
+    val minTemp: Double = 0.0,
+    val maxTemp: Double = 0.0,
+    val avgTemp: Double = 0.0,
+    val elapsedSec: Long = 0L,
+    val alert: Boolean = false
 )
 
 object BLEParser {

@@ -11,7 +11,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import com.example.ui.NaTrackApp
+import com.example.ui.FluxApp
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : FragmentActivity() {
@@ -30,7 +30,7 @@ class MainActivity : FragmentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    NaTrackApp(viewModel)
+                    FluxApp(viewModel)
                 }
             }
         }

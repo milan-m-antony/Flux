@@ -5,7 +5,7 @@ namespace NaTrack {
 void DeviceApp::begin() noexcept {
     // 1. Output concise production boot logs
     Serial.begin(Config::SerialBaudRate);
-    Serial.println("NaTrack Booting...");
+    Serial.println("Flux Telemetry Booting...");
 
     // Give managers static lifetimes
     static StatusReporter reporter{Serial, Config::StatusReportIntervalMs};

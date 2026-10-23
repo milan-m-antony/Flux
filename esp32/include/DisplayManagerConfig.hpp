@@ -26,15 +26,18 @@ constexpr uint8_t SecondaryOledAddress = 0x3DU;
 constexpr unsigned long StartupScreenDurationMs = 2000UL;
 
 // Startup title shown on power-up.
-constexpr const char* StartupTitle = "NaTrack";
+constexpr const char* StartupTitle = "FLUX";
+
+// Subtitle shown on power-up.
+constexpr const char* StartupSubtitle = "Smart Telemetry System";
 
 // Home screen header.
-constexpr const char* HomeTitle = "Home";
+constexpr const char* HomeTitle = "Dashboard";
 
 // Home screen placeholder values.
-constexpr const char* TemperaturePlaceholder = "Temperature: --";
-constexpr const char* SodiumPlaceholder = "Sodium: --";
+constexpr const char* TemperaturePlaceholder = "Temp: --.- C";
+constexpr const char* ModePlaceholder = "Mode: Live";
 constexpr const char* BatteryPlaceholder = "Battery: --";
-constexpr const char* BluetoothPlaceholder = "Bluetooth: Disconnected";
+constexpr const char* BluetoothPlaceholder = "BLE: Ready";
 
 } // namespace NaTrack::DisplayManagerConfig

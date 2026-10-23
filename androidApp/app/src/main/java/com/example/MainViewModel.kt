@@ -46,6 +46,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val settingsRepository = SettingsRepository(application.dataStore)
     private val notificationRepository = NotificationRepository(database.notificationDao())
     private val healthRepository = HealthRepository()
+    private val supabaseRepository = com.example.data.SupabaseRepository(viewModelScope)
 
     private val firebaseAnalytics = try {
         FirebaseAnalytics.getInstance(application)
@@ -174,9 +175,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = null
     )
     
+    val preferredUnit = settingsRepository.preferredUnit.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "C")
+    val activeProfile = settingsRepository.activeProfile.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Live Monitor")
+    val lowTempThreshold = settingsRepository.lowTempThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 18.0)
+    val highTempThreshold = settingsRepository.highTempThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 28.0)
+    val cloudUploadIntervalSec = settingsRepository.cloudUploadIntervalSec.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
+    val supabaseUrl = settingsRepository.supabaseUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val supabaseAnonKey = settingsRepository.supabaseAnonKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val onesignalAppId = settingsRepository.onesignalAppId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+
+    val supabaseSyncStatus = supabaseRepository.syncStatus
+    val pendingOfflineRecords = supabaseRepository.pendingQueueCount
+    val cloudHistoricalTelemetry = supabaseRepository.historicalTelemetry
+
     val lowAlertThreshold = settingsRepository.lowAlertThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 135.0)
     val highAlertThreshold = settingsRepository.highAlertThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 145.0)
-    val isDarkTheme = settingsRepository.isDarkTheme.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+    val isDarkTheme = settingsRepository.isDarkTheme.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
     
     val userName = settingsRepository.userName.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userAge = settingsRepository.userAge.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
@@ -184,8 +198,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val userHeight = settingsRepository.userHeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userPhotoUrl = settingsRepository.userPhotoUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     
-    // Auto-save logic can be added here if needed.
-    // For now, when we receive a new reading, we can save it.
     init {
         firebaseAuth?.addAuthStateListener { auth ->
             _currentUser.value = auth.currentUser
@@ -201,6 +213,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         calibrationE0 = reading.e0,
                         calibrationSlope = reading.slope
                     )
+
+                    // Threshold alert check with in-app notification
+                    if (reading.temp < lowTempThreshold.value || reading.temp > highTempThreshold.value) {
+                        createNotification(
+                            title = "Threshold Alert",
+                            message = "Temperature ${reading.temp}°C is outside configured limits (${lowTempThreshold.value}-${highTempThreshold.value}°C).",
+                            type = "ALERT"
+                        )
+                    }
+
+                    // Direct telemetry upload exclusively to Supabase (Zero writes to Firebase database)
+                    val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux-Sensor-01"
+                    supabaseRepository.uploadTelemetry(
+                        supabaseUrl = supabaseUrl.value,
+                        anonKey = supabaseAnonKey.value,
+                        deviceId = addr,
+                        temperatureC = reading.temp,
+                        profile = reading.mode.ifEmpty { activeProfile.value },
+                        isAlert = reading.isAlert || (reading.temp < lowTempThreshold.value || reading.temp > highTempThreshold.value),
+                        unit = preferredUnit.value,
+                        batteryPercent = reading.battery,
+                        batteryVolts = reading.batteryVoltage,
+                        charging = false,
+                        sensorConnected = reading.status != "Disconnected",
+                        uploadIntervalSec = cloudUploadIntervalSec.value
+                    )
                 }
             }
         }
@@ -214,29 +252,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Seed default notifications if database is empty
-        viewModelScope.launch {
-            try {
-                val existing = notificationRepository.allNotifications.first()
-                if (existing.isEmpty()) {
-                    // Notifications will be populated from Firestore
-                }
-            } catch (e: Exception) {
-                // Ignore errors
-            }
-        }
-        initializeFirestore()
-        
         // Track connection state for notifications
         viewModelScope.launch {
             var wasConnected = false
             bleManager.connectionState.collect { state ->
                 if (state == ConnectionState.CONNECTED && !wasConnected) {
                     wasConnected = true
-                    createNotification("Device Connected", "Successfully connected to your NaTrack sensor.", "INFO")
+                    createNotification("Device Connected", "Successfully connected to your Flux sensor.", "INFO")
                 } else if (state == ConnectionState.DISCONNECTED && wasConnected) {
                     wasConnected = false
-                    createNotification("Device Disconnected", "Connection to NaTrack sensor was lost.", "WARNING")
+                    createNotification("Device Disconnected", "Connection to Flux sensor was lost.", "WARNING")
                 }
             }
         }
@@ -289,6 +314,44 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun takeNewReading() {
         bleManager.requestNewReading()
+    }
+
+    fun setUnit(unit: String) {
+        viewModelScope.launch {
+            settingsRepository.saveUnit(unit)
+        }
+    }
+
+    fun setProfile(profile: String) {
+        viewModelScope.launch {
+            settingsRepository.saveProfile(profile)
+        }
+    }
+
+    fun setTemperatureThresholds(low: Double, high: Double) {
+        viewModelScope.launch {
+            settingsRepository.saveThresholds(low, high)
+        }
+    }
+
+    fun setUploadInterval(sec: Int) {
+        viewModelScope.launch {
+            settingsRepository.saveUploadInterval(sec)
+        }
+    }
+
+    fun saveCloudCredentials(url: String, key: String, onesignalId: String) {
+        viewModelScope.launch {
+            settingsRepository.saveCloudCredentials(url, key, onesignalId)
+            com.example.util.OneSignalManager.init(getApplication(), onesignalId)
+        }
+    }
+
+    fun fetchCloudHistory() {
+        viewModelScope.launch {
+            val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux-Sensor-01"
+            supabaseRepository.fetchHistoricalTelemetry(supabaseUrl.value, supabaseAnonKey.value, addr)
+        }
     }
     
     fun applyCalibration(e0: Double, slope: Double) {

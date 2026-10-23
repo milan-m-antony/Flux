@@ -5,7 +5,7 @@
 #include <DallasTemperature.h>
 #include <OneWire.h>
 
-#include "NaTrackConfig.hpp"
+#include "FluxConfig.hpp"
 
 namespace NaTrack {
 

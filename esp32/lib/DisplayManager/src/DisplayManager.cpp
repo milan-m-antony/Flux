@@ -7,7 +7,7 @@ void DisplayManager::begin(DeviceState* state, UIManager* uiMgr, NavigationManag
     uiMgr_ = uiMgr;
     nav_ = nav;
 
-    // Start I2C
+    // Start I2C bus
     Wire.begin(DisplayManagerConfig::I2CSdaPin, DisplayManagerConfig::I2CSclPin);
 
     displayReady_ = tryInitializeDisplay(DisplayManagerConfig::PrimaryOledAddress) ||
@@ -34,48 +34,30 @@ bool DisplayManager::tryInitializeDisplay(uint8_t address) noexcept {
 void DisplayManager::drawBootAnimation(unsigned long elapsed) noexcept {
     display_.clearDisplay();
 
-    if (elapsed < 300) {
-        // Frame 1: Black screen
+    // 0 - 200ms: Black buffer
+    if (elapsed < 200) {
         display_.display();
         return;
     }
 
-    // 300ms: Small droplet outline
-    if (elapsed >= 300 && elapsed < 1000) {
-        IconLibrary::drawDroplet(display_, 56, 12, 16, 24, false, SSD1306_WHITE);
-    }
-    // 1000ms: Droplet fills
-    else if (elapsed >= 1000) {
-        IconLibrary::drawDroplet(display_, 56, 12, 16, 24, true, SSD1306_WHITE);
-    }
+    // Centered FLUX title in large font
+    display_.setTextSize(2);
+    display_.setTextColor(SSD1306_WHITE);
+    // "FLUX" is 4 chars * 12px = 48px width. (128 - 48)/2 = 40
+    display_.setCursor(40, 14);
+    display_.print("FLUX");
 
-    // 1800ms: NaTrack fades in (centered)
-    if (elapsed >= 1800) {
-        display_.setTextSize(2);
-        display_.setTextColor(SSD1306_WHITE);
-        display_.setCursor(22, 38);
-        display_.print("NaTrack");
-    }
+    // Subtitle
+    display_.setTextSize(1);
+    display_.setCursor(2, 34);
+    display_.print("Smart Telemetry System");
 
-    // 2800ms: Smart Sodium Monitoring appears
-    if (elapsed >= 2800) {
-        display_.setTextSize(1);
-        display_.setCursor(28, 54);
-        display_.print("Smart Sodium");
-    }
-
-    // 3800ms: Loading dots ● ○ ○ -> ● ● ○ -> ● ● ●
-    if (elapsed >= 3800) {
-        int dotStage = ((elapsed - 3800) / 300) % 3;
-        display_.setTextSize(1);
-        display_.setCursor(52, 2);
-        if (dotStage == 0) {
-            display_.print("* o o");
-        } else if (dotStage == 1) {
-            display_.print("* * o");
-        } else {
-            display_.print("* * *");
-        }
+    // Progress bar (fills across 1800ms)
+    uint8_t progressPercent = (elapsed > 1800) ? 100 : (elapsed * 100 / 1800);
+    display_.drawRect(14, 48, 100, 7, SSD1306_WHITE);
+    uint8_t innerW = (progressPercent * 96) / 100;
+    if (innerW > 0) {
+        display_.fillRect(16, 50, innerW, 3, SSD1306_WHITE);
     }
 
     display_.display();
@@ -96,7 +78,7 @@ void DisplayManager::update() noexcept {
 
     if (!state_->bootCompleted) {
         unsigned long elapsed = nowMs - bootStartMs_;
-        if (elapsed >= 5000UL) {
+        if (elapsed >= 1800UL) {
             state_->bootCompleted = true;
             // Force redraw on first render
             lastActiveScreen_ = ScreenId::Count;
@@ -107,19 +89,26 @@ void DisplayManager::update() noexcept {
     }
 
     // Cache checking
-    int sodiumVal = state_->sodiumValue;
     float tempCelsius = state_->temperature;
     int batteryPercent = state_->batteryPercentage;
     float batteryVolts = state_->batteryVoltage;
     bool isBluetoothConnected = state_->bluetoothConnected;
     ScreenId activeScreen = state_->activeScreen;
+    int preferredUnitInt = static_cast<int>(state_->preferredUnit);
+    int activeProfileInt = static_cast<int>(state_->activeProfile);
+    bool isSensorConn = state_->sensorConnected;
+    bool isAlert = state_->isThresholdAlert;
     
     bool transitioning = nav_ ? nav_->isTransitioning() : false;
     int16_t slideOffset = nav_ ? nav_->getSlideOffset() : 0;
     int settingsIndex = nav_ ? nav_->getSettingsIndex() : 0;
 
-    bool stateChanged = (sodiumVal != lastSodium_ ||
-                         abs(tempCelsius - lastTemp_) > 0.05f ||
+    static int lastUnit = -1;
+    static int lastProfile = -1;
+    static bool lastSensorConn = false;
+    static bool lastAlert = false;
+
+    bool stateChanged = (abs(tempCelsius - lastTemp_) > 0.05f ||
                          batteryPercent != lastBatPercent_ ||
                          abs(batteryVolts - lastBatVolts_) > 0.01f ||
                          isBluetoothConnected != lastBtConnected_ ||
@@ -127,13 +116,16 @@ void DisplayManager::update() noexcept {
                          transitioning != lastTransitioning_ ||
                          slideOffset != lastSlideOffset_ ||
                          settingsIndex != lastSettingsIndex_ ||
+                         preferredUnitInt != lastUnit ||
+                         activeProfileInt != lastProfile ||
+                         isSensorConn != lastSensorConn ||
+                         isAlert != lastAlert ||
                          (isBluetoothConnected == false && btBlinkState_ != lastBlinkState_));
 
     if (!stateChanged) {
         return; 
     }
 
-    lastSodium_ = sodiumVal;
     lastTemp_ = tempCelsius;
     lastBatPercent_ = batteryPercent;
     lastBatVolts_ = batteryVolts;
@@ -143,6 +135,10 @@ void DisplayManager::update() noexcept {
     lastSlideOffset_ = slideOffset;
     lastSettingsIndex_ = settingsIndex;
     lastBlinkState_ = btBlinkState_;
+    lastUnit = preferredUnitInt;
+    lastProfile = activeProfileInt;
+    lastSensorConn = isSensorConn;
+    lastAlert = isAlert;
 
     display_.clearDisplay();
     uiMgr_->render(display_, *state_, btBlinkState_);

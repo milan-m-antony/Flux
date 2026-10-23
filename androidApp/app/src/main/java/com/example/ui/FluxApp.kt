@@ -102,10 +102,24 @@ object HelpSupportRoute
 object VersionDetailsRoute
 @Serializable
 object FcmTokenRoute
+@Serializable
+object FluxLiveMonitorRoute
+@Serializable
+object FluxEnvironmentRoute
+@Serializable
+object FluxLiquidRoute
+@Serializable
+object FluxFermentationRoute
+@Serializable
+object FluxStatsTimerRoute
+@Serializable
+object FluxAlertSettingsRoute
+@Serializable
+object FluxDiagnosticsRoute
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun NaTrackApp(viewModel: MainViewModel) {
+fun FluxApp(viewModel: MainViewModel) {
     val navController = rememberNavController()
     val darkTheme = MaterialTheme.colorScheme.background == Color(0xFF000000)
     val activeAccent = if (darkTheme) AccentCyan else Color(0xFF059669)
@@ -217,6 +231,27 @@ fun NaTrackApp(viewModel: MainViewModel) {
                     },
                     onNavigateToNotification = {
                         navController.navigate(NotificationRoute)
+                    },
+                    onNavigateToLiveTemp = {
+                        navController.navigate(FluxLiveMonitorRoute)
+                    },
+                    onNavigateToEnvironment = {
+                        navController.navigate(FluxEnvironmentRoute)
+                    },
+                    onNavigateToLiquid = {
+                        navController.navigate(FluxLiquidRoute)
+                    },
+                    onNavigateToFermentation = {
+                        navController.navigate(FluxFermentationRoute)
+                    },
+                    onNavigateToStats = {
+                        navController.navigate(FluxStatsTimerRoute)
+                    },
+                    onNavigateToAlerts = {
+                        navController.navigate(FluxAlertSettingsRoute)
+                    },
+                    onNavigateToDiagnostics = {
+                        navController.navigate(FluxDiagnosticsRoute)
                     }
                 )
             }
@@ -317,6 +352,27 @@ fun NaTrackApp(viewModel: MainViewModel) {
             }
             composable<FcmTokenRoute> {
                 FcmTokenScreen(onBack = { navController.navigateUp() })
+            }
+            composable<FluxLiveMonitorRoute> {
+                FluxLiveMonitorScreen(viewModel, onBack = { navController.navigateUp() })
+            }
+            composable<FluxEnvironmentRoute> {
+                FluxEnvironmentScreen(viewModel, onBack = { navController.navigateUp() })
+            }
+            composable<FluxLiquidRoute> {
+                FluxLiquidScreen(viewModel, onBack = { navController.navigateUp() })
+            }
+            composable<FluxFermentationRoute> {
+                FluxFermentationScreen(viewModel, onBack = { navController.navigateUp() })
+            }
+            composable<FluxStatsTimerRoute> {
+                FluxStatsTimerScreen(viewModel, onBack = { navController.navigateUp() })
+            }
+            composable<FluxAlertSettingsRoute> {
+                FluxAlertSettingsScreen(viewModel, onBack = { navController.navigateUp() })
+            }
+            composable<FluxDiagnosticsRoute> {
+                FluxDiagnosticsScreen(viewModel, onBack = { navController.navigateUp() })
             }
         }
         
@@ -481,5 +537,10 @@ fun NaTrackApp(viewModel: MainViewModel) {
         }
     }
 }
+}
+
+@Composable
+fun NaTrackApp(viewModel: MainViewModel) {
+    FluxApp(viewModel)
 }
 }

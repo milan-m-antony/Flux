@@ -23,28 +23,30 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
     if (state_ != nullptr) {
         state_->bluetoothConnected = false;
         state_->bluetoothEnabled = true;
+        state_->bluetoothName = "Flux-Telemetry";
     }
 
     try {
         // Initialize BLE Device
-        BLEDevice::init("NaTrack");
+        BLEDevice::init("Flux-Telemetry");
         
-        // CRITICAL: Set ESP32 MTU to 512 so it can send strings longer than 20 bytes!
+        // CRITICAL: Set ESP32 MTU to 512 so it can send strings longer than 20 bytes
         BLEDevice::setMTU(512);
 
         // Create BLE Server
         pServer_ = BLEDevice::createServer();
         pServer_->setCallbacks(this);
 
-        // Create BLE Service with 35 handles to accommodate 8 characteristics
+        // Create BLE Service with 35 handles to accommodate characteristics & descriptors
         pService_ = pServer_->createService(BLEUUID(std::string(SERVICE_UUID)), 35);
 
-        // Helper to add standard read/notify characteristics with BLE2902 descriptors
-        auto addChar = [this](const char* uuid) -> BLECharacteristic* {
-            BLECharacteristic* pChar = pService_->createCharacteristic(
-                uuid,
-                BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY
-            );
+        // Helper to add standard read/notify/write characteristics with BLE2902 descriptors
+        auto addChar = [this](const char* uuid, bool writable = false) -> BLECharacteristic* {
+            uint32_t props = BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY;
+            if (writable) {
+                props |= BLECharacteristic::PROPERTY_WRITE;
+            }
+            BLECharacteristic* pChar = pService_->createCharacteristic(uuid, props);
             pChar->addDescriptor(new BLE2902());
             pChar->setCallbacks(this);
             return pChar;
@@ -57,15 +59,15 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
         pCharStatus_ = addChar(STATUS_CHAR_UUID);
         pCharFirmware_ = addChar(FIRMWARE_CHAR_UUID);
         pCharName_ = addChar(NAME_CHAR_UUID);
-        pCharJson_ = addChar(JSON_CHAR_UUID);
+        pCharJson_ = addChar(JSON_CHAR_UUID, true); // JSON characteristic can also accept write commands
 
         // Set static characteristics
         if (state_ != nullptr) {
             pCharFirmware_->setValue(state_->firmwareVersion);
             pCharName_->setValue(state_->bluetoothName);
         } else {
-            pCharFirmware_->setValue("1.0.0");
-            pCharName_->setValue("NaTrack");
+            pCharFirmware_->setValue("v2.0.0");
+            pCharName_->setValue("Flux-Telemetry");
         }
 
         // Start Service
@@ -75,11 +77,11 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
         BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
         pAdvertising->addServiceUUID(SERVICE_UUID);
         pAdvertising->setScanResponse(true);
-        pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issues
+        pAdvertising->setMinPreferred(0x06);
         pAdvertising->setMinPreferred(0x12);
         BLEDevice::startAdvertising();
 
-        Serial.println("BLE Initialized");
+        Serial.println("Flux BLE Initialized");
         Serial.println("Advertising Started");
     } catch (...) {
         Serial.println("BLE Init Failed");
@@ -90,10 +92,10 @@ void BluetoothManager::onConnect(BLEServer* pServer) {
     connected_ = true;
     if (state_ != nullptr) {
         state_->bluetoothConnected = true;
-        state_->connectedDeviceName = "Android Client";
+        state_->connectedDeviceName = "Flux Android Client";
         state_->lastConnectionTime = millis();
     }
-    Serial.println("Client Connected");
+    Serial.println("Flux Client Connected");
 }
 
 void BluetoothManager::onDisconnect(BLEServer* pServer) {
@@ -102,15 +104,41 @@ void BluetoothManager::onDisconnect(BLEServer* pServer) {
         state_->bluetoothConnected = false;
         state_->connectedDeviceName = "";
     }
-    Serial.println("Client Disconnected");
+    Serial.println("Flux Client Disconnected");
     
     // Restart advertising immediately
     BLEDevice::startAdvertising();
-    Serial.println("Advertising Started");
+    Serial.println("Advertising Restarted");
 }
 
 void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
-    // Standard handler if Android app writes (reserved/future-ready)
+    if (state_ == nullptr) return;
+    std::string val = pCharacteristic->getValue();
+    if (val.empty()) return;
+
+    Serial.printf("BLE Received Command: %s\n", val.c_str());
+
+    // Simple command parser for unit, profile, thresholds, and stats reset
+    if (val.find("SET_UNIT_C") != std::string::npos || val.find("\"unit\":\"C\"") != std::string::npos) {
+        state_->preferredUnit = TempUnit::Celsius;
+    } else if (val.find("SET_UNIT_F") != std::string::npos || val.find("\"unit\":\"F\"") != std::string::npos) {
+        state_->preferredUnit = TempUnit::Fahrenheit;
+    } else if (val.find("MODE_LIVE") != std::string::npos || val.find("\"mode\":\"live\"") != std::string::npos) {
+        state_->activeProfile = ProfileMode::Live;
+    } else if (val.find("MODE_ENV") != std::string::npos || val.find("\"mode\":\"environment\"") != std::string::npos) {
+        state_->activeProfile = ProfileMode::Environment;
+    } else if (val.find("MODE_LIQ") != std::string::npos || val.find("\"mode\":\"liquid\"") != std::string::npos) {
+        state_->activeProfile = ProfileMode::Liquid;
+    } else if (val.find("MODE_FERM") != std::string::npos || val.find("\"mode\":\"fermentation\"") != std::string::npos) {
+        state_->activeProfile = ProfileMode::Fermentation;
+    } else if (val.find("RESET_STATS") != std::string::npos || val.find("\"reset\":true") != std::string::npos) {
+        state_->minTemperature = state_->temperature;
+        state_->maxTemperature = state_->temperature;
+        state_->tempSum = state_->temperature;
+        state_->sampleCount = (state_->temperature > -50.0f) ? 1 : 0;
+        state_->avgTemperature = state_->temperature;
+        state_->sessionStartMs = millis();
+    }
 }
 
 void BluetoothManager::notifyDataChange() noexcept {
@@ -123,7 +151,6 @@ void BluetoothManager::notifyDataChange() noexcept {
         lastNotifiedBattery_ = state_->batteryPercentage;
         pCharBattery_->setValue(lastNotifiedBattery_);
         pCharBattery_->notify();
-        Serial.println("Notification Sent");
     }
     if (abs(state_->batteryVoltage - lastNotifiedVoltage_) > 0.01f) {
         lastNotifiedVoltage_ = state_->batteryVoltage;
@@ -131,7 +158,6 @@ void BluetoothManager::notifyDataChange() noexcept {
         dtostrf(lastNotifiedVoltage_, 4, 2, buf);
         pCharVoltage_->setValue(buf);
         pCharVoltage_->notify();
-        Serial.println("Notification Sent");
     }
     if (state_->sodiumValue != lastNotifiedSodium_) {
         lastNotifiedSodium_ = state_->sodiumValue;
@@ -143,28 +169,33 @@ void BluetoothManager::notifyDataChange() noexcept {
         }
         pCharSodium_->setValue(buf);
         pCharSodium_->notify();
-        Serial.println("Notification Sent");
     }
-    if (strcmp(state_->sodiumStatus, lastNotifiedStatus_) != 0) {
-        lastNotifiedStatus_ = state_->sodiumStatus;
+    if (strcmp(state_->sensorStatus, lastNotifiedStatus_) != 0) {
+        lastNotifiedStatus_ = state_->sensorStatus;
         pCharStatus_->setValue(const_cast<char*>(lastNotifiedStatus_));
         pCharStatus_->notify();
-        Serial.println("Notification Sent");
     }
 
     // 2. Format and send System JSON payload via 6E400009 characteristic
-    // Construct manual JSON payload to avoid large library overheads
-    char json[192];
+    unsigned long elapsedSec = (millis() - state_->sessionStartMs) / 1000UL;
+    char json[320];
     snprintf(json, sizeof(json),
-             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\"}",
+             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s}",
              state_->temperature,
              state_->batteryPercentage,
              state_->batteryVoltage,
              state_->charging ? "true" : "false",
              state_->sodiumValue == -1 ? "---" : String(state_->sodiumValue).c_str(),
-             state_->sodiumStatus,
+             state_->sensorStatus,
              state_->firmwareVersion,
-             state_->bluetoothName);
+             state_->bluetoothName,
+             getProfileName(state_->activeProfile),
+             (state_->preferredUnit == TempUnit::Fahrenheit) ? "F" : "C",
+             (state_->minTemperature > 900.0f) ? state_->temperature : state_->minTemperature,
+             (state_->maxTemperature < -900.0f) ? state_->temperature : state_->maxTemperature,
+             state_->avgTemperature,
+             elapsedSec,
+             state_->isThresholdAlert ? "true" : "false");
 
     pCharJson_->setValue(json);
     pCharJson_->notify();
@@ -173,7 +204,7 @@ void BluetoothManager::notifyDataChange() noexcept {
 void BluetoothManager::update() noexcept {
     const unsigned long nowMs = millis();
     
-    // Simulate RSSI fluctuate when connected
+    // Periodic RSSI measurement
     if (connected_ && (nowMs - lastRssiUpdateMs_) >= 5000UL) {
         lastRssiUpdateMs_ = nowMs;
         rssi_ = -60 - (rand() % 15);
@@ -186,11 +217,10 @@ void BluetoothManager::update() noexcept {
     if (connected_ && (nowMs - lastTempNotifyMs_) >= 1000UL) {
         lastTempNotifyMs_ = nowMs;
         
-        // Notify Temperature
+        // Notify Temperature characteristic (in Celsius for precision)
         float tempVal = state_ ? state_->temperature : 25.0f;
         pCharTemp_->setValue(tempVal);
         pCharTemp_->notify();
-        Serial.printf("Temperature Notification Sent: %.1f\n", tempVal);
 
         // Format and send System JSON payload
         notifyDataChange();

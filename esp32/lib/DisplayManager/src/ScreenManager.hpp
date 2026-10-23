@@ -13,13 +13,14 @@ public:
                     const DeviceState& state, int settingsIndex) noexcept;
 
 private:
-    void drawHomeScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
-    void drawSodiumScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
-    void drawTemperatureScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
-    void drawBatteryScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
-    void drawBluetoothScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
-    void drawSettingsScreen(Adafruit_SSD1306& display, int16_t offsetX, int settingsIndex) noexcept;
-    void drawAboutScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawDashboard(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawLiveMonitor(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawEnvironment(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawLiquid(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawFermentation(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawStatisticsTimer(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawSystemStatus(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept;
+    void drawSettingsScreen(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state, int settingsIndex) noexcept;
 };
 
 } // namespace NaTrack

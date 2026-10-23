@@ -10,8 +10,8 @@ void NavigationManager::begin(DeviceState* state) noexcept {
     settingsIndex_ = 0;
 
     if (state_ != nullptr) {
-        state_->activeScreen = ScreenId::Home;
-        state_->previousScreen = ScreenId::Home;
+        state_->activeScreen = ScreenId::Dashboard;
+        state_->previousScreen = ScreenId::Dashboard;
     }
 }
 
@@ -20,20 +20,20 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
         return;
     }
 
-    // Long press on OK returns Home
+    // Long press on OK returns to Main Dashboard from any screen
     if (button == ButtonId::Ok && event == ButtonEvent::LongPressed) {
-        if (state_->activeScreen != ScreenId::Home) {
+        if (state_->activeScreen != ScreenId::Dashboard) {
             state_->previousScreen = state_->activeScreen;
-            state_->activeScreen = ScreenId::Home;
+            state_->activeScreen = ScreenId::Dashboard;
             transitioning_ = true;
-            slideLeft_ = false; // slide right/back to home
+            slideLeft_ = false; // slide back to dashboard
             transitionStartMs_ = millis();
         }
         return;
     }
 
     if (event != ButtonEvent::Pressed) {
-        return; // Only trigger navigation on short press
+        return; // Trigger on short press
     }
 
     if (transitioning_) {
@@ -63,10 +63,56 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
         slideLeft_ = true;
         transitionStartMs_ = millis();
     } else if (button == ButtonId::Ok) {
-        // OK -> Open Screen / Select
+        // OK -> Interactive action on current screen
         if (state_->activeScreen == ScreenId::Settings) {
-            // Cycle through settings menu items
-            settingsIndex_ = (settingsIndex_ + 1) % 5;
+            // Cycle through settings options and apply immediate toggle
+            if (settingsIndex_ == 0) {
+                // Toggle Unit (C <-> F)
+                state_->preferredUnit = (state_->preferredUnit == TempUnit::Celsius) 
+                                        ? TempUnit::Fahrenheit 
+                                        : TempUnit::Celsius;
+            } else if (settingsIndex_ == 1) {
+                // Cycle Profile Mode
+                int nextMode = static_cast<int>(state_->activeProfile) + 1;
+                if (nextMode >= static_cast<int>(ProfileMode::Count)) {
+                    nextMode = 0;
+                }
+                state_->activeProfile = static_cast<ProfileMode>(nextMode);
+            } else if (settingsIndex_ == 2) {
+                // Reset Session Statistics & Elapsed Timer
+                state_->minTemperature = state_->temperature;
+                state_->maxTemperature = state_->temperature;
+                state_->tempSum = state_->temperature;
+                state_->sampleCount = (state_->temperature > -50.0f) ? 1 : 0;
+                state_->avgTemperature = state_->temperature;
+                state_->sessionStartMs = millis();
+            } else if (settingsIndex_ == 3) {
+                // Toggle Threshold presets (18-28C -> 15-25C -> 20-30C)
+                if (state_->lowThreshold == 18.0f) {
+                    state_->lowThreshold = 15.0f;
+                    state_->highThreshold = 25.0f;
+                } else if (state_->lowThreshold == 15.0f) {
+                    state_->lowThreshold = 20.0f;
+                    state_->highThreshold = 30.0f;
+                } else {
+                    state_->lowThreshold = 18.0f;
+                    state_->highThreshold = 28.0f;
+                }
+            }
+            settingsIndex_ = (settingsIndex_ + 1) % 4;
+        } else if (state_->activeScreen == ScreenId::Dashboard || state_->activeScreen == ScreenId::LiveMonitor) {
+            // Quick unit toggle from dashboard/live monitor
+            state_->preferredUnit = (state_->preferredUnit == TempUnit::Celsius) 
+                                    ? TempUnit::Fahrenheit 
+                                    : TempUnit::Celsius;
+        } else if (state_->activeScreen == ScreenId::StatisticsTimer) {
+            // Reset statistics on OK press
+            state_->minTemperature = state_->temperature;
+            state_->maxTemperature = state_->temperature;
+            state_->tempSum = state_->temperature;
+            state_->sampleCount = (state_->temperature > -50.0f) ? 1 : 0;
+            state_->avgTemperature = state_->temperature;
+            state_->sessionStartMs = millis();
         }
     }
 }

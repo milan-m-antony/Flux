@@ -58,14 +58,21 @@ class BleManager(private val context: Context) {
             BleReading(
                 na = naValue,
                 temp = data.temperature,
-                mv = data.batteryVoltage * 1000.0, // Convert V to mV
+                mv = data.batteryVoltage * 1000.0,
                 status = data.status,
                 e0 = 150.0,
                 slope = 59.2,
                 battery = data.battery,
                 batteryVoltage = data.batteryVoltage,
                 firmware = data.firmware,
-                deviceName = data.device
+                deviceName = data.device,
+                mode = data.mode,
+                unit = data.unit,
+                minTemp = data.minTemp,
+                maxTemp = data.maxTemp,
+                avgTemp = data.avgTemp,
+                elapsedSec = data.elapsedSec,
+                isAlert = data.alert
             )
         }
     }.stateIn(scope, SharingStarted.Eagerly, null)
