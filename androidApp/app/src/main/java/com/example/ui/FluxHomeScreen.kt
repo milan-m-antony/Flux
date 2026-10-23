@@ -270,16 +270,16 @@ private fun TemperatureGauge(
         val totalWidth = maxWidth
         val totalHeight = maxHeight
         val centerX = totalWidth / 2
-        val centerY = totalHeight / 2 - 2.dp
+        val centerY = totalHeight / 2 + 5.dp
 
         val radiusDp = 104.dp
         // 135° (bottom left) and 45° (bottom right)
         // cos(45°) = 0.7071f, sin(45°) = 0.7071f
         val arcOffsetX = radiusDp * 0.7071f
         val arcOffsetY = radiusDp * 0.7071f
-        val labelYDp = centerY + arcOffsetY + 12.dp
+        val labelYDp = centerY + arcOffsetY + 10.dp
 
-        // 1. Top "Medium" needle marker label directly above the 12 o'clock apex
+        // 1. Top "Medium" needle marker label moved a little bit to top for clear visibility
         Text(
             text = "Medium",
             color = colors.textPrimary,
@@ -287,12 +287,12 @@ private fun TemperatureGauge(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = (centerY - radiusDp - 20.dp).coerceAtLeast(0.dp))
+                .offset(y = 2.dp)
         )
 
         // 2. Circular Gauge Canvas (Outer Radial Ticks, Track, Active Arc, Knob)
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val center = Offset(size.width / 2f, size.height / 2f - 2.dp.toPx())
+            val center = Offset(size.width / 2f, size.height / 2f + 5.dp.toPx())
             val radius = radiusDp.toPx()
 
             val startAngle = 135f
@@ -393,7 +393,7 @@ private fun TemperatureGauge(
         Box(
             modifier = Modifier
                 .size(158.dp)
-                .offset(y = (-2).dp)
+                .offset(y = 5.dp)
                 .shadow(
                     elevation = 9.dp,
                     shape = CircleShape,
