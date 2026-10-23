@@ -29,13 +29,13 @@ fun FluxBackground(
             val baseColor = if (darkTheme) Color(0xFF0F172A) else FluxBgLight
             drawRect(color = baseColor)
 
-            // 2. Wave 1
+            // 2. Wave 1: Soft warm peach accent in top right corner
             val wave1 = Path().apply {
-                moveTo(width * 0.2f, 0f)
+                moveTo(width * 0.35f, 0f)
                 cubicTo(
-                    width * 0.45f, height * 0.08f,
-                    width * 0.85f, height * 0.04f,
-                    width, height * 0.16f
+                    width * 0.55f, height * 0.06f,
+                    width * 0.82f, height * 0.03f,
+                    width, height * 0.14f
                 )
                 lineTo(width, 0f)
                 close()
@@ -47,45 +47,44 @@ fun FluxBackground(
                 )
             } else {
                 listOf(
-                    FluxWaveOrange.copy(alpha = 0.55f),
-                    FluxWavePeach.copy(alpha = 0.40f)
+                    FluxWaveOrange.copy(alpha = 0.60f),
+                    FluxWavePeach.copy(alpha = 0.45f)
                 )
             }
             drawPath(
                 path = wave1,
                 brush = Brush.linearGradient(
                     colors = wave1Colors,
-                    start = Offset(width * 0.3f, 0f),
-                    end = Offset(width, height * 0.16f)
+                    start = Offset(width * 0.4f, 0f),
+                    end = Offset(width, height * 0.14f)
                 )
             )
 
-            // 3. Wave 2
+            // 3. Wave 2: Organic peach blob flowing from mid-left behind circular gauge
             val wave2 = Path().apply {
-                moveTo(0f, height * 0.18f)
+                moveTo(0f, height * 0.15f)
                 cubicTo(
-                    width * 0.25f, height * 0.12f,
-                    width * 0.65f, height * 0.26f,
-                    width, height * 0.19f
+                    width * 0.28f, height * 0.12f,
+                    width * 0.42f, height * 0.22f,
+                    width * 0.35f, height * 0.32f
                 )
-                lineTo(width, height * 0.38f)
                 cubicTo(
-                    width * 0.65f, height * 0.32f,
-                    width * 0.25f, height * 0.35f,
-                    0f, height * 0.28f
+                    width * 0.25f, height * 0.38f,
+                    width * 0.10f, height * 0.35f,
+                    0f, height * 0.34f
                 )
                 close()
             }
             val wave2Colors = if (darkTheme) {
                 listOf(
-                    Color(0xFF1E293B).copy(alpha = 0.5f),
                     FluxOrange.copy(alpha = 0.08f),
+                    Color(0xFF1E293B).copy(alpha = 0.4f),
                     Color.Transparent
                 )
             } else {
                 listOf(
-                    FluxWavePeach.copy(alpha = 0.45f),
-                    FluxWaveOrange.copy(alpha = 0.25f),
+                    FluxWavePeach.copy(alpha = 0.50f),
+                    FluxWaveOrange.copy(alpha = 0.30f),
                     Color.Transparent
                 )
             }
@@ -93,24 +92,23 @@ fun FluxBackground(
                 path = wave2,
                 brush = Brush.linearGradient(
                     colors = wave2Colors,
-                    start = Offset(0f, height * 0.15f),
-                    end = Offset(width, height * 0.35f)
+                    start = Offset(0f, height * 0.20f),
+                    end = Offset(width * 0.40f, height * 0.25f)
                 )
             )
 
-            // 4. Wave 3
+            // 4. Wave 3: Organic peach blob flowing from mid-right behind controls & trend card
             val wave3 = Path().apply {
-                moveTo(width * 0.35f, height * 0.46f)
+                moveTo(width, height * 0.38f)
                 cubicTo(
-                    width * 0.65f, height * 0.42f,
-                    width * 0.90f, height * 0.52f,
-                    width, height * 0.48f
+                    width * 0.72f, height * 0.42f,
+                    width * 0.58f, height * 0.48f,
+                    width * 0.68f, height * 0.58f
                 )
-                lineTo(width, height * 0.62f)
                 cubicTo(
-                    width * 0.70f, height * 0.66f,
-                    width * 0.45f, height * 0.58f,
-                    width * 0.25f, height * 0.54f
+                    width * 0.78f, height * 0.64f,
+                    width * 0.90f, height * 0.60f,
+                    width, height * 0.58f
                 )
                 close()
             }
@@ -118,21 +116,21 @@ fun FluxBackground(
                 listOf(
                     Color.Transparent,
                     FluxOrange.copy(alpha = 0.07f),
-                    Color(0xFF1E293B).copy(alpha = 0.3f)
+                    Color(0xFF1E293B).copy(alpha = 0.35f)
                 )
             } else {
                 listOf(
                     Color.Transparent,
-                    FluxWaveOrange.copy(alpha = 0.30f),
-                    FluxWavePeach.copy(alpha = 0.20f)
+                    FluxWaveOrange.copy(alpha = 0.35f),
+                    FluxWavePeach.copy(alpha = 0.45f)
                 )
             }
             drawPath(
                 path = wave3,
                 brush = Brush.linearGradient(
                     colors = wave3Colors,
-                    start = Offset(width * 0.3f, height * 0.45f),
-                    end = Offset(width, height * 0.62f)
+                    start = Offset(width * 0.60f, height * 0.48f),
+                    end = Offset(width, height * 0.54f)
                 )
             )
         }
