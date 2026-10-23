@@ -95,6 +95,44 @@ struct DeviceState {
     // Backward compatibility helpers
     int sodiumValue = -1;
     const char* sodiumStatus = "OK";
+
+    // Real-time Clock & Uptime Tracking
+    bool timeSynced = false;
+    unsigned long timeSyncedAtMs = 0UL;
+    unsigned long initialEpochSec = 0UL;
+
+    void getFormattedTime(char* out, size_t outSize) const noexcept {
+        if (timeSynced && initialEpochSec > 0) {
+            unsigned long elapsedSec = (millis() - timeSyncedAtMs) / 1000UL;
+            unsigned long totalSec = initialEpochSec + elapsedSec;
+            int h = (totalSec / 3600UL) % 24;
+            int m = (totalSec / 60UL) % 60;
+            int s = totalSec % 60;
+            snprintf(out, outSize, "%02d:%02d:%02d", h, m, s);
+        } else {
+            // Running device uptime format (HH:MM:SS)
+            unsigned long totalSec = millis() / 1000UL;
+            int h = (totalSec / 3600UL) % 24;
+            int m = (totalSec / 60UL) % 60;
+            int s = totalSec % 60;
+            snprintf(out, outSize, "%02d:%02d:%02d", h, m, s);
+        }
+    }
+
+    // Live Temperature Sparkline / History Ring Buffer
+    static constexpr size_t HistoryBufferSize = 32;
+    float history[HistoryBufferSize]{};
+    size_t historyCount = 0;
+    size_t historyIndex = 0;
+
+    void addHistory(float val) noexcept {
+        if (val < -50.0f || val > 125.0f) return;
+        history[historyIndex] = val;
+        historyIndex = (historyIndex + 1) % HistoryBufferSize;
+        if (historyCount < HistoryBufferSize) {
+            historyCount++;
+        }
+    }
 };
 
 } // namespace Flux

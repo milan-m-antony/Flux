@@ -15,5 +15,7 @@ void drawHistory(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, 
 void drawWarning(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, uint16_t color) noexcept;
 void drawSuccess(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, uint16_t color) noexcept;
 void drawArrow(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, bool up, uint16_t color) noexcept;
+void drawClock(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, uint16_t color) noexcept;
+void drawFlame(Adafruit_SSD1306& display, int16_t cx, int16_t cy, uint8_t size, uint16_t color) noexcept;
 
 } // namespace Flux::IconLibrary

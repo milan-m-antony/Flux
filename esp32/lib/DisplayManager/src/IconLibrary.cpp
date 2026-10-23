@@ -157,4 +157,29 @@ void drawArrow(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, bo
     }
 }
 
+void drawClock(Adafruit_SSD1306& display, int16_t x, int16_t y, uint8_t size, uint16_t color) noexcept {
+    int16_t r = size / 2;
+    int16_t cx = x + r;
+    int16_t cy = y + r;
+    display.drawCircle(cx, cy, r, color);
+    display.drawPixel(cx, cy, color);
+    // Hour hand points towards 9:00
+    display.drawLine(cx, cy, cx - r + 3, cy, color);
+    // Minute hand points towards 12:00
+    display.drawLine(cx, cy, cx, cy - r + 2, color);
+}
+
+void drawFlame(Adafruit_SSD1306& display, int16_t cx, int16_t cy, uint8_t size, uint16_t color) noexcept {
+    // Outer flame teardrop body
+    display.fillTriangle(cx, cy - size, cx - (size * 6) / 10, cy + size / 3, cx + (size * 6) / 10, cy + size / 3, color);
+    display.fillCircle(cx, cy + size / 3, (size * 55) / 100, color);
+    
+    // Inner flame cutout (negative space)
+    uint8_t inSize = (size * 5) / 10;
+    if (inSize >= 2) {
+        display.fillTriangle(cx, cy - inSize + 2, cx - inSize / 2, cy + inSize / 2, cx + inSize / 2, cy + inSize / 2, SSD1306_BLACK);
+        display.fillCircle(cx, cy + inSize / 2, inSize / 2, SSD1306_BLACK);
+    }
+}
+
 } // namespace Flux::IconLibrary

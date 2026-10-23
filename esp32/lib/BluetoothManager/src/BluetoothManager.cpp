@@ -138,6 +138,24 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         state_->sampleCount = (state_->temperature > -50.0f) ? 1 : 0;
         state_->avgTemperature = state_->temperature;
         state_->sessionStartMs = millis();
+    } else if (val.find("SET_TIME:") != std::string::npos) {
+        size_t idx = val.find("SET_TIME:") + 9;
+        unsigned long epoch = strtoul(val.substr(idx).c_str(), nullptr, 10);
+        if (epoch > 1000000UL) {
+            state_->initialEpochSec = epoch;
+            state_->timeSyncedAtMs = millis();
+            state_->timeSynced = true;
+            Serial.printf("Time synchronized from BLE: %lu\n", epoch);
+        }
+    } else if (val.find("\"time\":") != std::string::npos) {
+        size_t idx = val.find("\"time\":") + 7;
+        unsigned long epoch = strtoul(val.substr(idx).c_str(), nullptr, 10);
+        if (epoch > 1000000UL) {
+            state_->initialEpochSec = epoch;
+            state_->timeSyncedAtMs = millis();
+            state_->timeSynced = true;
+            Serial.printf("Time synchronized from BLE JSON: %lu\n", epoch);
+        }
     }
 }
 

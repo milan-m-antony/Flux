@@ -34,30 +34,65 @@ bool DisplayManager::tryInitializeDisplay(uint8_t address) noexcept {
 void DisplayManager::drawBootAnimation(unsigned long elapsed) noexcept {
     display_.clearDisplay();
 
-    // 0 - 200ms: Black buffer
-    if (elapsed < 200) {
+    // Stage 1: 0 - 600ms: Flame Ignition & Pulsing Rings
+    if (elapsed < 600) {
+        int16_t ringR = (int16_t)((elapsed / 25) % 24);
+        if (ringR > 2) {
+            display_.drawCircle(64, 24, ringR, SSD1306_WHITE);
+        }
+        uint8_t flameSize = (elapsed < 400) ? (uint8_t)(6 + (elapsed * 6 / 400)) : 12;
+        IconLibrary::drawFlame(display_, 64, 24, flameSize, SSD1306_WHITE);
         display_.display();
         return;
     }
 
-    // Centered FLUX title in large font
+    // Stage 2: 600ms - 1500ms: Flame + FLUX Typography
+    if (elapsed < 1500) {
+        // Glowing flame with breathing pulse
+        uint8_t pulse = ((elapsed / 150) % 2 == 0) ? 12 : 13;
+        IconLibrary::drawFlame(display_, 64, 18, pulse, SSD1306_WHITE);
+        display_.drawCircle(64, 18, 17, SSD1306_WHITE);
+
+        // Bold Title
+        display_.setTextSize(2);
+        display_.setTextColor(SSD1306_WHITE);
+        display_.setCursor(40, 34);
+        display_.print("FLUX");
+
+        // Subtitle
+        display_.setTextSize(1);
+        display_.setCursor(18, 52);
+        display_.print("SMART TELEMETRY");
+        display_.display();
+        return;
+    }
+
+    // Stage 3: 1500ms - 2400ms: Hardware Diagnostics & Progress Bar Loading
+    // Flame & Title compact layout
+    IconLibrary::drawFlame(display_, 64, 13, 10, SSD1306_WHITE);
     display_.setTextSize(2);
     display_.setTextColor(SSD1306_WHITE);
-    // "FLUX" is 4 chars * 12px = 48px width. (128 - 48)/2 = 40
-    display_.setCursor(40, 14);
+    display_.setCursor(40, 24);
     display_.print("FLUX");
 
-    // Subtitle
+    // Dynamic status text
     display_.setTextSize(1);
-    display_.setCursor(2, 34);
-    display_.print("Smart Telemetry System");
+    if (elapsed < 1800) {
+        display_.setCursor(18, 41);
+        display_.print("INITIALIZING BLE...");
+    } else if (elapsed < 2100) {
+        display_.setCursor(24, 41);
+        display_.print("PROBE SENSORS OK");
+    } else {
+        display_.setCursor(26, 41);
+        display_.print("SYSTEM ONLINE");
+    }
 
-    // Progress bar (fills across 1800ms)
-    uint8_t progressPercent = (elapsed > 1800) ? 100 : (elapsed * 100 / 1800);
-    display_.drawRect(14, 48, 100, 7, SSD1306_WHITE);
-    uint8_t innerW = (progressPercent * 96) / 100;
-    if (innerW > 0) {
-        display_.fillRect(16, 50, innerW, 3, SSD1306_WHITE);
+    // Progress bar fills across 1500ms -> 2400ms
+    display_.drawRoundRect(16, 52, 96, 7, 2, SSD1306_WHITE);
+    uint8_t prog = (elapsed >= 2400) ? 92 : (uint8_t)((elapsed - 1500) * 92 / 900);
+    if (prog > 2) {
+        display_.fillRoundRect(18, 54, prog - 2, 3, 1, SSD1306_WHITE);
     }
 
     display_.display();
@@ -78,7 +113,7 @@ void DisplayManager::update() noexcept {
 
     if (!state_->bootCompleted) {
         unsigned long elapsed = nowMs - bootStartMs_;
-        if (elapsed >= 1800UL) {
+        if (elapsed >= 2400UL) {
             state_->bootCompleted = true;
             // Force redraw on first render
             lastActiveScreen_ = ScreenId::Count;
@@ -86,6 +121,14 @@ void DisplayManager::update() noexcept {
             drawBootAnimation(elapsed);
             return;
         }
+    }
+
+    // Check if the seconds tick changed to update the bottom-left clock display
+    unsigned long currentSec = nowMs / 1000UL;
+    static unsigned long lastRenderSec = 0UL;
+    bool secondChanged = (currentSec != lastRenderSec);
+    if (secondChanged) {
+        lastRenderSec = currentSec;
     }
 
     // Cache checking
@@ -108,7 +151,8 @@ void DisplayManager::update() noexcept {
     static bool lastSensorConn = false;
     static bool lastAlert = false;
 
-    bool stateChanged = (abs(tempCelsius - lastTemp_) > 0.05f ||
+    bool stateChanged = (secondChanged ||
+                         abs(tempCelsius - lastTemp_) > 0.05f ||
                          batteryPercent != lastBatPercent_ ||
                          abs(batteryVolts - lastBatVolts_) > 0.01f ||
                          isBluetoothConnected != lastBtConnected_ ||

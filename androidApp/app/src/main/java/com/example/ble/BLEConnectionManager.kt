@@ -132,6 +132,7 @@ class BLEConnectionManager(
                         }
                     }
                     onDataReceived("Subscribed. Waiting for ESP32...")
+                    syncTimeWithDevice()
                 }, 500)
             } else {
                 onDataReceived("Error: Service discovery failed with status $status")
@@ -214,5 +215,18 @@ class BLEConnectionManager(
         if (savedAddr != null && _connectionState.value == BLEState.DISCONNECTED) {
             connect(savedAddr)
         }
+    }
+
+    fun sendCommand(command: String): Boolean {
+        val currentGatt = gatt ?: return false
+        val service = currentGatt.getService(SERVICE_UUID) ?: return false
+        val characteristic = service.getCharacteristic(JSON_CHAR_UUID) ?: return false
+        characteristic.value = command.toByteArray(Charsets.UTF_8)
+        return currentGatt.writeCharacteristic(characteristic)
+    }
+
+    fun syncTimeWithDevice() {
+        val epochSec = System.currentTimeMillis() / 1000L
+        sendCommand("SET_TIME:$epochSec")
     }
 }

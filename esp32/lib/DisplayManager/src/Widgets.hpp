@@ -14,7 +14,7 @@ public:
 
 class FooterWidget {
 public:
-    static void draw(Adafruit_SSD1306& display, float temperature, TempUnit unit, int batteryPercent, bool isCharging) noexcept;
+    static void draw(Adafruit_SSD1306& display, const DeviceState& state) noexcept;
 };
 
 class CardWidget {

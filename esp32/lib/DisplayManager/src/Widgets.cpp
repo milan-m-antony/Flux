@@ -21,34 +21,33 @@ void HeaderWidget::draw(Adafruit_SSD1306& display, int batteryPercent, bool isCh
     display.drawFastHLine(0, 11, 128, SSD1306_WHITE);
 }
 
-void FooterWidget::draw(Adafruit_SSD1306& display, float temperature, TempUnit unit, int batteryPercent, bool isCharging) noexcept {
+void FooterWidget::draw(Adafruit_SSD1306& display, const DeviceState& state) noexcept {
     // Bottom Bar is Y=52 to Y=63.
     // Divider at Y=51
     display.drawFastHLine(0, 51, 128, SSD1306_WHITE);
 
-    // Temperature icon + value bottom left
-    IconLibrary::drawThermometer(display, 2, 53, 9, SSD1306_WHITE);
-    display.setCursor(12, 54);
+    // 1. Bottom Left: Clock icon + Live Time display (00:00:00)
+    IconLibrary::drawClock(display, 1, 53, 8, SSD1306_WHITE);
+    char timeBuf[16];
+    state.getFormattedTime(timeBuf, sizeof(timeBuf));
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
-    
-    if (temperature > -50.0f && temperature < 125.0f) {
-        if (unit == TempUnit::Fahrenheit) {
-            float tempF = (temperature * 9.0f / 5.0f) + 32.0f;
-            display.printf("%.1fF", tempF);
-        } else {
-            display.printf("%.1fC", temperature);
-        }
-    } else {
-        display.print("--.-");
-    }
+    display.setCursor(11, 54);
+    display.print(timeBuf);
 
-    // Battery % bottom right
-    display.setCursor(92, 54);
-    display.print(batteryPercent);
-    display.print("%");
-    
-    IconLibrary::drawBattery(display, 114, 54, 12, 7, batteryPercent, isCharging, SSD1306_WHITE);
+    // 2. Center: Active Profile Tag (LIVE, ENV, LIQ, FERM)
+    const char* profileTag = "LIVE";
+    if (state.activeProfile == ProfileMode::Environment) profileTag = "ENV";
+    else if (state.activeProfile == ProfileMode::Liquid) profileTag = "LIQ";
+    else if (state.activeProfile == ProfileMode::Fermentation) profileTag = "FERM";
+    display.setCursor(64, 54);
+    display.print(profileTag);
+
+    // 3. Bottom Right: Battery % and icon
+    int batX = (state.batteryPercentage >= 100) ? 91 : 95;
+    display.setCursor(batX, 54);
+    display.printf("%d%%", state.batteryPercentage);
+    IconLibrary::drawBattery(display, 116, 54, 10, 7, state.batteryPercentage, state.charging, SSD1306_WHITE);
 }
 
 void CardWidget::draw(Adafruit_SSD1306& display, int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) noexcept {

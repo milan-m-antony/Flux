@@ -47,6 +47,7 @@ void SensorManager::update() noexcept {
                     state_->sensorConnected = true;
                     state_->temperature = tempVal;
                     state_->temperatureF = (tempVal * 9.0f / 5.0f) + 32.0f;
+                    state_->addHistory(tempVal);
 
                     // Update session statistics
                     if (tempVal < state_->minTemperature) {
