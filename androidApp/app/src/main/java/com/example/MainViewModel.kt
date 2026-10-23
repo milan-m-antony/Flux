@@ -577,6 +577,24 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setPreferredUnit(unit: String) {
+        viewModelScope.launch {
+            settingsRepository.saveUnit(unit)
+        }
+    }
+
+    fun saveActiveProfile(profile: String) {
+        viewModelScope.launch {
+            settingsRepository.saveProfile(profile)
+        }
+    }
+
+    fun setDarkTheme(isDark: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveTheme(isDark)
+        }
+    }
+
     fun flushOfflineQueue() {
         viewModelScope.launch {
             supabaseRepository.flushOfflineQueueNow(supabaseUrl.value, supabaseAnonKey.value)
