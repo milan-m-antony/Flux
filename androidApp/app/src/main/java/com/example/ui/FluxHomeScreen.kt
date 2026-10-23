@@ -130,7 +130,7 @@ fun FluxHomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // 1. Spacer to cleanly clear the fixed top header with generous breathing room
-            Spacer(modifier = Modifier.height(84.dp))
+            Spacer(modifier = Modifier.height(86.dp))
 
             // 2. Large Circular Temperature Gauge (Slightly reduced from 290.dp to 265.dp to preserve generous size)
             TemperatureGauge(
@@ -279,7 +279,7 @@ private fun TemperatureGauge(
         val arcOffsetY = radiusDp * 0.7071f
         val labelYDp = centerY + arcOffsetY + 10.dp
 
-        // 1. Top "Medium" needle marker label moved a little bit to top for clear visibility
+        // 1. Top "Medium" needle marker label moved higher to top for clear visibility
         Text(
             text = "Medium",
             color = colors.textPrimary,
@@ -287,7 +287,7 @@ private fun TemperatureGauge(
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .offset(y = 2.dp)
+                .offset(y = (-14).dp)
         )
 
         // 2. Circular Gauge Canvas (Outer Radial Ticks, Track, Active Arc, Knob)
