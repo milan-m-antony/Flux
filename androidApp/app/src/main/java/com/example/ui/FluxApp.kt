@@ -33,8 +33,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 object SplashRoute
 @Serializable
-object LiveTemperatureRoute
-@Serializable
 object LoginRoute
 @Serializable
 object SignUpRoute
@@ -56,8 +54,6 @@ object DeviceRoute
 object ProfileRoute
 @Serializable
 object DeviceSetupRoute
-@Serializable
-object EditProfileRoute
 @Serializable
 object NotificationRoute
 @Serializable
