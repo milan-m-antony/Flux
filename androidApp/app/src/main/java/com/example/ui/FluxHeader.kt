@@ -186,13 +186,13 @@ fun FluxHeader(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = (-0.3).sp,
                         maxLines = 1,
-                        modifier = Modifier.offset(y = 1.2.dp)
+                        modifier = Modifier.offset(y = 2.dp)
                     )
 
                     Spacer(modifier = Modifier.height(1.dp))
 
                     Row(
-                        modifier = Modifier.offset(y = (-0.8).dp),
+                        modifier = Modifier.offset(y = (-1.8).dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Animated pulsing & glowing status dot

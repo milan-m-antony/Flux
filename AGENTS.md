@@ -31,8 +31,9 @@ This repository houses **Flux**, a high-precision smart telemetry and thermal mo
 ---
 
 ## 3. UI Design & Layout Standards
+- **Header Lock & Frozen Alignment**: The top header (`FluxHeader`) design, dimensions, and element alignments are strictly finalized and frozen. NEVER change the header layout, padding, or its internal offsets (`Flux1` at `offset(y = 2.dp)`, `Online`/`Offline` row at `offset(y = (-1.8).dp)`, `1.dp` vertical spacer, and `FluxSignalMeter` alignment).
 - **Single-Page Viewport Balance**: Keep dashboard screens balanced within a single mobile viewport (~640dp - 740dp content height) without requiring scrolling.
-- **Header Clearance**: Allow appropriate spacing (`82.dp` - `84.dp`) below the fixed header to prevent clipping the top of circular gauges and indicators.
+- **Header Clearance**: Allow `86.dp` clearance below the fixed header to prevent clipping the top of circular gauges and indicators, with the gauge 'Medium' label at `offset(y = (-14).dp)`.
 - **Visual Accuracy**: Math and positioning for radial ticks, thumb knobs, and range labels (`16°C` / `40°C`) must align precisely with arc endpoints.
 - **Dynamic Units**: Properly handle unit conversion for all labels and axis ticks when switching between `°C` and `°F`.
 
