@@ -7,7 +7,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 
 object BiometricHelper {
-    private const val PREF_NAME = "natrack_security"
+    private const val PREF_NAME = "flux_security"
     private const val KEY_APP_LOCK = "app_lock_enabled"
 
     fun setAppLockEnabled(context: Context, enabled: Boolean) {

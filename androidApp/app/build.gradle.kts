@@ -16,7 +16,7 @@ android {
   compileSdk = 36
 
   defaultConfig {
-    applicationId = "com.natrack.app"
+    applicationId = "com.flux.app"
     minSdk = 24
     targetSdk = 35
     versionCode = 1

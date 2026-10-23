@@ -26,7 +26,7 @@ public:
     }
 
     const char* getDeviceName() const noexcept {
-        return "NaTrack";
+        return "Flux-Telemetry";
     }
 
     int16_t getRSSI() const noexcept {
