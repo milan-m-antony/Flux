@@ -268,7 +268,8 @@ fun FluxApp(viewModel: MainViewModel) {
                         DeviceSetupScreen(
                             viewModel = viewModel,
                             onNext = { navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } } },
-                            onSkip = { navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } } }
+                            onSkip = { navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } } },
+                            onBack = { navController.navigateUp() }
                         )
                     }
                     composable<ScanRoute> {

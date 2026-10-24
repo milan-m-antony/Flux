@@ -31,17 +31,17 @@ enum class SignalLevel(val color: Color) {
  * Production-ready immutable state representing dynamic connection status and signal strength.
  */
 data class FluxConnectivityState(
-    val type: ConnectionType = ConnectionType.WIFI,
-    val deviceName: String = "Flux1",
-    val title: String = "Device online",
-    val statusText: String = "82% signal",
-    val signalPercent: Int? = 82,
-    val signalDbm: Int? = -57,
-    val signalLevel: SignalLevel = SignalLevel.STRONG,
-    val isOnline: Boolean = true,
-    val isCloudReachable: Boolean = true,
+    val type: ConnectionType = ConnectionType.NONE,
+    val deviceName: String = "",
+    val title: String = "Device offline",
+    val statusText: String = "Offline",
+    val signalPercent: Int? = null,
+    val signalDbm: Int? = null,
+    val signalLevel: SignalLevel = SignalLevel.UNAVAILABLE,
+    val isOnline: Boolean = false,
+    val isCloudReachable: Boolean = false,
     val isStale: Boolean = false,
-    val lastTelemetryTimestamp: Long = System.currentTimeMillis()
+    val lastTelemetryTimestamp: Long = 0L
 )
 
 /**

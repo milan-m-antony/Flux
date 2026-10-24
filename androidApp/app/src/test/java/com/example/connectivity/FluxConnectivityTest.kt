@@ -85,16 +85,15 @@ class FluxConnectivityTest {
 
     @Test
     fun testFluxConnectivityStateImmutability() {
+        // Default state must be safe: offline, no type, no signal.
+        // This prevents ghost "online" readings when no telemetry has been received.
         val defaultState = FluxConnectivityState()
-        assertEquals(ConnectionType.WIFI, defaultState.type)
-        assertEquals("Device online", defaultState.title)
-        assertEquals("82% signal", defaultState.statusText)
-        assertEquals(82, defaultState.signalPercent)
-        assertEquals(SignalLevel.STRONG, defaultState.signalLevel)
-        assertTrue(defaultState.isOnline)
-        assertTrue(defaultState.isCloudReachable)
-        assertFalse(defaultState.isStale)
-        assertEquals("Flux1", defaultState.deviceName)
+        assertEquals(ConnectionType.NONE, defaultState.type)
+        assertFalse("Default state must be offline", defaultState.isOnline)
+        assertNull("Default signal percent must be null", defaultState.signalPercent)
+        assertEquals(SignalLevel.UNAVAILABLE, defaultState.signalLevel)
+        assertFalse(defaultState.isCloudReachable)
+        assertEquals("", defaultState.deviceName)
     }
 
     @Test

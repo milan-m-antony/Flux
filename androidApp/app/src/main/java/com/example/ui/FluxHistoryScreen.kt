@@ -45,7 +45,9 @@ fun FluxHistoryScreen(
     var selectedTab by remember { mutableStateOf("Temperature") }
     var selectedRange by remember { mutableStateOf("Day") }
     val connectionState by viewModel.connectionState.collectAsState()
-    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
+    val allReadings by viewModel.allReadings.collectAsState()
+    val preferredUnit by viewModel.preferredUnit.collectAsState()
+    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED
 
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)
@@ -319,7 +321,14 @@ fun FluxHistoryScreen(
                             }
                         }
 
-                        // Max & Min Badges
+                        // Max & Min Badges — computed from real readings
+                        val isFahrBadge = preferredUnit.equals("F", ignoreCase = true)
+                        val maxTemp = remember(allReadings) { allReadings.maxOfOrNull { it.temperature } }
+                        val minTemp = remember(allReadings) { allReadings.minOfOrNull { it.temperature } }
+                        fun fmtBadge(t: Double?) = if (t == null) "--" else {
+                            val v = if (isFahrBadge) (t * 9 / 5) + 32 else t
+                            String.format("%.1f°%s", v, if (isFahrBadge) "F" else "C")
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             // Max badge
                             Column(
@@ -329,7 +338,7 @@ fun FluxHistoryScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "30.8°C",
+                                    text = fmtBadge(maxTemp),
                                     color = Color(0xFFDC2626),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -350,7 +359,7 @@ fun FluxHistoryScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    text = "20.1°C",
+                                    text = fmtBadge(minTemp),
                                     color = Color(0xFF2563EB),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold
@@ -367,7 +376,7 @@ fun FluxHistoryScreen(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // Hourly Area Chart
+                    // Hourly Area Chart — real data
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -375,7 +384,8 @@ fun FluxHistoryScreen(
                     ) {
                         HistoryChartCanvas(
                             modifier = Modifier.fillMaxSize(),
-                            darkTheme = darkTheme
+                            darkTheme = darkTheme,
+                            readings = allReadings
                         )
                     }
                 }
@@ -418,8 +428,6 @@ fun FluxHistoryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            val allReadings by viewModel.allReadings.collectAsState()
-            val preferredUnit by viewModel.preferredUnit.collectAsState()
             val lowThresh by viewModel.lowTempThreshold.collectAsState()
             val highThresh by viewModel.highTempThreshold.collectAsState()
 
@@ -594,7 +602,8 @@ private fun DataLogCard(
 @Composable
 private fun HistoryChartCanvas(
     modifier: Modifier = Modifier,
-    darkTheme: Boolean = false
+    darkTheme: Boolean = false,
+    readings: List<com.example.data.Reading> = emptyList()
 ) {
     Canvas(modifier = modifier) {
         val width = size.width
@@ -618,84 +627,95 @@ private fun HistoryChartCanvas(
             )
         }
 
-        // 2. Data Points for the 24-hr spline
-        val points = listOf(
-            Offset(leftPadding + chartWidth * 0.00f, chartHeight * 0.70f),
-            Offset(leftPadding + chartWidth * 0.10f, chartHeight * 0.58f),
-            Offset(leftPadding + chartWidth * 0.20f, chartHeight * 0.65f),
-            Offset(leftPadding + chartWidth * 0.30f, chartHeight * 0.48f),
-            Offset(leftPadding + chartWidth * 0.45f, chartHeight * 0.52f),
-            Offset(leftPadding + chartWidth * 0.58f, chartHeight * 0.20f), // Peak 30.8°C around 12:00
-            Offset(leftPadding + chartWidth * 0.70f, chartHeight * 0.28f),
-            Offset(leftPadding + chartWidth * 0.82f, chartHeight * 0.44f),
-            Offset(leftPadding + chartWidth * 0.92f, chartHeight * 0.52f),
-            Offset(leftPadding + chartWidth * 1.00f, chartHeight * 0.46f)
-        )
-
-        val path = Path().apply {
-            moveTo(points.first().x, points.first().y)
-            for (i in 0 until points.size - 1) {
-                val p0 = points[i]
-                val p1 = points[i + 1]
-                val cx = (p0.x + p1.x) / 2f
-                cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+        // 2. Data points from real readings (last 24 readings max)
+        if (readings.isNotEmpty()) {
+            val slice = readings.takeLast(24)
+            val minT = slice.minOf { it.temperature }.toFloat()
+            val maxT = slice.maxOf { it.temperature }.toFloat()
+            val range = (maxT - minT).coerceAtLeast(1f)
+            val points = slice.mapIndexed { i, r ->
+                val x = leftPadding + chartWidth * (i.toFloat() / (slice.size - 1).coerceAtLeast(1))
+                val y = chartHeight * (1f - (r.temperature.toFloat() - minT) / range)
+                Offset(x, y)
             }
-        }
 
-        val fillPath = Path().apply {
-            addPath(path)
-            lineTo(points.last().x, chartHeight)
-            lineTo(points.first().x, chartHeight)
-            close()
-        }
+            val path = Path().apply {
+                moveTo(points.first().x, points.first().y)
+                for (i in 0 until points.size - 1) {
+                    val p0 = points[i]
+                    val p1 = points[i + 1]
+                    val cx = (p0.x + p1.x) / 2f
+                    cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                }
+            }
 
-        drawPath(
-            path = fillPath,
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    FluxOrange.copy(alpha = 0.35f),
-                    FluxOrange.copy(alpha = 0.03f)
-                ),
-                startY = 0f,
-                endY = chartHeight
+            val fillPath = Path().apply {
+                addPath(path)
+                lineTo(points.last().x, chartHeight)
+                lineTo(points.first().x, chartHeight)
+                close()
+            }
+
+            drawPath(
+                path = fillPath,
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        FluxOrange.copy(alpha = 0.35f),
+                        FluxOrange.copy(alpha = 0.03f)
+                    ),
+                    startY = 0f,
+                    endY = chartHeight
+                )
             )
-        )
 
-        drawPath(
-            path = path,
-            color = FluxOrange,
-            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-        )
+            drawPath(
+                path = path,
+                color = FluxOrange,
+                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+            )
+        }
+        // If readings is empty, just show the grid lines — label overlay handles empty state text
     }
 
-    // Static text overlay for labels
+    // Overlay: axis labels or empty-state message
     Box(modifier = modifier) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxHeight()
-                .padding(bottom = 20.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("40", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("30", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("20", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("10", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-        }
+        if (readings.isEmpty()) {
+            // Empty state — centred message
+            androidx.compose.material3.Text(
+                text = "Awaiting Telemetry Readings",
+                color = FluxTextLight,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.align(Alignment.Center)
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxHeight()
+                    .padding(bottom = 20.dp),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("40", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("30", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("20", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("10", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            }
 
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .fillMaxWidth()
-                .padding(start = 24f.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text("00:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("04:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("08:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("12:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("16:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            Text("20:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .fillMaxWidth()
+                    .padding(start = 24f.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("00:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("04:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("08:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("12:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("16:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("20:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }

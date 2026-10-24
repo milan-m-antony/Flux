@@ -203,14 +203,16 @@ fun FluxHomeScreen(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
+            val isDeviceOnline = connectivityState.isOnline || connectionState == com.example.ble.ConnectionState.CONNECTED
             // 2. Large Circular Temperature Gauge (Slightly reduced from 290.dp to 265.dp to preserve generous size)
             TemperatureGauge(
                 temperature = currentTempC.toFloat(),
                 minTemp = 16f,
                 maxTemp = 40f,
                 unitSymbol = unitSymbol,
-                displayTempStr = if (hasRealData) String.format("%.1f", displayTemp) else "--.-",
-                hasData = hasRealData,
+                displayTempStr = if (hasRealData && (isDeviceOnline || allReadings.isNotEmpty())) String.format("%.1f", displayTemp) else "--.-",
+                hasData = hasRealData && (isDeviceOnline || allReadings.isNotEmpty()),
+                isLive = isDeviceOnline,
                 darkTheme = darkTheme,
                 colors = colors,
                 modifier = Modifier
@@ -322,6 +324,7 @@ private fun TemperatureGauge(
     unitSymbol: String,
     displayTempStr: String,
     hasData: Boolean = true,
+    isLive: Boolean = true,
     modifier: Modifier = Modifier,
     darkTheme: Boolean = false,
     colors: FluxColors = rememberFluxColors(darkTheme)
@@ -512,11 +515,11 @@ private fun TemperatureGauge(
                         modifier = Modifier
                             .size(6.5.dp)
                             .clip(CircleShape)
-                            .background(if (hasData) FluxGreenOnline else Color(0xFF94A3B8))
+                            .background(if (isLive) FluxGreenOnline else Color(0xFF94A3B8))
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (hasData) "Live" else "Offline",
+                        text = if (isLive) "Live" else "Offline",
                         color = FluxTextMuted,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.SemiBold
@@ -679,6 +682,7 @@ private fun TemperatureTrendCard(
             ) {
                 InteractiveTrendChart(
                     filter = selectedFilter,
+                    readings = readings,
                     unitSymbol = unitSymbol,
                     isFahrenheit = isFahrenheit,
                     darkTheme = darkTheme,
@@ -700,7 +704,7 @@ private fun TemperatureTrendCard(
                     iconTint = Color(0xFF2563EB),
                     icon = Icons.Outlined.Thermostat,
                     label = "Min",
-                    value = convertTemp(if (hasRealTelemetry) realMinTemp else selectedFilter.minTemp),
+                    value = convertTemp(realMinTemp),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
@@ -711,7 +715,7 @@ private fun TemperatureTrendCard(
                     iconTint = Color(0xFFEA580C),
                     icon = Icons.Default.North,
                     label = "Max",
-                    value = convertTemp(if (hasRealTelemetry) realMaxTemp else selectedFilter.maxTemp),
+                    value = convertTemp(realMaxTemp),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
@@ -722,7 +726,7 @@ private fun TemperatureTrendCard(
                     iconTint = Color(0xFF64748B),
                     icon = Icons.Outlined.BarChart,
                     label = "Average",
-                    value = convertTemp(if (hasRealTelemetry) realAvgTemp else selectedFilter.avgTemp),
+                    value = convertTemp(realAvgTemp),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
@@ -785,15 +789,30 @@ private fun SummaryStatCard(
 @Composable
 private fun InteractiveTrendChart(
     filter: TrendTimeFilter,
+    readings: List<com.example.data.Reading> = emptyList(),
     unitSymbol: String,
     isFahrenheit: Boolean = false,
     modifier: Modifier = Modifier,
     darkTheme: Boolean = false,
     colors: FluxColors = rememberFluxColors(darkTheme)
 ) {
+    val hasRealData = readings.isNotEmpty()
+    val realTemps = remember(readings) {
+        if (readings.isEmpty()) emptyList()
+        else {
+            val count = readings.size
+            if (count > 20) {
+                val step = count / 15
+                readings.filterIndexed { i, _ -> i % step == 0 }.takeLast(15).map { it.temperature.toFloat() }
+            } else {
+                readings.map { it.temperature.toFloat() }
+            }
+        }
+    }
+
     // Animated progress to draw in line and fill when filter changes or on load
     val animProgress = remember { Animatable(0f) }
-    LaunchedEffect(filter) {
+    LaunchedEffect(filter, readings.size) {
         animProgress.snapTo(0f)
         animProgress.animateTo(
             targetValue = 1f,
@@ -802,25 +821,25 @@ private fun InteractiveTrendChart(
     }
     val chartAnimProgress = animProgress.value
 
-    // Interactive Touch / Drag Scrubbing State
     var isDragging by remember { mutableStateOf(false) }
-    var touchFraction by remember { mutableStateOf(0.88f) } // Defaults to peak point at ~0.88f (11:00)
+    var touchFraction by remember { mutableStateOf(1f) }
 
-    val currentPeakIndex = filter.peakIndex
-    val defaultPeakFraction = (currentPeakIndex.toFloat() / (filter.temps.size - 1)).coerceIn(0f, 1f)
+    val activeFraction = if (isDragging) touchFraction else 1f
 
-    // Active scrubber fraction: defaults to peak point when not dragging
-    val activeFraction = if (isDragging) touchFraction else defaultPeakFraction
-
-    // Interpolate temperature reading at activeFraction
-    val activeIndexFloat = activeFraction * (filter.temps.size - 1)
-    val lowerIndex = activeIndexFloat.toInt().coerceIn(0, filter.temps.size - 1)
-    val upperIndex = (lowerIndex + 1).coerceAtMost(filter.temps.size - 1)
-    val fractionBetween = activeIndexFloat - lowerIndex
-    val rawTempC = if (lowerIndex == upperIndex) {
-        filter.temps[lowerIndex]
+    val rawTempC = if (!hasRealData) {
+        0f
+    } else if (realTemps.size == 1) {
+        realTemps.first()
     } else {
-        filter.temps[lowerIndex] + fractionBetween * (filter.temps[upperIndex] - filter.temps[lowerIndex])
+        val activeIndexFloat = activeFraction * (realTemps.size - 1)
+        val lowerIndex = activeIndexFloat.toInt().coerceIn(0, realTemps.size - 1)
+        val upperIndex = (lowerIndex + 1).coerceAtMost(realTemps.size - 1)
+        val fractionBetween = activeIndexFloat - lowerIndex
+        if (lowerIndex == upperIndex) {
+            realTemps[lowerIndex]
+        } else {
+            realTemps[lowerIndex] + fractionBetween * (realTemps[upperIndex] - realTemps[lowerIndex])
+        }
     }
 
     val displayTempStr = if (isFahrenheit) {
@@ -831,43 +850,48 @@ private fun InteractiveTrendChart(
 
     Box(
         modifier = modifier
-            .pointerInput(filter) {
-                detectTapGestures(
-                    onPress = { offset ->
-                        isDragging = true
-                        val leftPaddingPx = 28.dp.toPx()
-                        val rightPaddingPx = 10.dp.toPx()
-                        val chartW = size.width - leftPaddingPx - rightPaddingPx
-                        if (chartW > 0) {
-                            touchFraction = ((offset.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
+            .then(
+                if (hasRealData && realTemps.size > 1) {
+                    Modifier
+                        .pointerInput(filter, realTemps) {
+                            detectTapGestures(
+                                onPress = { offset ->
+                                    isDragging = true
+                                    val leftPaddingPx = 28.dp.toPx()
+                                    val rightPaddingPx = 10.dp.toPx()
+                                    val chartW = size.width - leftPaddingPx - rightPaddingPx
+                                    if (chartW > 0) {
+                                        touchFraction = ((offset.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
+                                    }
+                                    tryAwaitRelease()
+                                    isDragging = false
+                                }
+                            )
                         }
-                        tryAwaitRelease()
-                        isDragging = false
-                    }
-                )
-            }
-            .pointerInput(filter) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                        isDragging = true
-                        val leftPaddingPx = 28.dp.toPx()
-                        val rightPaddingPx = 10.dp.toPx()
-                        val chartW = size.width - leftPaddingPx - rightPaddingPx
-                        if (chartW > 0) {
-                            touchFraction = ((offset.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
+                        .pointerInput(filter, realTemps) {
+                            detectDragGestures(
+                                onDragStart = { offset ->
+                                    isDragging = true
+                                    val leftPaddingPx = 28.dp.toPx()
+                                    val rightPaddingPx = 10.dp.toPx()
+                                    val chartW = size.width - leftPaddingPx - rightPaddingPx
+                                    if (chartW > 0) {
+                                        touchFraction = ((offset.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
+                                    }
+                                },
+                                onDragEnd = { isDragging = false },
+                                onDragCancel = { isDragging = false }
+                            ) { change, _ ->
+                                val leftPaddingPx = 28.dp.toPx()
+                                val rightPaddingPx = 10.dp.toPx()
+                                val chartW = size.width - leftPaddingPx - rightPaddingPx
+                                if (chartW > 0) {
+                                    touchFraction = ((change.position.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
+                                }
+                            }
                         }
-                    },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false }
-                ) { change, _ ->
-                    val leftPaddingPx = 28.dp.toPx()
-                    val rightPaddingPx = 10.dp.toPx()
-                    val chartW = size.width - leftPaddingPx - rightPaddingPx
-                    if (chartW > 0) {
-                        touchFraction = ((change.position.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
-                    }
-                }
-            }
+                } else Modifier
+            )
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val width = size.width
@@ -876,12 +900,12 @@ private fun InteractiveTrendChart(
             val leftPadding = 26.dp.toPx()
             val rightPadding = 8.dp.toPx()
             val bottomPadding = 18.dp.toPx()
-            val topPadding = 24.dp.toPx() // space for floating tooltip badge
+            val topPadding = 24.dp.toPx()
 
             val chartWidth = width - leftPadding - rightPadding
             val chartHeight = height - topPadding - bottomPadding
 
-            // 1. Horizontal dashed grid lines for Y levels
+            // 1. Horizontal dashed grid lines
             val gridLineColor = if (darkTheme) Color(0xFF334155) else Color(0xFFEDF2F7)
             val yLevels = listOf(40f, 30f, 20f, 10f)
             for (i in yLevels.indices) {
@@ -895,111 +919,127 @@ private fun InteractiveTrendChart(
                 )
             }
 
-            // 2. Compute Points from filter.temps (mapped across 10°C to 40°C range)
-            val minRange = 10f
-            val maxRange = 40f
-            val points = filter.temps.mapIndexed { idx, temp ->
-                val x = leftPadding + (chartWidth * idx / (filter.temps.size - 1))
-                val normalizedY = 1f - ((temp - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
-                val y = topPadding + (chartHeight * normalizedY)
-                Offset(x, y)
-            }
-
-            // 3. Smooth Cubic Bezier Spline Path
-            val fullSplinePath = Path().apply {
-                moveTo(points.first().x, points.first().y)
-                for (i in 0 until points.size - 1) {
-                    val p0 = points[i]
-                    val p1 = points[i + 1]
-                    val cx = (p0.x + p1.x) / 2f
-                    cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+            if (hasRealData) {
+                val minRange = 10f
+                val maxRange = 40f
+                val points = if (realTemps.size == 1) {
+                    val normalizedY = 1f - ((realTemps[0] - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
+                    val y = topPadding + (chartHeight * normalizedY)
+                    listOf(Offset(leftPadding, y), Offset(leftPadding + chartWidth, y))
+                } else {
+                    realTemps.mapIndexed { idx, temp ->
+                        val x = leftPadding + (chartWidth * idx / (realTemps.size - 1))
+                        val normalizedY = 1f - ((temp - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
+                        val y = topPadding + (chartHeight * normalizedY)
+                        Offset(x, y)
+                    }
                 }
-            }
 
-            // Animate line clipping from left to right
-            val clipRight = leftPadding + (chartWidth * chartAnimProgress)
+                val fullSplinePath = Path().apply {
+                    moveTo(points.first().x, points.first().y)
+                    for (i in 0 until points.size - 1) {
+                        val p0 = points[i]
+                        val p1 = points[i + 1]
+                        val cx = (p0.x + p1.x) / 2f
+                        cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
+                    }
+                }
 
-            // Fill Path under spline
-            val fillPath = Path().apply {
-                addPath(fullSplinePath)
-                lineTo(points.last().x, topPadding + chartHeight)
-                lineTo(points.first().x, topPadding + chartHeight)
-                close()
-            }
+                val clipRight = leftPadding + (chartWidth * chartAnimProgress)
+                val fillPath = Path().apply {
+                    addPath(fullSplinePath)
+                    lineTo(points.last().x, topPadding + chartHeight)
+                    lineTo(points.first().x, topPadding + chartHeight)
+                    close()
+                }
 
-            // Draw Area Fill under curve with clipping for entry animation
-            clipRect(
-                left = 0f,
-                top = 0f,
-                right = clipRight,
-                bottom = height
-            ) {
-                drawPath(
-                    path = fillPath,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            FluxOrange.copy(alpha = 0.28f),
-                            FluxOrange.copy(alpha = 0.02f)
-                        ),
-                        startY = topPadding,
-                        endY = topPadding + chartHeight
+                clipRect(
+                    left = 0f,
+                    top = 0f,
+                    right = clipRight,
+                    bottom = height
+                ) {
+                    drawPath(
+                        path = fillPath,
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                FluxOrange.copy(alpha = 0.28f),
+                                FluxOrange.copy(alpha = 0.02f)
+                            ),
+                            startY = topPadding,
+                            endY = topPadding + chartHeight
+                        )
                     )
+
+                    drawPath(
+                        path = fullSplinePath,
+                        color = FluxOrange,
+                        style = Stroke(width = 2.8.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                }
+
+                // Highlighted point
+                val activeX = leftPadding + (chartWidth * activeFraction)
+                val normalizedActiveY = 1f - ((rawTempC - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
+                val activeY = topPadding + (chartHeight * normalizedActiveY)
+                val pointPos = Offset(activeX, activeY)
+
+                drawLine(
+                    color = if (darkTheme) Color(0xFF64748B) else Color(0xFFCBD5E1),
+                    start = Offset(pointPos.x, pointPos.y),
+                    end = Offset(pointPos.x, topPadding + chartHeight),
+                    strokeWidth = 1.3.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f)
                 )
 
-                // Draw orange spline curve
-                drawPath(
-                    path = fullSplinePath,
+                drawCircle(color = Color.White, radius = 5.5.dp.toPx(), center = pointPos)
+                drawCircle(
                     color = FluxOrange,
-                    style = Stroke(width = 2.8.dp.toPx(), cap = StrokeCap.Round)
+                    radius = 5.5.dp.toPx(),
+                    center = pointPos,
+                    style = Stroke(width = 2.2.dp.toPx())
+                )
+
+                val badgeW = 46.dp.toPx()
+                val badgeH = 20.dp.toPx()
+                val badgeLeft = (activeX - badgeW / 2f).coerceIn(leftPadding, width - rightPadding - badgeW)
+                val badgeY = activeY - badgeH - 6.dp.toPx()
+
+                drawRoundRect(
+                    color = Color(0xFF1E232A),
+                    topLeft = Offset(badgeLeft, badgeY),
+                    size = Size(badgeW, badgeH),
+                    cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx())
+                )
+
+                val trianglePath = Path().apply {
+                    moveTo(pointPos.x - 3.dp.toPx(), badgeY + badgeH)
+                    lineTo(pointPos.x + 3.dp.toPx(), badgeY + badgeH)
+                    lineTo(pointPos.x, badgeY + badgeH + 3.5.dp.toPx())
+                    close()
+                }
+                drawPath(path = trianglePath, color = Color(0xFF1E232A))
+            }
+        }
+
+        if (!hasRealData) {
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Awaiting Telemetry Readings",
+                    color = colors.textSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Data will plot here automatically when connected",
+                    color = colors.textSecondary.copy(alpha = 0.65f),
+                    fontSize = 10.5.sp
                 )
             }
-
-            // 4. Highlighted Point & Tooltip at activeFraction
-            val activeX = leftPadding + (chartWidth * activeFraction)
-            val normalizedActiveY = 1f - ((rawTempC - minRange) / (maxRange - minRange)).coerceIn(0f, 1f)
-            val activeY = topPadding + (chartHeight * normalizedActiveY)
-            val pointPos = Offset(activeX, activeY)
-
-            // Vertical dashed line down to chart bottom
-            drawLine(
-                color = if (darkTheme) Color(0xFF64748B) else Color(0xFFCBD5E1),
-                start = Offset(pointPos.x, pointPos.y),
-                end = Offset(pointPos.x, topPadding + chartHeight),
-                strokeWidth = 1.3.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f)
-            )
-
-            // Outer white circle + orange border knob
-            drawCircle(color = Color.White, radius = 5.5.dp.toPx(), center = pointPos)
-            drawCircle(
-                color = FluxOrange,
-                radius = 5.5.dp.toPx(),
-                center = pointPos,
-                style = Stroke(width = 2.2.dp.toPx())
-            )
-
-            // Floating dark tooltip badge with downward triangle pointer
-            val badgeW = 46.dp.toPx()
-            val badgeH = 20.dp.toPx()
-            val badgeX = (pointPos.x - badgeW / 2f).coerceIn(leftPadding, width - rightPadding - badgeW)
-            val badgeY = pointPos.y - badgeH - 6.dp.toPx()
-
-            // Badge capsule
-            drawRoundRect(
-                color = Color(0xFF1E232A),
-                topLeft = Offset(badgeX, badgeY),
-                size = Size(badgeW, badgeH),
-                cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx())
-            )
-
-            // Downward pointer triangle
-            val trianglePath = Path().apply {
-                moveTo(pointPos.x - 3.dp.toPx(), badgeY + badgeH)
-                lineTo(pointPos.x + 3.dp.toPx(), badgeY + badgeH)
-                lineTo(pointPos.x, badgeY + badgeH + 3.5.dp.toPx())
-                close()
-            }
-            drawPath(path = trianglePath, color = Color(0xFF1E232A))
         }
 
         // Static Overlay for Y-Axis labels (40, 30, 20, 10 or Fahrenheit equivalent)
@@ -1016,55 +1056,39 @@ private fun InteractiveTrendChart(
             }
         }
 
-        // X-Axis Timestamps (e.g. 10:20, 10:30, 10:40, 10:50, 11:00)
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .fillMaxWidth()
-                .padding(start = 28.dp, end = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            filter.timestamps.forEach { timeStr ->
-                Text(
-                    text = timeStr,
-                    color = FluxTextLight,
-                    fontSize = 8.5.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-        }
+        if (hasRealData) {
+            // Tooltip text overlay aligned with the active marker
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val leftPaddingPx = 26.dp
+                val rightPaddingPx = 8.dp
+                val topPaddingPx = 24.dp
+                val bottomPaddingPx = 18.dp
 
-        // Tooltip text overlay aligned with the active marker
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val leftPaddingPx = 26.dp
-            val rightPaddingPx = 8.dp
-            val topPaddingPx = 24.dp
-            val bottomPaddingPx = 18.dp
+                val chartW = maxWidth - leftPaddingPx - rightPaddingPx
+                val chartH = maxHeight - topPaddingPx - bottomPaddingPx
 
-            val chartW = maxWidth - leftPaddingPx - rightPaddingPx
-            val chartH = maxHeight - topPaddingPx - bottomPaddingPx
+                val activeXPx = leftPaddingPx + (chartW * activeFraction)
+                val normalizedActiveY = 1f - ((rawTempC - 10f) / 30f).coerceIn(0f, 1f)
+                val activeYPx = topPaddingPx + (chartH * normalizedActiveY)
 
-            val activeXPx = leftPaddingPx + (chartW * activeFraction)
-            val normalizedActiveY = 1f - ((rawTempC - 10f) / 30f).coerceIn(0f, 1f)
-            val activeYPx = topPaddingPx + (chartH * normalizedActiveY)
+                val badgeWPx = 46.dp
+                val badgeHPx = 20.dp
+                val badgeLeft = (activeXPx - badgeWPx / 2).coerceIn(leftPaddingPx, maxWidth - rightPaddingPx - badgeWPx)
+                val badgeTop = activeYPx - badgeHPx - 6.dp
 
-            val badgeWPx = 46.dp
-            val badgeHPx = 20.dp
-            val badgeLeft = (activeXPx - badgeWPx / 2).coerceIn(leftPaddingPx, maxWidth - rightPaddingPx - badgeWPx)
-            val badgeTop = activeYPx - badgeHPx - 6.dp
-
-            Box(
-                modifier = Modifier
-                    .offset(x = badgeLeft, y = badgeTop)
-                    .size(badgeWPx, badgeHPx),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = displayTempStr,
-                    color = Color.White,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .offset(x = badgeLeft, y = badgeTop)
+                        .size(badgeWPx, badgeHPx),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = displayTempStr,
+                        color = Color.White,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

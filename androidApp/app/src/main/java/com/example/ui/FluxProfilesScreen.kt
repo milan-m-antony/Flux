@@ -40,7 +40,8 @@ fun FluxProfilesScreen(
     val context = LocalContext.current
     val activeProfile by viewModel.activeProfile.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
-    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || true
+    val connectivityState by viewModel.connectivityState.collectAsState()
+    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED || connectivityState.isOnline
 
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)

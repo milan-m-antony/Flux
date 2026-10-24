@@ -57,7 +57,8 @@ import com.example.ui.theme.*
 fun DeviceSetupScreen(
     viewModel: MainViewModel,
     onNext: () -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onBack: () -> Unit = onSkip
 ) {
     val initialStep = if (viewModel.connectionState.value == ConnectionState.CONNECTED) 3 else 1
     var step by remember { mutableStateOf(initialStep) }
@@ -66,12 +67,18 @@ fun DeviceSetupScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val reading by viewModel.latestReading.collectAsState()
 
-    BackHandler {
-        if (step > 1) {
+    val handleBackNavigation: () -> Unit = {
+        if (initialStep == 3) {
+            onBack()
+        } else if (step > 1) {
             step--
         } else {
-            onSkip()
+            onBack()
         }
+    }
+
+    BackHandler {
+        handleBackNavigation()
     }
 
     FluxBackground(darkTheme = isDarkTheme) {
@@ -97,7 +104,7 @@ fun DeviceSetupScreen(
                         .background(colors.cardBg)
                         .border(0.5.dp, colors.cardBorder, CircleShape)
                         .clickable {
-                            if (step > 1) step-- else onSkip()
+                            handleBackNavigation()
                         },
                     contentAlignment = Alignment.Center
                 ) {
@@ -127,12 +134,12 @@ fun DeviceSetupScreen(
                 }
 
                 Text(
-                    text = if (step < 4) "Skip" else "",
+                    text = if (initialStep == 3) "Cancel" else if (step < 4) "Skip" else "",
                     color = colors.textSecondary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier
-                        .clickable { onSkip() }
+                        .clickable { if (initialStep == 3) onBack() else onSkip() }
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
@@ -451,6 +458,19 @@ private fun StepTwoConnect(
 }
 
 // ==============================================================================
+private fun isLocationServiceEnabled(context: Context): Boolean {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+        ?: return false
+    return androidx.core.location.LocationManagerCompat.isLocationEnabled(locationManager)
+}
+
+private fun isConnectedToWifi(context: Context): Boolean {
+    val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+    val network = cm.activeNetwork ?: return false
+    val caps = cm.getNetworkCapabilities(network) ?: return false
+    return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+}
+
 private fun getActiveWifiSsid(context: Context): String? {
     try {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
@@ -493,9 +513,19 @@ private fun StepThreeProvisionWifi(
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var turnOffBleAfterWifi by remember { mutableStateOf(false) }
+    var isLocationEnabled by remember { mutableStateOf(isLocationServiceEnabled(context)) }
+    var isPhoneOnWifi by remember { mutableStateOf(isConnectedToWifi(context)) }
     val focusManager = LocalFocusManager.current
 
+    val reading by viewModel.latestReading.collectAsState()
+    val bleDeviceName by viewModel.bleManager.deviceName.collectAsState()
+
+    val actualDeviceName = reading?.deviceName?.ifBlank { bleDeviceName }?.ifBlank { "Flux ESP32" }
+        ?: (bleDeviceName.ifBlank { "Flux ESP32" })
+
     val refreshWifiDetection: () -> Unit = {
+        isLocationEnabled = isLocationServiceEnabled(context)
+        isPhoneOnWifi = isConnectedToWifi(context)
         val detected = getActiveWifiSsid(context)
         if (!detected.isNullOrBlank()) {
             autoDetectedSsid = detected
@@ -515,153 +545,353 @@ private fun StepThreeProvisionWifi(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
+        // 1. Connected Device Status Hero Card
         Box(
             modifier = Modifier
-                .size(90.dp)
-                .clip(CircleShape)
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color(0x10000000))
+                .clip(RoundedCornerShape(20.dp))
                 .background(colors.cardBg)
-                .border(1.5.dp, FluxOrange, CircleShape),
-            contentAlignment = Alignment.Center
+                .border(0.5.dp, colors.cardBorder, RoundedCornerShape(20.dp))
+                .padding(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Outlined.Wifi,
-                contentDescription = null,
-                tint = FluxOrange,
-                modifier = Modifier.size(44.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(FluxOrange.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Bluetooth,
+                        contentDescription = null,
+                        tint = FluxOrange,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(FluxGreenOnline)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = actualDeviceName,
+                            color = colors.textPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        text = if (reading != null) {
+                            "${reading?.battery ?: 100}% Battery • ${reading?.firmware ?: "v1.2.0"}"
+                        } else {
+                            "Paired via Bluetooth Low Energy"
+                        },
+                        color = colors.textSecondary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(FluxGreenOnline.copy(alpha = 0.12f))
+                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Connected",
+                        color = FluxGreenOnline,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        // Title and description
         Text(
-            text = "Connect Device to Wi-Fi",
+            text = "Configure Wi-Fi",
             color = colors.textPrimary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = (-0.4).sp
         )
 
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Provision 2.4 GHz Wi-Fi credentials to ESP32 for cloud synchronization and remote alerts.",
+            text = "Connect ESP32 to 2.4 GHz Wi-Fi for 24/7 cloud telemetry to Supabase.",
             color = colors.textSecondary,
-            fontSize = 13.5.sp,
+            fontSize = 13.sp,
             textAlign = TextAlign.Center,
-            lineHeight = 19.sp,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
-        // Phone Wi-Fi Detection Banner
+        // 2. Wi-Fi Detection State Card (Auto-detect / Location disabled / Mobile Data)
         if (autoDetectedSsid != null) {
+            // SUCCESS: Detected phone Wi-Fi
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(FluxGreenOnline.copy(alpha = 0.10f))
-                    .border(1.dp, FluxGreenOnline.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(FluxGreenOnline.copy(alpha = 0.08f))
+                    .border(1.dp, FluxGreenOnline.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+                    .padding(16.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = FluxGreenOnline,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = FluxGreenOnline,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Detected Phone Network",
+                                color = FluxGreenOnline,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        IconButton(onClick = refreshWifiDetection, modifier = Modifier.size(28.dp)) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = autoDetectedSsid ?: "",
+                            color = colors.textPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(FluxGreenOnline.copy(alpha = 0.15f))
+                                .clickable { ssid = autoDetectedSsid ?: "" }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = if (ssid == autoDetectedSsid) "Auto-Filled" else "Use This",
                                 color = FluxGreenOnline,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold
                             )
-                            Text(
-                                text = autoDetectedSsid ?: "",
-                                color = colors.textPrimary,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
                         }
                     }
-                    IconButton(onClick = refreshWifiDetection, modifier = Modifier.size(32.dp)) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
-                    }
+
+                    Text(
+                        text = "Make sure your Wi-Fi router broadcasts on 2.4 GHz (ESP32 supports 802.11 b/g/n).",
+                        color = colors.textSecondary,
+                        fontSize = 11.sp,
+                        lineHeight = 15.sp
+                    )
                 }
             }
-        } else {
+        } else if (!isLocationEnabled) {
+            // WARNING: Location is disabled on phone
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colors.cardBg)
-                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(16.dp))
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(FluxOrange.copy(alpha = 0.08f))
+                    .border(1.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
+                    .padding(16.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Info, contentDescription = null, tint = FluxOrange, modifier = Modifier.size(18.dp))
+                        Icon(
+                            imageVector = Icons.Default.LocationOff,
+                            contentDescription = null,
+                            tint = FluxOrange,
+                            modifier = Modifier.size(20.dp)
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Auto-detect Phone Wi-Fi",
-                            color = colors.textPrimary,
-                            fontSize = 13.5.sp,
+                            text = "Phone Location is Turned Off",
+                            color = FluxOrange,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
+
                     Text(
-                        text = "Connect phone to 2.4 GHz Wi-Fi to auto-fill, or enter network details manually below.",
+                        text = "Android privacy policies hide the Wi-Fi network name unless device Location (GPS) is turned ON. Turn on Location to auto-detect your Wi-Fi, or enter the network name manually below.",
                         color = colors.textSecondary,
                         fontSize = 12.sp,
                         lineHeight = 16.sp
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier.weight(1f).height(38.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = FluxOrange,
+                                contentColor = Color.White
+                            ),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Turn On Location", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
                         OutlinedButton(
                             onClick = refreshWifiDetection,
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(36.dp),
+                            modifier = Modifier.height(38.dp),
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            border = BorderStroke(1.dp, colors.cardBorder),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = FluxOrange)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Detect Wi-Fi", fontSize = 12.sp, color = colors.textPrimary)
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
                         }
+                    }
+                }
+            }
+        } else if (!isPhoneOnWifi) {
+            // INFO: Phone is on mobile data, not on Wi-Fi
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(colors.cardBg)
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+                    .padding(16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.WifiOff,
+                            contentDescription = null,
+                            tint = colors.textSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Phone is on Mobile Data",
+                            color = colors.textPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Text(
+                        text = "Connect phone to your 2.4 GHz home Wi-Fi to auto-fill the network name, or type your network details manually below.",
+                        color = colors.textSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         OutlinedButton(
                             onClick = {
                                 try {
                                     context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
                                 } catch (_: Exception) {}
                             },
-                            modifier = Modifier
-                                .weight(1.2f)
-                                .height(36.dp),
+                            modifier = Modifier.weight(1f).height(38.dp),
                             shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                            border = BorderStroke(1.dp, colors.cardBorder),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                         ) {
-                            Icon(Icons.Outlined.Settings, contentDescription = null, modifier = Modifier.size(14.dp), tint = FluxOrange)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Wi-Fi Settings", fontSize = 12.sp, color = colors.textPrimary)
+                            Icon(Icons.Outlined.Settings, contentDescription = null, tint = FluxOrange, modifier = Modifier.size(15.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Open Wi-Fi Settings", fontSize = 12.sp, color = colors.textPrimary)
                         }
+
+                        OutlinedButton(
+                            onClick = refreshWifiDetection,
+                            modifier = Modifier.height(38.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            border = BorderStroke(1.dp, colors.cardBorder),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+        } else {
+            // Connected to Wi-Fi, but SSID redacted by OS
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(colors.cardBg)
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Connected to Wi-Fi",
+                            color = colors.textPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Enter your network name and password below to provision ESP32.",
+                            color = colors.textSecondary,
+                            fontSize = 11.5.sp
+                        )
+                    }
+                    IconButton(onClick = refreshWifiDetection, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = FluxOrange, modifier = Modifier.size(18.dp))
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(18.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Input Fields Card
+        // 3. Credentials Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -669,9 +899,9 @@ private fun StepThreeProvisionWifi(
                 .clip(RoundedCornerShape(22.dp))
                 .background(colors.cardBg)
                 .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
-                .padding(20.dp)
+                .padding(18.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Wi-Fi SSID
                 OutlinedTextField(
                     value = ssid,
@@ -704,6 +934,7 @@ private fun StepThreeProvisionWifi(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Wi-Fi Password (leave empty for open)") },
+                    placeholder = { Text("Password") },
                     leadingIcon = {
                         Icon(Icons.Outlined.Lock, contentDescription = null, tint = FluxOrange)
                     },
@@ -736,7 +967,7 @@ private fun StepThreeProvisionWifi(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // Battery Saving / BLE Option Card
+        // 4. Battery Saving / BLE Option Card
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -770,8 +1001,9 @@ private fun StepThreeProvisionWifi(
             )
         }
 
-        Spacer(modifier = Modifier.height(22.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
+        // 5. Connect Action Button
         Button(
             onClick = {
                 if (ssid.isNotBlank()) {
@@ -785,8 +1017,8 @@ private fun StepThreeProvisionWifi(
             enabled = ssid.isNotBlank(),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(18.dp),
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = FluxOrange,
                 contentColor = Color.White,
@@ -797,14 +1029,15 @@ private fun StepThreeProvisionWifi(
             Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (ssid.isNotBlank()) "Connect ESP32 to '${ssid.trim()}'" else "Enter Wi-Fi Network to Connect",
+                text = if (ssid.isNotBlank()) "Connect ESP32 to '${ssid.trim()}'" else "Enter Wi-Fi Network Name",
                 fontSize = 14.5.sp,
                 fontWeight = FontWeight.Bold
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
+        // 6. Skip Wi-Fi Button
         OutlinedButton(
             onClick = onSkipWifi,
             modifier = Modifier
@@ -818,7 +1051,7 @@ private fun StepThreeProvisionWifi(
             Text(
                 text = "Continue with Bluetooth Only (Skip Wi-Fi)",
                 color = colors.textPrimary,
-                fontSize = 13.5.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -901,9 +1134,11 @@ private fun StepFourVerify(
                 .padding(20.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                val devName = reading?.deviceName?.ifBlank { viewModel.bleManager.deviceName.value }?.ifBlank { "Flux ESP32" }
+                    ?: viewModel.bleManager.deviceName.value.ifBlank { "Flux ESP32" }
                 VerifyStatusRow(
                     label = "BLE Peripheral Session",
-                    sublabel = if (isBleOk) "Connected to Flux1" else "Disconnected / Idle",
+                    sublabel = if (isBleOk) "Connected to $devName" else "Disconnected / Idle",
                     isPassed = isBleOk,
                     colors = colors
                 )

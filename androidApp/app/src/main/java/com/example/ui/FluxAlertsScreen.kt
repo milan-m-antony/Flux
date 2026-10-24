@@ -173,16 +173,19 @@ fun FluxAlertsScreen(
 
                             Spacer(modifier = Modifier.width(14.dp))
 
-                            Column {
+                Column {
+                                val notifications by viewModel.allNotifications.collectAsState()
+                                val unreadCount = notifications.count { !it.isRead }
                                 Text(
-                                    text = "2 Active Alerts",
+                                    text = if (unreadCount > 0) "$unreadCount Active Alert${if (unreadCount > 1) "s" else ""}"
+                                           else "No Active Alerts",
                                     color = colors.textPrimary,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Your device needs attention",
+                                    text = if (unreadCount > 0) "Your device needs attention" else "All systems normal",
                                     color = colors.textSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
@@ -281,91 +284,99 @@ fun FluxAlertsScreen(
 
                     Spacer(modifier = Modifier.height(18.dp))
 
-                    // Group: Today
-                    Text(
-                        text = "Today",
-                        color = colors.textSecondary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Dynamic alerts from Room DB
+                    val notifications by viewModel.allNotifications.collectAsState()
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    if (notifications.isEmpty()) {
+                        // Clean empty-state
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(colors.cardBg)
+                                .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+                                .padding(horizontal = 20.dp, vertical = 28.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Filled.Notifications,
+                                    contentDescription = null,
+                                    tint = colors.textSecondary.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(36.dp)
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "No active alerts",
+                                    color = colors.textPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "All systems normal • Alerts will appear here when triggered.",
+                                    color = colors.textSecondary,
+                                    fontSize = 12.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    lineHeight = 17.sp
+                                )
+                            }
+                        }
+                    } else {
+                        val timeFormatter = remember {
+                            java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+                        }
+                        // Group by date label (Today / Yesterday / older)
+                        val today = remember {
+                            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                        }
+                        val yesterday = remember {
+                            val cal = java.util.Calendar.getInstance()
+                            cal.add(java.util.Calendar.DAY_OF_YEAR, -1)
+                            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(cal.time)
+                        }
 
-                    // Alert 1: High Temperature
-                    AlertRecordItem(
-                        icon = Icons.Filled.Thermostat,
-                        iconTint = Color(0xFFEF4444),
-                        iconBg = if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2),
-                        title = "High Temperature",
-                        description = "Temperature reached 34.2°C",
-                        time = "11:00 AM",
-                        pillText = "34.2°C",
-                        pillBg = if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2),
-                        pillColor = Color(0xFFEF4444),
-                        darkTheme = darkTheme,
-                        colors = colors
-                    )
+                        // Most-recent first
+                        val sorted = remember(notifications) { notifications.sortedByDescending { it.id } }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Alert 2: Temperature Back to Normal
-                    AlertRecordItem(
-                        icon = Icons.Filled.Thermostat,
-                        iconTint = FluxOrange,
-                        iconBg = if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB),
-                        title = "Temperature Back to Normal",
-                        description = "Temperature is now within range",
-                        time = "11:25 AM",
-                        pillText = "28.1°C",
-                        pillBg = if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB),
-                        pillColor = FluxOrange,
-                        darkTheme = darkTheme,
-                        colors = colors
-                    )
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    // Group: Yesterday
-                    Text(
-                        text = "Yesterday",
-                        color = colors.textSecondary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Alert 3: Low Temperature
-                    AlertRecordItem(
-                        icon = Icons.Filled.Thermostat,
-                        iconTint = Color(0xFF3B82F6),
-                        iconBg = if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE),
-                        title = "Low Temperature",
-                        description = "Temperature dropped to 15.8°C",
-                        time = "08:24 AM",
-                        pillText = "15.8°C",
-                        pillBg = if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE),
-                        pillColor = Color(0xFF3B82F6),
-                        darkTheme = darkTheme,
-                        colors = colors
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Alert 4: Device Offline
-                    AlertRecordItem(
-                        icon = Icons.Outlined.WifiOff,
-                        iconTint = colors.textSecondary,
-                        iconBg = if (darkTheme) Color(0xFF334155) else Color(0xFFF1F5F9),
-                        title = "Device Offline",
-                        description = "No signal received for 10 minutes",
-                        time = "04:12 PM",
-                        pillText = "Offline",
-                        pillBg = if (darkTheme) Color(0xFF334155) else Color(0xFFF1F5F9),
-                        pillColor = colors.textSecondary,
-                        darkTheme = darkTheme,
-                        colors = colors
-                    )
+                        sorted.forEach { notif ->
+                            val isAlert = notif.type == "ALERT"
+                            val isWarning = notif.type == "WARNING"
+                            val iconTint = when {
+                                isAlert -> Color(0xFFEF4444)
+                                isWarning -> FluxOrange
+                                else -> colors.textSecondary
+                            }
+                            val iconBg = when {
+                                isAlert -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
+                                isWarning -> if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)
+                                else -> if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                            }
+                            val pillBg = iconBg
+                            val pillColor = iconTint
+                            val pillText = when {
+                                isAlert -> "Alert"
+                                isWarning -> "Warning"
+                                else -> "Info"
+                            }
+                            AlertRecordItem(
+                                icon = if (isAlert) Icons.Filled.Thermostat
+                                       else if (isWarning) Icons.Outlined.AccessTime
+                                       else Icons.Filled.Notifications,
+                                iconTint = iconTint,
+                                iconBg = iconBg,
+                                title = notif.title,
+                                description = notif.message,
+                                time = notif.time,
+                                pillText = pillText,
+                                pillBg = pillBg,
+                                pillColor = pillColor,
+                                darkTheme = darkTheme,
+                                colors = colors
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+                    }
 
             Spacer(modifier = Modifier.height(110.dp))
         }

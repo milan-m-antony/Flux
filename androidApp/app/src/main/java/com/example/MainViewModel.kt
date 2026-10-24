@@ -160,7 +160,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val userHeight = settingsRepository.userHeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userPhotoUrl = settingsRepository.userPhotoUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
-    private val _lastTelemetryTimestamp = MutableStateFlow(System.currentTimeMillis())
+    private val _lastTelemetryTimestamp = MutableStateFlow(0L)
     val lastTelemetryTimestamp: StateFlow<Long> = _lastTelemetryTimestamp.asStateFlow()
 
     private val _espWifiConnected = MutableStateFlow(false)
@@ -180,7 +180,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     )
     val connectivityState: StateFlow<FluxConnectivityState> = connectivityCoordinator.connectivityState
     
+    private val bluetoothReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {
+            if (intent?.action == android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED) {
+                val state = intent.getIntExtra(
+                    android.bluetooth.BluetoothAdapter.EXTRA_STATE,
+                    android.bluetooth.BluetoothAdapter.ERROR
+                )
+                if (state == android.bluetooth.BluetoothAdapter.STATE_OFF || state == android.bluetooth.BluetoothAdapter.STATE_TURNING_OFF) {
+                    bleManager.disconnect()
+                    _lastTelemetryTimestamp.value = 0L
+                    _espWifiConnected.value = false
+                    _espWifiRssi.value = null
+                    connectivityCoordinator.recalculateConnectivity()
+                }
+            }
+        }
+    }
+
     init {
+        try {
+            val filter = android.content.IntentFilter(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
+            application.registerReceiver(bluetoothReceiver, filter)
+        } catch (_: Exception) {}
+
         firebaseAuth?.addAuthStateListener { auth ->
             val user = auth.currentUser
             _currentUser.value = user
@@ -256,16 +279,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Track connection state for notifications
+        // Track connection state for notifications and offline resets
         viewModelScope.launch {
             var wasConnected = false
             bleManager.connectionState.collect { state ->
                 if (state == ConnectionState.CONNECTED && !wasConnected) {
                     wasConnected = true
                     createNotification("Device Connected", "Successfully connected to your Flux sensor.", "INFO")
-                } else if (state == ConnectionState.DISCONNECTED && wasConnected) {
-                    wasConnected = false
-                    createNotification("Device Disconnected", "Connection to Flux sensor was lost.", "WARNING")
+                } else if (state == ConnectionState.DISCONNECTED) {
+                    if (wasConnected) {
+                        wasConnected = false
+                        createNotification("Device Disconnected", "Connection to Flux sensor was lost.", "WARNING")
+                    }
+                    _lastTelemetryTimestamp.value = 0L
+                    _espWifiConnected.value = false
+                    _espWifiRssi.value = null
+                    connectivityCoordinator.recalculateConnectivity()
                 }
             }
         }
@@ -651,6 +680,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     override fun onCleared() {
         super.onCleared()
+        try {
+            getApplication<Application>().unregisterReceiver(bluetoothReceiver)
+        } catch (_: Exception) {}
         connectivityCoordinator.cleanup()
     }
 

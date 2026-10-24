@@ -82,6 +82,7 @@ class BleManager(private val context: Context) {
     }.stateIn(scope, SharingStarted.Eagerly, null)
 
     val rssi: StateFlow<Int?> = repository.rssi
+    val deviceName: StateFlow<String> = repository.deviceName
     val latestMv: StateFlow<Double?> = latestReading.map { it?.mv }.stateIn(scope, SharingStarted.Eagerly, null)
 
     fun startScan() {
