@@ -159,7 +159,8 @@ USING (
 -- ==============================================================================
 -- 8. Realtime Replication Enablement
 -- ==============================================================================
--- Add device_state and alert_events to Supabase realtime publication
+-- Add telemetry, device_state and alert_events to Supabase realtime publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.telemetry;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.device_state;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.alert_events;
 
