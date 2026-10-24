@@ -34,32 +34,77 @@ bool DisplayManager::tryInitializeDisplay(uint8_t address) noexcept {
 void DisplayManager::drawBootAnimation(unsigned long elapsed) noexcept {
     display_.clearDisplay();
 
-    // 1. Centered Flame Icon at top
-    IconLibrary::drawFlame(display_, 64, 13, 11, SSD1306_WHITE);
+    if (elapsed < 3200UL) {
+        // --- PHASE 1: Boot Splash Screen (Image 1 Screen 1) ---
+        // 1. Centered Flame Icon at top
+        IconLibrary::drawFlame(display_, 64, 13, 11, SSD1306_WHITE);
 
-    // 2. Bold "Flux" Typography (Size 2)
-    display_.setTextSize(2);
-    display_.setTextColor(SSD1306_WHITE);
-    display_.setCursor(40, 26);
-    display_.print("Flux");
+        // 2. Bold "Flux" Typography (Size 2)
+        display_.setTextSize(2);
+        display_.setTextColor(SSD1306_WHITE);
+        display_.setCursor(40, 26);
+        display_.print("Flux");
 
-    // 3. Rounded Pill Progress Bar: (X=18, Y=43, W=92, H=8, r=3)
-    display_.drawRoundRect(18, 43, 92, 8, 3, SSD1306_WHITE);
+        // 3. Rounded Pill Progress Bar: (X=18, Y=43, W=92, H=8, r=3)
+        display_.drawRoundRect(18, 43, 92, 8, 3, SSD1306_WHITE);
 
-    // Dynamic Progress Fill: 0 to 86 px width
-    uint8_t fillW = 0;
-    if (elapsed > 300) {
-        fillW = (elapsed >= 2200) ? 86 : (uint8_t)((elapsed - 300) * 86 / 1900);
+        // Dynamic Progress Fill: 0 to 86 px width smoothly across 300ms to 3000ms
+        uint8_t fillW = 0;
+        if (elapsed > 300UL) {
+            fillW = (elapsed >= 3000UL) ? 86 : (uint8_t)((elapsed - 300UL) * 86 / 2700UL);
+        }
+        if (fillW > 0) {
+            display_.fillRoundRect(21, 45, fillW, 4, 2, SSD1306_WHITE);
+        }
+
+        // 4. Centered "Initializing..." Status Text (Size 1)
+        display_.setTextSize(1);
+        display_.setTextColor(SSD1306_WHITE);
+        display_.setCursor(22, 54);
+        display_.print("Initializing...");
+    } else if (elapsed < 4900UL) {
+        // --- PHASE 2: Connecting (Wi-Fi) Screen (Image 1 Screen 2) ---
+        if (state_ != nullptr) {
+            HeaderWidget::draw(display_, *state_, true);
+        }
+
+        // Large Wi-Fi radar icon
+        IconLibrary::drawBigWifi(display_, 10, 24, SSD1306_WHITE);
+
+        // Connecting... text
+        display_.setTextSize(1);
+        display_.setTextColor(SSD1306_WHITE);
+        display_.setCursor(46, 27);
+        display_.print("Connecting...");
+
+        // Animated loader dots: ● ● ○
+        int step = ((elapsed - 3200UL) / 300UL) % 3;
+        for (int d = 0; d < 3; d++) {
+            int dx = 50 + d * 10;
+            if (d == step) {
+                display_.drawCircle(dx, 44, 2, SSD1306_WHITE);
+            } else {
+                display_.fillCircle(dx, 44, 2, SSD1306_WHITE);
+            }
+        }
+    } else {
+        // --- PHASE 3: Connected (Wi-Fi) Screen (Image 1 Screen 3) ---
+        if (state_ != nullptr) {
+            HeaderWidget::draw(display_, *state_, true);
+        }
+
+        // Large Wi-Fi radar icon
+        IconLibrary::drawBigWifi(display_, 10, 24, SSD1306_WHITE);
+
+        // Connected status & IP address
+        display_.setTextSize(1);
+        display_.setTextColor(SSD1306_WHITE);
+        display_.setCursor(46, 27);
+        display_.print("Connected");
+
+        display_.setCursor(46, 40);
+        display_.print("192.168.1.10");
     }
-    if (fillW > 0) {
-        display_.fillRoundRect(21, 45, fillW, 4, 2, SSD1306_WHITE);
-    }
-
-    // 4. Centered "Initializing..." Status Text (Size 1)
-    display_.setTextSize(1);
-    display_.setTextColor(SSD1306_WHITE);
-    display_.setCursor(22, 54);
-    display_.print("Initializing...");
 
     display_.display();
 }
@@ -79,7 +124,7 @@ void DisplayManager::update() noexcept {
 
     if (!state_->bootCompleted) {
         unsigned long elapsed = nowMs - bootStartMs_;
-        if (elapsed >= 2400UL) {
+        if (elapsed >= 6500UL) {
             state_->bootCompleted = true;
             // Force redraw on first render
             lastActiveScreen_ = ScreenId::Count;

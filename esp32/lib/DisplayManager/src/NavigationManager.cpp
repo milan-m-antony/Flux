@@ -21,6 +21,12 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
         return;
     }
 
+    // Pressing any button during boot instantly completes boot animation
+    if (!state_->bootCompleted) {
+        state_->bootCompleted = true;
+        return;
+    }
+
     // Long press on OK returns to MainMonitor from any screen
     if (button == ButtonId::Ok && event == ButtonEvent::LongPressed) {
         if (state_->activeScreen != ScreenId::MainMonitor) {
@@ -44,10 +50,20 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
     // 1. Handling inside ModeSelection menu
     if (state_->activeScreen == ScreenId::ModeSelection) {
         if (button == ButtonId::Left) {
-            modeIndex_ = (modeIndex_ + 3) % 4;
+            if (modeIndex_ == 0) {
+                // Return back to MainMonitor when at top
+                state_->previousScreen = ScreenId::ModeSelection;
+                state_->activeScreen = ScreenId::MainMonitor;
+                transitioning_ = true;
+                slideLeft_ = false;
+                transitionStartMs_ = millis();
+            } else {
+                modeIndex_--;
+            }
         } else if (button == ButtonId::Right) {
             modeIndex_ = (modeIndex_ + 1) % 4;
         } else if (button == ButtonId::Ok) {
+            // Select highlighted profile mode and return to MainMonitor
             state_->activeProfile = static_cast<ProfileMode>(modeIndex_);
             state_->previousScreen = ScreenId::ModeSelection;
             state_->activeScreen = ScreenId::MainMonitor;
@@ -61,7 +77,16 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
     // 2. Handling inside Settings menu
     if (state_->activeScreen == ScreenId::Settings) {
         if (button == ButtonId::Left) {
-            settingsIndex_ = (settingsIndex_ + 3) % 4;
+            if (settingsIndex_ == 0) {
+                // Return back to MainMonitor when at top
+                state_->previousScreen = ScreenId::Settings;
+                state_->activeScreen = ScreenId::MainMonitor;
+                transitioning_ = true;
+                slideLeft_ = false;
+                transitionStartMs_ = millis();
+            } else {
+                settingsIndex_--;
+            }
         } else if (button == ButtonId::Right) {
             settingsIndex_ = (settingsIndex_ + 1) % 4;
         } else if (button == ButtonId::Ok) {
@@ -101,12 +126,14 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
         state_->activeScreen == ScreenId::WifiStatus ||
         state_->activeScreen == ScreenId::BluetoothStatus) {
         if (button == ButtonId::Ok || button == ButtonId::Left) {
+            // Return back to Settings menu
             state_->previousScreen = state_->activeScreen;
             state_->activeScreen = ScreenId::Settings;
             transitioning_ = true;
             slideLeft_ = false;
             transitionStartMs_ = millis();
         } else if (button == ButtonId::Right) {
+            // Return to MainMonitor
             state_->previousScreen = state_->activeScreen;
             state_->activeScreen = ScreenId::MainMonitor;
             transitioning_ = true;
