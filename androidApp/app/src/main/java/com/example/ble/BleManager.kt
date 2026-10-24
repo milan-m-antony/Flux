@@ -42,6 +42,7 @@ class BleManager(private val context: Context) {
     }.stateIn(scope, SharingStarted.Eagerly, ConnectionState.DISCONNECTED)
 
     val discoveredDevices: StateFlow<List<DiscoveredDevice>> = scanner.discoveredDevices
+    val isScanning: StateFlow<Boolean> = scanner.isScanning
 
     val rawPayload: StateFlow<String> = repository.rawPayload
 

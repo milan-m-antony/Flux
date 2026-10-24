@@ -169,8 +169,8 @@ private fun StepOneDiscover(
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        if (permissions.values.all { it }) {
+    ) { _ ->
+        if (BLEPermissionsManager.hasPermissions(context)) {
             viewModel.startScan()
             onStartScan()
         }
@@ -284,6 +284,7 @@ private fun StepTwoConnect(
 ) {
     val connectionState by viewModel.connectionState.collectAsState()
     val discoveredDevices by viewModel.discoveredDevices.collectAsState()
+    val isScanning by viewModel.isScanning.collectAsState()
 
     val infiniteTransition = rememberInfiniteTransition(label = "Radar")
     val pulseScale by infiniteTransition.animateFloat(
@@ -305,6 +306,10 @@ private fun StepTwoConnect(
         label = "RadarAlpha"
     )
 
+    LaunchedEffect(Unit) {
+        viewModel.startScan()
+    }
+
     LaunchedEffect(connectionState) {
         if (connectionState == ConnectionState.CONNECTED) {
             onConnected()
@@ -321,7 +326,7 @@ private fun StepTwoConnect(
             modifier = Modifier.size(100.dp),
             contentAlignment = Alignment.Center
         ) {
-            if (connectionState == ConnectionState.SCANNING) {
+            if (isScanning || connectionState == ConnectionState.SCANNING) {
                 Box(
                     modifier = Modifier
                         .size(100.dp)
@@ -376,17 +381,44 @@ private fun StepTwoConnect(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(
-                        color = FluxOrange,
-                        strokeWidth = 3.dp,
-                        modifier = Modifier.size(36.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Scanning for Flux1 / ESP32...",
-                        color = colors.textSecondary,
-                        fontSize = 14.sp
-                    )
+                    if (isScanning) {
+                        CircularProgressIndicator(
+                            color = FluxOrange,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Scanning for Flux1 / ESP32...",
+                            color = colors.textSecondary,
+                            fontSize = 14.sp
+                        )
+                    } else {
+                        Text(
+                            text = "No Flux devices detected yet.",
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Ensure ESP32 is powered on and within range.",
+                            color = colors.textSecondary,
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.startScan() },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = FluxOrange),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, FluxOrange),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Scan Again")
+                        }
+                    }
                 }
             }
         } else {

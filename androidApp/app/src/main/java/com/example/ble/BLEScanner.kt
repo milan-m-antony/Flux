@@ -15,8 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
 @SuppressLint("MissingPermission")
 class BLEScanner(private val context: Context) {
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-    private val adapter: BluetoothAdapter? = bluetoothManager.adapter
-    private val scanner: BluetoothLeScanner? = adapter?.bluetoothLeScanner
+    private val adapter: BluetoothAdapter?
+        get() = bluetoothManager.adapter
+    private val scanner: BluetoothLeScanner?
+        get() = adapter?.bluetoothLeScanner
 
     private val _discoveredDevices = MutableStateFlow<List<DiscoveredDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<DiscoveredDevice>> = _discoveredDevices.asStateFlow()
@@ -27,18 +29,36 @@ class BLEScanner(private val context: Context) {
     private val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
-            val name = device.name ?: result.scanRecord?.deviceName ?: "Unknown"
-            
+            val scanRecord = result.scanRecord
+            val recordName = scanRecord?.deviceName
+            val devName = try { device.name } catch (e: SecurityException) { null }
+            val rawName = (devName ?: recordName ?: "").trim()
+
             // The ESP32 broadcasts this specific Service UUID
             val targetServiceUuid1 = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
             val targetServiceUuid2 = "6E400011-B5A3-F393-E0A9-E50E24DCCA9E"
-            val hasTargetService = result.scanRecord?.serviceUuids?.any { 
+            val hasTargetService = scanRecord?.serviceUuids?.any { 
                 val uuidStr = it.uuid.toString()
                 uuidStr.equals(targetServiceUuid1, ignoreCase = true) || uuidStr.equals(targetServiceUuid2, ignoreCase = true)
             } == true
-            
-            if (name.contains("Flux", ignoreCase = true) || hasTargetService) {
-                val displayName = if (name == "Unknown") "Flux1" else name
+
+            // Raw scan payload check for "Flux" ASCII or UUID string
+            val rawContainsTarget = scanRecord?.bytes?.let { bytes ->
+                val str = String(bytes, Charsets.ISO_8859_1)
+                str.contains("Flux", ignoreCase = true) || str.contains("6E40", ignoreCase = true)
+            } ?: false
+
+            val isFluxDevice = rawName.contains("Flux", ignoreCase = true) ||
+                               rawName.contains("ESP32", ignoreCase = true) ||
+                               hasTargetService ||
+                               rawContainsTarget
+
+            if (isFluxDevice) {
+                val displayName = if (rawName.isNotBlank() && !rawName.equals("Unknown", ignoreCase = true)) {
+                    rawName
+                } else {
+                    "Flux1"
+                }
                 val newDevice = DiscoveredDevice(device, displayName, device.address, result.rssi)
                 val currentList = _discoveredDevices.value.toMutableList()
                 val existingIndex = currentList.indexOfFirst { it.address == device.address }
@@ -53,11 +73,17 @@ class BLEScanner(private val context: Context) {
     }
 
     fun startScan() {
-        if (scanner == null || adapter?.isEnabled != true || _isScanning.value) return
+        val currentScanner = scanner ?: return
+        if (adapter?.isEnabled != true) return
+        if (_isScanning.value) {
+            try {
+                currentScanner.stopScan(scanCallback)
+            } catch (e: Exception) {}
+        }
         _discoveredDevices.value = emptyList()
         _isScanning.value = true
         val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-        scanner.startScan(null, settings, scanCallback)
+        currentScanner.startScan(null, settings, scanCallback)
     }
 
     fun stopScan() {

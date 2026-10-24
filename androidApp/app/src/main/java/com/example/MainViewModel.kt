@@ -96,6 +96,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val connectionState = bleManager.connectionState
     val discoveredDevices = bleManager.discoveredDevices
+    val isScanning = bleManager.isScanning
     val latestReading = bleManager.latestReading
     val latestMv = bleManager.latestMv
     val rawPayload = bleManager.rawPayload

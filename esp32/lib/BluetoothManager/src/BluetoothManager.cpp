@@ -1,6 +1,7 @@
 #include "BluetoothManager.hpp"
 #include <WiFi.h>
 #include <Preferences.h>
+#include <nvs_flash.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 
@@ -35,6 +36,13 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
     }
 
     try {
+        // Initialize NVS Flash partition cleanly
+        esp_err_t nvsErr = nvs_flash_init();
+        if (nvsErr == ESP_ERR_NVS_NO_FREE_PAGES || nvsErr == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+            nvs_flash_erase();
+            nvs_flash_init();
+        }
+
         // Initialize BLE Device
         BLEDevice::init("Flux1");
         
@@ -81,15 +89,26 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
         // Start Service
         pService_->start();
 
-        // Start Advertising
+        // Start Advertising with explicit Device Name & UUID in both adv & scan response
         BLEAdvertising* pAdvertising = BLEDevice::getAdvertising();
         pAdvertising->addServiceUUID(SERVICE_UUID);
+
+        BLEAdvertisementData advData;
+        advData.setName("Flux1");
+        advData.setFlags(0x06); // BR_EDR_NOT_SUPPORTED | GENERAL_DISC_MODE
+        advData.setCompleteServices(BLEUUID(SERVICE_UUID));
+        pAdvertising->setAdvertisementData(advData);
+
+        BLEAdvertisementData scanRespData;
+        scanRespData.setName("Flux1");
+        pAdvertising->setScanResponseData(scanRespData);
+
         pAdvertising->setScanResponse(true);
         pAdvertising->setMinPreferred(0x06);
         pAdvertising->setMinPreferred(0x12);
         BLEDevice::startAdvertising();
 
-        Serial.println("Flux BLE Initialized");
+        Serial.println("Flux BLE Initialized with explicit device name Flux1");
         Serial.println("Advertising Started");
 
         // Load saved Wi-Fi credentials from NVS
