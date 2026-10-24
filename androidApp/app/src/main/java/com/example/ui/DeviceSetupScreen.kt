@@ -37,6 +37,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.foundation.BorderStroke
+import android.content.Context
+import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.wifi.WifiManager
+import android.provider.Settings
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +59,8 @@ fun DeviceSetupScreen(
     onNext: () -> Unit,
     onSkip: () -> Unit
 ) {
-    var step by remember { mutableStateOf(1) }
+    val initialStep = if (viewModel.connectionState.value == ConnectionState.CONNECTED) 3 else 1
+    var step by remember { mutableStateOf(initialStep) }
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(isDarkTheme)
     val connectionState by viewModel.connectionState.collectAsState()
@@ -443,6 +451,33 @@ private fun StepTwoConnect(
 }
 
 // ==============================================================================
+private fun getActiveWifiSsid(context: Context): String? {
+    try {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            val network = connectivityManager?.activeNetwork
+            val capabilities = connectivityManager?.getNetworkCapabilities(network)
+            if (capabilities?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true) {
+                val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
+                val tSsid = wifiInfo?.ssid
+                if (!tSsid.isNullOrBlank() && tSsid != "<unknown ssid>" && tSsid != "0x") {
+                    return tSsid.removeSurrounding("\"")
+                }
+            }
+        }
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        val connectionInfo = wifiManager?.connectionInfo
+        if (connectionInfo != null && connectionInfo.networkId != -1) {
+            val ssid = connectionInfo.ssid
+            if (!ssid.isNullOrBlank() && ssid != "<unknown ssid>" && ssid != "0x") {
+                return ssid.removeSurrounding("\"")
+            }
+        }
+    } catch (_: Exception) {}
+    return null
+}
+
+// ==============================================================================
 // STEP 3: Wi-Fi Provisioning
 // ==============================================================================
 @Composable
@@ -452,10 +487,27 @@ private fun StepThreeProvisionWifi(
     onProvisionSent: () -> Unit,
     onSkipWifi: () -> Unit
 ) {
+    val context = LocalContext.current
+    var autoDetectedSsid by remember { mutableStateOf<String?>(null) }
     var ssid by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var turnOffBleAfterWifi by remember { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
+
+    val refreshWifiDetection: () -> Unit = {
+        val detected = getActiveWifiSsid(context)
+        if (!detected.isNullOrBlank()) {
+            autoDetectedSsid = detected
+            ssid = detected
+        } else {
+            autoDetectedSsid = null
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshWifiDetection()
+    }
 
     Column(
         modifier = Modifier
@@ -484,7 +536,7 @@ private fun StepThreeProvisionWifi(
         Spacer(modifier = Modifier.height(18.dp))
 
         Text(
-            text = "Configure Device Wi-Fi",
+            text = "Connect Device to Wi-Fi",
             color = colors.textPrimary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Black,
@@ -502,7 +554,112 @@ private fun StepThreeProvisionWifi(
             modifier = Modifier.padding(horizontal = 12.dp)
         )
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Phone Wi-Fi Detection Banner
+        if (autoDetectedSsid != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(FluxGreenOnline.copy(alpha = 0.10f))
+                    .border(1.dp, FluxGreenOnline.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = FluxGreenOnline,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Detected Phone Network",
+                                color = FluxGreenOnline,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = autoDetectedSsid ?: "",
+                                color = colors.textPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                    IconButton(onClick = refreshWifiDetection, modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = colors.textSecondary, modifier = Modifier.size(18.dp))
+                    }
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.cardBg)
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.Info, contentDescription = null, tint = FluxOrange, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Auto-detect Phone Wi-Fi",
+                            color = colors.textPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Text(
+                        text = "Connect phone to 2.4 GHz Wi-Fi to auto-fill, or enter network details manually below.",
+                        color = colors.textSecondary,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = refreshWifiDetection,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(36.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp), tint = FluxOrange)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Detect Wi-Fi", fontSize = 12.sp, color = colors.textPrimary)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier
+                                .weight(1.2f)
+                                .height(36.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) {
+                            Icon(Icons.Outlined.Settings, contentDescription = null, modifier = Modifier.size(14.dp), tint = FluxOrange)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Wi-Fi Settings", fontSize = 12.sp, color = colors.textPrimary)
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
 
         // Input Fields Card
         Box(
@@ -520,8 +677,16 @@ private fun StepThreeProvisionWifi(
                     value = ssid,
                     onValueChange = { ssid = it },
                     label = { Text("Wi-Fi Network Name (SSID)") },
+                    placeholder = { Text("e.g. MyHome-2.4G") },
                     leadingIcon = {
                         Icon(Icons.Outlined.Wifi, contentDescription = null, tint = FluxOrange)
+                    },
+                    trailingIcon = {
+                        if (ssid.isNotEmpty()) {
+                            IconButton(onClick = { ssid = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = colors.textSecondary)
+                            }
+                        }
                     },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
@@ -538,7 +703,7 @@ private fun StepThreeProvisionWifi(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Wi-Fi Password") },
+                    label = { Text("Wi-Fi Password (leave empty for open)") },
                     leadingIcon = {
                         Icon(Icons.Outlined.Lock, contentDescription = null, tint = FluxOrange)
                     },
@@ -569,12 +734,51 @@ private fun StepThreeProvisionWifi(
             }
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Battery Saving / BLE Option Card
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(colors.cardBg)
+                .border(0.5.dp, colors.cardBorder, RoundedCornerShape(14.dp))
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                Text(
+                    text = "Turn off BLE after Wi-Fi connects",
+                    color = colors.textPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Conserves ESP32 battery once cloud sync is online.",
+                    color = colors.textSecondary,
+                    fontSize = 11.5.sp
+                )
+            }
+            Switch(
+                checked = turnOffBleAfterWifi,
+                onCheckedChange = { turnOffBleAfterWifi = it },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = FluxOrange
+                )
+            )
+        }
+
+        Spacer(modifier = Modifier.height(22.dp))
 
         Button(
             onClick = {
                 if (ssid.isNotBlank()) {
                     viewModel.sendWifiCredentials(ssid.trim(), password)
+                    if (turnOffBleAfterWifi) {
+                        viewModel.turnOffBle()
+                    }
                     onProvisionSent()
                 }
             },
@@ -586,25 +790,36 @@ private fun StepThreeProvisionWifi(
             colors = ButtonDefaults.buttonColors(
                 containerColor = FluxOrange,
                 contentColor = Color.White,
-                disabledContainerColor = FluxOrange.copy(alpha = 0.4f)
+                disabledContainerColor = FluxOrange.copy(alpha = 0.35f),
+                disabledContentColor = Color.White.copy(alpha = 0.6f)
             )
         ) {
             Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Send Credentials to Flux", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = if (ssid.isNotBlank()) "Connect ESP32 to '${ssid.trim()}'" else "Enter Wi-Fi Network to Connect",
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        TextButton(
+        OutlinedButton(
             onClick = onSkipWifi,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, colors.cardBorder)
         ) {
+            Icon(Icons.Default.Bluetooth, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.textSecondary)
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "Use Bluetooth Only (Skip Wi-Fi)",
-                color = colors.textSecondary,
+                text = "Continue with Bluetooth Only (Skip Wi-Fi)",
+                color = colors.textPrimary,
                 fontSize = 13.5.sp,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.SemiBold
             )
         }
 
@@ -643,13 +858,13 @@ private fun StepFourVerify(
                 .shadow(8.dp, CircleShape, spotColor = FluxGreenOnline.copy(alpha = 0.3f))
                 .clip(CircleShape)
                 .background(colors.cardBg)
-                .border(2.dp, if (isBleOk) FluxGreenOnline else FluxOrange, CircleShape),
+                .border(2.dp, if (isBleOk || isWifiOk) FluxGreenOnline else FluxOrange, CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (isBleOk) Icons.Default.CheckCircle else Icons.Default.Sync,
+                imageVector = if (isBleOk || isWifiOk) Icons.Default.CheckCircle else Icons.Default.Sync,
                 contentDescription = null,
-                tint = if (isBleOk) FluxGreenOnline else FluxOrange,
+                tint = if (isBleOk || isWifiOk) FluxGreenOnline else FluxOrange,
                 modifier = Modifier.size(54.dp)
             )
         }
@@ -688,7 +903,7 @@ private fun StepFourVerify(
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 VerifyStatusRow(
                     label = "BLE Peripheral Session",
-                    sublabel = if (isBleOk) "Connected to Flux1" else "Connecting...",
+                    sublabel = if (isBleOk) "Connected to Flux1" else "Disconnected / Idle",
                     isPassed = isBleOk,
                     colors = colors
                 )
@@ -707,20 +922,39 @@ private fun StepFourVerify(
             }
         }
 
-        Spacer(modifier = Modifier.height(34.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = onComplete,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(18.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = FluxOrange,
-                contentColor = Color.White
-            )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Complete & Open Dashboard", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            if (isBleOk) {
+                OutlinedButton(
+                    onClick = { viewModel.turnOffBle() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, colors.cardBorder)
+                ) {
+                    Icon(Icons.Default.BluetoothDisabled, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.textSecondary)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Turn Off BLE", fontSize = 13.sp, color = colors.textPrimary)
+                }
+            }
+            Button(
+                onClick = onComplete,
+                modifier = Modifier
+                    .weight(if (isBleOk) 1.5f else 1f)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = FluxOrange,
+                    contentColor = Color.White
+                )
+            ) {
+                Text("Open Dashboard", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))

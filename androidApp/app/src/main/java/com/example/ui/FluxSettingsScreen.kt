@@ -20,8 +20,11 @@ import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -52,7 +55,8 @@ import com.example.ui.theme.*
 fun FluxSettingsScreen(
     viewModel: MainViewModel,
     onNotificationClick: () -> Unit = {},
-    onNavigateToDevice: () -> Unit = {}
+    onNavigateToDevice: () -> Unit = {},
+    onNavigateToWifiSetup: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lowThreshold by viewModel.lowTempThreshold.collectAsState()
@@ -769,6 +773,34 @@ fun FluxSettingsScreen(
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // 7. Quick Device Wi-Fi Setup Button
+            OutlinedButton(
+                onClick = onNavigateToWifiSetup,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, FluxOrange.copy(alpha = 0.5f)),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = FluxOrange
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Wifi,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                    tint = FluxOrange
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Configure Device Wi-Fi Network",
+                    fontSize = 13.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(110.dp))

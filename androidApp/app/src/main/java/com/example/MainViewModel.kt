@@ -627,6 +627,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun turnOffBle() {
+        viewModelScope.launch {
+            try {
+                bleManager.sendCommand("BLE_OFF")
+            } catch (_: Exception) {
+            }
+            bleManager.disconnect()
+        }
+    }
+
     fun setDarkTheme(isDark: Boolean) {
         viewModelScope.launch {
             settingsRepository.saveTheme(isDark)

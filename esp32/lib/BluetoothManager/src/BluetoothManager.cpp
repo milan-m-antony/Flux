@@ -194,14 +194,26 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         size_t idx = val.find("SET_WIFI:") + 9;
         std::string param = val.substr(idx);
         size_t comma = param.find(',');
-        if (comma != std::string::npos) {
-            std::string ssid = param.substr(0, comma);
-            std::string pass = param.substr(comma + 1);
-            Serial.printf("Received Wi-Fi config over BLE: SSID=%s\n", ssid.c_str());
-            saveWifiCredentials(ssid.c_str(), pass.c_str());
-            WiFi.disconnect();
-            WiFi.mode(WIFI_STA);
+        std::string ssid = (comma != std::string::npos) ? param.substr(0, comma) : param;
+        std::string pass = (comma != std::string::npos) ? param.substr(comma + 1) : "";
+        Serial.printf("Received Wi-Fi config over BLE: SSID=%s\n", ssid.c_str());
+        saveWifiCredentials(ssid.c_str(), pass.c_str());
+        WiFi.disconnect();
+        WiFi.mode(WIFI_STA);
+        if (pass.empty()) {
+            WiFi.begin(ssid.c_str());
+        } else {
             WiFi.begin(ssid.c_str(), pass.c_str());
+        }
+    } else if (val.find("BLE_OFF") != std::string::npos || val.find("STOP_BLE") != std::string::npos) {
+        Serial.println("Stopping BLE Advertising upon request");
+        BLEDevice::getAdvertising()->stop();
+        if (pServer_ != nullptr && connected_) {
+            pServer_->disconnect(pServer_->getConnId());
+        }
+        if (state_ != nullptr) {
+            state_->bluetoothEnabled = false;
+            state_->bluetoothConnected = false;
         }
     }
 }
@@ -378,7 +390,8 @@ void BluetoothManager::update() noexcept {
         if (WiFi.status() == WL_CONNECTED) {
             state_->wifiConnected = true;
             state_->wifiRSSI = WiFi.RSSI();
-            state_->wifiSSID = WiFi.SSID().c_str();
+            currentWifiSsid_ = WiFi.SSID();
+            state_->wifiSSID = currentWifiSsid_.c_str();
             attemptCloudUpload();
         } else {
             state_->wifiConnected = false;

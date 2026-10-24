@@ -255,3 +255,13 @@ CREATE TRIGGER trg_after_telemetry_insert
 AFTER INSERT ON public.telemetry
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_new_telemetry();
+
+-- ==============================================================================
+-- 10. Seed Initial Device Record
+-- ==============================================================================
+INSERT INTO public.devices (id, display_name, owner_id, firmware_version, device_status)
+VALUES ('Flux1', 'Flux Smart Monitor', 'anonymous', 'v2.0.0', 'ONLINE')
+ON CONFLICT (id) DO UPDATE SET
+    last_seen = NOW(),
+    device_status = 'ONLINE';
+

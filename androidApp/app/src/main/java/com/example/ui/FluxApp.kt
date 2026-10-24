@@ -230,6 +230,9 @@ fun FluxApp(viewModel: MainViewModel) {
                             },
                             onNavigateToDevice = {
                                 navController.navigate(DeviceRoute)
+                            },
+                            onNavigateToWifiSetup = {
+                                navController.navigate(DeviceSetupRoute)
                             }
                         )
                     }
@@ -281,7 +284,8 @@ fun FluxApp(viewModel: MainViewModel) {
                         FluxDeviceScreen(
                             viewModel = viewModel,
                             onBack = { navController.navigateUp() },
-                            onNavigateToDiagnostics = { navController.navigate(FluxDiagnosticsRoute) }
+                            onNavigateToDiagnostics = { navController.navigate(FluxDiagnosticsRoute) },
+                            onNavigateToWifiSetup = { navController.navigate(DeviceSetupRoute) }
                         )
                     }
                     composable<FluxLiveMonitorRoute> {

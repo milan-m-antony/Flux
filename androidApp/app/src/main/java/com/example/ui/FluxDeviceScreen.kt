@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.widget.Toast
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.*
@@ -46,7 +48,8 @@ import com.example.ui.theme.*
 fun FluxDeviceScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit = {},
-    onNavigateToDiagnostics: () -> Unit = {}
+    onNavigateToDiagnostics: () -> Unit = {},
+    onNavigateToWifiSetup: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
@@ -495,38 +498,16 @@ fun FluxDeviceScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // 5. Interactive Hardware Action Buttons
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Ping Button
-                OutlinedButton(
-                    onClick = {
-                        Toast.makeText(context, "Ping sent to $deviceName: 18ms latency (ACK received)", Toast.LENGTH_SHORT).show()
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = colors.textPrimary
-                    ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = Brush.horizontalGradient(listOf(colors.cardBorder, colors.cardBorder))
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = FluxOrange
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Ping Telemetry", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-
-                // Diagnostics Button
+                // Configure Wi-Fi Button
                 Button(
-                    onClick = { onNavigateToDiagnostics() },
-                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToWifiSetup,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = FluxOrange,
@@ -534,12 +515,85 @@ fun FluxDeviceScreen(
                     )
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.Settings,
+                        imageVector = Icons.Outlined.Wifi,
                         contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Diagnostics", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (reading?.wifiConnected == true) "Manage Wi-Fi Settings" else "Connect Device to Wi-Fi",
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Ping Button
+                    OutlinedButton(
+                        onClick = {
+                            Toast.makeText(context, "Ping sent to $deviceName: 18ms latency (ACK received)", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = colors.textPrimary
+                        ),
+                        border = BorderStroke(1.dp, colors.cardBorder)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = FluxOrange
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ping", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Turn Off BLE Button
+                    if (isOnline) {
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.turnOffBle()
+                                Toast.makeText(context, "Turned off BLE session", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1.3f).height(46.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            border = BorderStroke(1.dp, colors.cardBorder)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BluetoothDisabled,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = colors.textSecondary
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Turn Off BLE", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                        }
+                    }
+
+                    // Diagnostics Button
+                    Button(
+                        onClick = { onNavigateToDiagnostics() },
+                        modifier = Modifier.weight(1.2f).height(46.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.pillBg,
+                            contentColor = colors.textPrimary
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = FluxOrange
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Diagnostics", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
