@@ -163,6 +163,9 @@ void DisplayManager::update() noexcept {
     static bool lastSensorConn = false;
     static bool lastAlert = false;
     static bool lastWifiConn = false;
+    static bool lastAlertPulse = false;
+
+    bool alertPulse = state_->isThresholdAlert && (((nowMs / 350) % 2) != 0);
 
     bool stateChanged = (secondChanged ||
                          abs(tempCelsius - lastTemp_) > 0.05f ||
@@ -178,6 +181,7 @@ void DisplayManager::update() noexcept {
                          activeProfileInt != lastProfile ||
                          isSensorConn != lastSensorConn ||
                          isAlert != lastAlert ||
+                         alertPulse != lastAlertPulse ||
                          ((isBluetoothConnected == false || isWifiConn == false) && btBlinkState_ != lastBlinkState_));
 
     if (!stateChanged) {
@@ -198,6 +202,7 @@ void DisplayManager::update() noexcept {
     lastSensorConn = isSensorConn;
     lastAlert = isAlert;
     lastWifiConn = isWifiConn;
+    lastAlertPulse = alertPulse;
 
     display_.clearDisplay();
     uiMgr_->render(display_, *state_, btBlinkState_);

@@ -49,6 +49,10 @@ class BLERepository private constructor(context: Context) {
         connectionManager.autoReconnectIfPossible()
     }
 
+    fun sendCommand(command: String): Boolean {
+        return connectionManager.sendCommand(command)
+    }
+
     companion object {
         @Volatile
         private var INSTANCE: BLERepository? = null

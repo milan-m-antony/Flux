@@ -31,6 +31,7 @@ enum class ScreenId : uint8_t {
     MainMonitor = 0,
     ModeSelection,
     Settings,
+    Preferences,
     DeviceInfo,
     WifiStatus,
     BluetoothStatus,
@@ -55,6 +56,8 @@ struct DeviceState {
     float lowThreshold = 18.0f;         // in Celsius
     float highThreshold = 28.0f;        // in Celsius
     bool isThresholdAlert = false;
+    unsigned long alertSentAnimMs = 0UL; // Timestamp of alert occurrence for screen animations
+    bool buzzerEnabled = true;
     
     // Sensor Health
     bool sensorConnected = false;

@@ -23,6 +23,9 @@ public:
         if (state_ && state_->activeScreen == ScreenId::ModeSelection) {
             return modeIndex_;
         }
+        if (state_ && state_->activeScreen == ScreenId::Preferences) {
+            return prefIndex_;
+        }
         return settingsIndex_;
     }
 
@@ -33,6 +36,7 @@ private:
     bool slideLeft_ = true; // true = slide left (next), false = slide right (prev)
     int settingsIndex_ = 0;
     int modeIndex_ = 0;
+    int prefIndex_ = 0;
 
     static constexpr unsigned long TransitionDurationMs = 200UL;
 };

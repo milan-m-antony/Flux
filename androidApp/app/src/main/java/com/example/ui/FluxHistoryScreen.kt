@@ -405,8 +405,11 @@ fun FluxHistoryScreen(
                     )
                 }
 
+                val todayFormatted = remember {
+                    java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                }
                 Text(
-                    text = "20 Oct 2026",
+                    text = todayFormatted,
                     color = colors.textSecondary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
@@ -415,56 +418,88 @@ fun FluxHistoryScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 4 Spacious Horizontal Data Log Cards
-            DataLogCard(
-                iconTint = Color(0xFFEF4444),
-                iconBg = if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2),
-                time = "12:00 PM",
-                value = "30.8°C",
-                statusLabel = "High",
-                statusBg = if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2),
-                statusColor = Color(0xFFDC2626),
-                colors = colors
-            )
+            val allReadings by viewModel.allReadings.collectAsState()
+            val preferredUnit by viewModel.preferredUnit.collectAsState()
+            val lowThresh by viewModel.lowTempThreshold.collectAsState()
+            val highThresh by viewModel.highTempThreshold.collectAsState()
 
-            Spacer(modifier = Modifier.height(10.dp))
+            if (allReadings.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(colors.cardBg, RoundedCornerShape(18.dp))
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+                        .padding(horizontal = 20.dp, vertical = 24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No recorded readings yet.\nTelemetry will log here in real-time when connected.",
+                        color = colors.textSecondary,
+                        fontSize = 13.sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        lineHeight = 18.sp
+                    )
+                }
+            } else {
+                val timeFormatter = remember {
+                    java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+                }
+                val recentReadings = remember(allReadings) {
+                    allReadings.takeLast(10).reversed()
+                }
 
-            DataLogCard(
-                iconTint = FluxOrange,
-                iconBg = if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB),
-                time = "08:00 AM",
-                value = "24.1°C",
-                statusLabel = "Normal",
-                statusBg = if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7),
-                statusColor = if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A),
-                colors = colors
-            )
+                recentReadings.forEach { reading ->
+                    val readingTime = timeFormatter.format(java.util.Date(reading.timestamp))
+                    val isFahr = preferredUnit.equals("F", ignoreCase = true)
+                    val dispTemp = if (isFahr) (reading.temperature * 9 / 5) + 32 else reading.temperature
+                    val valStr = String.format("%.1f°%s", dispTemp, if (isFahr) "F" else "C")
 
-            Spacer(modifier = Modifier.height(10.dp))
+                    val isHigh = reading.temperature > highThresh
+                    val isLow = reading.temperature < lowThresh
 
-            DataLogCard(
-                iconTint = Color(0xFF3B82F6),
-                iconBg = if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE),
-                time = "04:00 AM",
-                value = "19.6°C",
-                statusLabel = "Low",
-                statusBg = if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE),
-                statusColor = Color(0xFF2563EB),
-                colors = colors
-            )
+                    val statusLabel = when {
+                        isHigh -> "High"
+                        isLow -> "Low"
+                        else -> "Normal"
+                    }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                    val iconTint = when {
+                        isHigh -> Color(0xFFEF4444)
+                        isLow -> Color(0xFF3B82F6)
+                        else -> FluxOrange
+                    }
 
-            DataLogCard(
-                iconTint = FluxOrange,
-                iconBg = if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB),
-                time = "12:00 AM",
-                value = "20.2°C",
-                statusLabel = "Normal",
-                statusBg = if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7),
-                statusColor = if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A),
-                colors = colors
-            )
+                    val iconBg = when {
+                        isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
+                        isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
+                        else -> if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)
+                    }
+
+                    val statusBg = when {
+                        isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
+                        isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
+                        else -> if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7)
+                    }
+
+                    val statusColor = when {
+                        isHigh -> Color(0xFFDC2626)
+                        isLow -> Color(0xFF2563EB)
+                        else -> if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A)
+                    }
+
+                    DataLogCard(
+                        iconTint = iconTint,
+                        iconBg = iconBg,
+                        time = readingTime,
+                        value = valStr,
+                        statusLabel = statusLabel,
+                        statusBg = statusBg,
+                        statusColor = statusColor,
+                        colors = colors
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
+            }
 
             Spacer(modifier = Modifier.height(110.dp))
         }

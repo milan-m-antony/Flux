@@ -110,4 +110,8 @@ class BleManager(private val context: Context) {
     fun autoReconnectIfPossible() {
         repository.autoReconnectIfPossible()
     }
+
+    fun sendCommand(command: String): Boolean {
+        return repository.sendCommand(command)
+    }
 }

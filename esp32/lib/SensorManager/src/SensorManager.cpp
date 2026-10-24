@@ -62,6 +62,9 @@ void SensorManager::update() noexcept {
 
                     // Threshold and profile evaluation
                     if (tempVal < state_->lowThreshold || tempVal > state_->highThreshold) {
+                        if (!state_->isThresholdAlert) {
+                            state_->alertSentAnimMs = millis();
+                        }
                         state_->isThresholdAlert = true;
                         state_->sensorStatus = "Threshold Alert";
                     } else {

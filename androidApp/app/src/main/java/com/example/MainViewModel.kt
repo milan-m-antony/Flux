@@ -162,10 +162,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _lastTelemetryTimestamp = MutableStateFlow(System.currentTimeMillis())
     val lastTelemetryTimestamp: StateFlow<Long> = _lastTelemetryTimestamp.asStateFlow()
 
-    private val _espWifiConnected = MutableStateFlow(true)
+    private val _espWifiConnected = MutableStateFlow(false)
     val espWifiConnected: StateFlow<Boolean> = _espWifiConnected.asStateFlow()
 
-    private val _espWifiRssi = MutableStateFlow<Int?>(-57)
+    private val _espWifiRssi = MutableStateFlow<Int?>(null)
     val espWifiRssi: StateFlow<Int?> = _espWifiRssi.asStateFlow()
 
     val connectivityCoordinator = FluxConnectivityCoordinator(
@@ -189,9 +189,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _lastTelemetryTimestamp.value = System.currentTimeMillis()
                     if (reading.wifiConnected) {
                         _espWifiConnected.value = true
-                        if (reading.wifiRssi != 0) {
-                            _espWifiRssi.value = reading.wifiRssi
-                        }
+                        _espWifiRssi.value = if (reading.wifiRssi != 0) reading.wifiRssi else null
+                    } else {
+                        _espWifiConnected.value = false
+                        _espWifiRssi.value = null
+                    }
+
+                    // Bidirectional sync: sync profile and unit received from ESP32
+                    if (reading.mode.isNotEmpty() && reading.mode != activeProfile.value) {
+                        settingsRepository.saveProfile(reading.mode)
+                    }
+                    if (reading.unit.isNotEmpty() && reading.unit != preferredUnit.value) {
+                        settingsRepository.saveUnit(reading.unit)
                     }
                     readingRepository.insert(
                         naValue = reading.na,
@@ -578,18 +587,35 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateThresholds(low: Double, high: Double) {
         viewModelScope.launch {
             settingsRepository.saveThresholds(low, high)
+            bleManager.sendCommand("SET_THRESH:${low.toInt()},${high.toInt()}")
         }
     }
 
     fun setPreferredUnit(unit: String) {
         viewModelScope.launch {
             settingsRepository.saveUnit(unit)
+            val cmd = if (unit.equals("F", ignoreCase = true)) "SET_UNIT_F" else "SET_UNIT_C"
+            bleManager.sendCommand(cmd)
         }
     }
 
     fun saveActiveProfile(profile: String) {
         viewModelScope.launch {
             settingsRepository.saveProfile(profile)
+            val cmd = when (profile.lowercase()) {
+                "live monitor", "live" -> "MODE_LIVE"
+                "environment", "env" -> "MODE_ENV"
+                "liquid probe", "liquid" -> "MODE_LIQ"
+                "fermentation", "ferm" -> "MODE_FERM"
+                else -> "MODE_LIVE"
+            }
+            bleManager.sendCommand(cmd)
+        }
+    }
+
+    fun sendWifiCredentials(ssid: String, pass: String) {
+        viewModelScope.launch {
+            bleManager.sendCommand("SET_WIFI:$ssid,$pass")
         }
     }
 

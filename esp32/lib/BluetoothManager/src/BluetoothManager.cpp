@@ -1,4 +1,5 @@
 #include "BluetoothManager.hpp"
+#include <WiFi.h>
 
 namespace Flux {
 
@@ -147,14 +148,29 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
             state_->timeSynced = true;
             Serial.printf("Time synchronized from BLE: %lu\n", epoch);
         }
-    } else if (val.find("\"time\":") != std::string::npos) {
-        size_t idx = val.find("\"time\":") + 7;
-        unsigned long epoch = strtoul(val.substr(idx).c_str(), nullptr, 10);
-        if (epoch > 1000000UL) {
-            state_->initialEpochSec = epoch;
-            state_->timeSyncedAtMs = millis();
-            state_->timeSynced = true;
-            Serial.printf("Time synchronized from BLE JSON: %lu\n", epoch);
+    } else if (val.find("SET_THRESH:") != std::string::npos) {
+        size_t idx = val.find("SET_THRESH:") + 11;
+        std::string param = val.substr(idx);
+        size_t comma = param.find(',');
+        if (comma != std::string::npos) {
+            float lo = atof(param.substr(0, comma).c_str());
+            float hi = atof(param.substr(comma + 1).c_str());
+            if (lo < hi) {
+                state_->lowThreshold = lo;
+                state_->highThreshold = hi;
+                Serial.printf("Thresholds updated from BLE: Lo=%.1f Hi=%.1f\n", lo, hi);
+            }
+        }
+    } else if (val.find("SET_WIFI:") != std::string::npos) {
+        size_t idx = val.find("SET_WIFI:") + 9;
+        std::string param = val.substr(idx);
+        size_t comma = param.find(',');
+        if (comma != std::string::npos) {
+            std::string ssid = param.substr(0, comma);
+            std::string pass = param.substr(comma + 1);
+            Serial.printf("Connecting to Wi-Fi SSID: %s\n", ssid.c_str());
+            WiFi.disconnect();
+            WiFi.begin(ssid.c_str(), pass.c_str());
         }
     }
 }
@@ -231,6 +247,17 @@ void BluetoothManager::update() noexcept {
         rssi_ = -60 - (rand() % 15);
         if (state_ != nullptr) {
             state_->signalStrength = rssi_;
+        }
+    }
+
+    // Monitor Wi-Fi connection
+    if (state_ != nullptr) {
+        if (WiFi.status() == WL_CONNECTED) {
+            state_->wifiConnected = true;
+            state_->wifiRSSI = WiFi.RSSI();
+            state_->wifiSSID = WiFi.SSID().c_str();
+        } else {
+            state_->wifiConnected = false;
         }
     }
 

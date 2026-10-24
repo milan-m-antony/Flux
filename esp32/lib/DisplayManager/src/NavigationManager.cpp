@@ -105,10 +105,12 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
                 slideLeft_ = true;
                 transitionStartMs_ = millis();
             } else if (settingsIndex_ == 2) {
-                // Preferences -> toggle Unit
-                state_->preferredUnit = (state_->preferredUnit == TempUnit::Celsius)
-                                        ? TempUnit::Fahrenheit
-                                        : TempUnit::Celsius;
+                // Preferences -> open Preferences screen
+                state_->previousScreen = ScreenId::Settings;
+                state_->activeScreen = ScreenId::Preferences;
+                transitioning_ = true;
+                slideLeft_ = true;
+                transitionStartMs_ = millis();
             } else if (settingsIndex_ == 3) {
                 // Device Info -> open DeviceInfo
                 state_->previousScreen = ScreenId::Settings;
@@ -116,6 +118,48 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
                 transitioning_ = true;
                 slideLeft_ = true;
                 transitionStartMs_ = millis();
+            }
+        }
+        return;
+    }
+
+    // 2b. Handling inside Preferences screen
+    if (state_->activeScreen == ScreenId::Preferences) {
+        if (button == ButtonId::Left) {
+            if (prefIndex_ == 0) {
+                // Return back to Settings menu
+                state_->previousScreen = ScreenId::Preferences;
+                state_->activeScreen = ScreenId::Settings;
+                transitioning_ = true;
+                slideLeft_ = false;
+                transitionStartMs_ = millis();
+            } else {
+                prefIndex_--;
+            }
+        } else if (button == ButtonId::Right) {
+            prefIndex_ = (prefIndex_ + 1) % 4;
+        } else if (button == ButtonId::Ok) {
+            if (prefIndex_ == 0) {
+                // Toggle Preferred Unit (°C <-> °F)
+                state_->preferredUnit = (state_->preferredUnit == TempUnit::Celsius)
+                                        ? TempUnit::Fahrenheit
+                                        : TempUnit::Celsius;
+            } else if (prefIndex_ == 1) {
+                // Cycle High Threshold: 26 -> 28 -> 30 -> 32 -> 35 -> 26
+                if (state_->highThreshold < 27.0f) state_->highThreshold = 28.0f;
+                else if (state_->highThreshold < 29.0f) state_->highThreshold = 30.0f;
+                else if (state_->highThreshold < 31.0f) state_->highThreshold = 32.0f;
+                else if (state_->highThreshold < 34.0f) state_->highThreshold = 35.0f;
+                else state_->highThreshold = 26.0f;
+            } else if (prefIndex_ == 2) {
+                // Cycle Low Threshold: 12 -> 15 -> 18 -> 20 -> 12
+                if (state_->lowThreshold < 14.0f) state_->lowThreshold = 15.0f;
+                else if (state_->lowThreshold < 17.0f) state_->lowThreshold = 18.0f;
+                else if (state_->lowThreshold < 19.0f) state_->lowThreshold = 20.0f;
+                else state_->lowThreshold = 12.0f;
+            } else if (prefIndex_ == 3) {
+                // Toggle Buzzer
+                state_->buzzerEnabled = !state_->buzzerEnabled;
             }
         }
         return;
