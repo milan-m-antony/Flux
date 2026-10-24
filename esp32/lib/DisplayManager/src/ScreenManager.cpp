@@ -292,22 +292,24 @@ void ScreenManager::drawPreferences(Adafruit_SSD1306& display, int16_t offsetX, 
 
 void ScreenManager::drawDeviceInfo(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
     // Microchip Icon shifted left for optimal responsive clearance
-    IconLibrary::drawMicrochip(display, 4 + offsetX, 20, SSD1306_WHITE);
+    IconLibrary::drawMicrochip(display, 2 + offsetX, 20, SSD1306_WHITE);
 
     // Device Metadata with clean margins and visible uptime
+    display.setTextWrap(false);
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
 
-    display.setCursor(28 + offsetX, 20);
-    display.printf("Device : %s", state.deviceName);
+    display.setCursor(26 + offsetX, 20);
+    display.printf("Device: %s", state.deviceName);
 
-    display.setCursor(28 + offsetX, 32);
-    display.printf("Firmw. : %s", state.firmwareVersion);
+    display.setCursor(26 + offsetX, 32);
+    display.printf("Firmw : %s", state.firmwareVersion);
 
     char upBuf[16];
     state.getFormattedUptime(upBuf, sizeof(upBuf));
-    display.setCursor(28 + offsetX, 44);
-    display.printf("Uptime : %s", upBuf);
+    display.setCursor(26 + offsetX, 44);
+    display.printf("Uptime: %s", upBuf);
+    display.setTextWrap(true);
 }
 
 void ScreenManager::drawWifiStatus(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
