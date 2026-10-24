@@ -119,9 +119,13 @@ void ScreenManager::drawMainMonitor(Adafruit_SSD1306& display, int16_t offsetX, 
         display.print(titleStr);
     }
 
-    // Large Temperature Readout (e.g., 28.5 °C)
+    // Large Temperature Readout (e.g., 28.5 °C or --.- if disconnected)
     char tempBuf[12];
-    formatTemperature(state.temperature, state.preferredUnit, tempBuf, sizeof(tempBuf));
+    if (!state.sensorConnected || state.temperature <= -50.0f) {
+        strcpy(tempBuf, "--.-");
+    } else {
+        formatTemperature(state.temperature, state.preferredUnit, tempBuf, sizeof(tempBuf));
+    }
     display.setTextSize(2);
     display.setCursor(38 + offsetX, 29);
     display.print(tempBuf);
@@ -143,9 +147,11 @@ void ScreenManager::drawMainMonitor(Adafruit_SSD1306& display, int16_t offsetX, 
         display.setTextColor(SSD1306_WHITE);
     }
 
-    // Status State Determination (Normal / Warning / Critical)
+    // Status State Determination (Normal / Warning / Critical / Sensor Err)
     const char* statusStr = "Normal";
-    if (state.temperature >= state.highThreshold + 5.0f) {
+    if (!state.sensorConnected || state.temperature <= -50.0f) {
+        statusStr = "Sensor Err";
+    } else if (state.temperature >= state.highThreshold + 5.0f) {
         statusStr = "Critical";
     } else if (state.temperature > state.highThreshold || state.temperature < state.lowThreshold) {
         statusStr = "Warning";
@@ -314,37 +320,79 @@ void ScreenManager::drawDeviceInfo(Adafruit_SSD1306& display, int16_t offsetX, c
 
 void ScreenManager::drawWifiStatus(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {
     // Large Wi-Fi radar icon
-    IconLibrary::drawBigWifi(display, 10 + offsetX, 24, SSD1306_WHITE);
+    IconLibrary::drawBigWifi(display, 8 + offsetX, 22, SSD1306_WHITE);
 
+    display.setTextWrap(false);
     display.setTextSize(1);
     display.setTextColor(SSD1306_WHITE);
 
     if (state.wifiConnected) {
-        display.setCursor(46 + offsetX, 27);
+        // Line 1: Status
+        display.setCursor(44 + offsetX, 19);
         display.print("Connected");
 
-        display.setCursor(46 + offsetX, 40);
+        // Line 2: Real IP address (Honest only)
+        display.setCursor(44 + offsetX, 30);
         String ipStr = WiFi.localIP().toString();
         if (ipStr.length() > 0 && ipStr != "0.0.0.0") {
-            display.print(ipStr);
+            display.printf("IP: %s", ipStr.c_str());
         } else {
-            display.print("192.168.1.10");
+            display.print("IP: Acquiring...");
+        }
+
+        // Line 3: Backend cloud synchronization status & last upload
+        display.setCursor(44 + offsetX, 41);
+        if (state.lastCloudSyncMs > 0) {
+            unsigned long sec = (millis() - state.lastCloudSyncMs) / 1000UL;
+            display.printf("Cloud: %lus ago", sec);
+        } else {
+            display.printf("Cloud: %s", state.supabaseSyncState);
+        }
+
+        // Line 4: Sensor health
+        display.setCursor(44 + offsetX, 52);
+        if (!state.sensorConnected || state.temperature <= -50.0f) {
+            display.print("Sensor: ERROR");
+        } else {
+            display.printf("Sensor: %.1fC", state.temperature);
         }
     } else {
-        display.setCursor(46 + offsetX, 27);
-        display.print("Connecting...");
+        bool isAttempting = (WiFi.status() == WL_IDLE_STATUS) || 
+                            (WiFi.SSID().length() > 0 && WiFi.status() != WL_DISCONNECTED && WiFi.status() != WL_CONNECT_FAILED);
 
-        // Animated loader dots: ● ● ○
-        int step = (millis() / 400) % 3;
-        for (int d = 0; d < 3; d++) {
-            int dx = 50 + offsetX + d * 10;
-            if (d == step) {
-                display.drawCircle(dx, 44, 2, SSD1306_WHITE);
+        if (isAttempting) {
+            display.setCursor(44 + offsetX, 23);
+            display.print("Connecting...");
+
+            display.setCursor(44 + offsetX, 36);
+            if (WiFi.SSID().length() > 0) {
+                display.printf("SSID: %s", WiFi.SSID().c_str());
             } else {
-                display.fillCircle(dx, 44, 2, SSD1306_WHITE);
+                display.print("Searching net...");
             }
+
+            // Animated loader dots: ● ● ○
+            int step = (millis() / 400) % 3;
+            for (int d = 0; d < 3; d++) {
+                int dx = 50 + offsetX + d * 10;
+                if (d == step) {
+                    display.drawCircle(dx, 50, 2, SSD1306_WHITE);
+                } else {
+                    display.fillCircle(dx, 50, 2, SSD1306_WHITE);
+                }
+            }
+        } else {
+            display.setCursor(44 + offsetX, 23);
+            display.print("Wi-Fi Offline");
+
+            display.setCursor(44 + offsetX, 36);
+            display.print("Disconnected");
+
+            display.setCursor(44 + offsetX, 49);
+            display.print("Pair via App");
         }
     }
+    display.setTextWrap(true);
 }
 
 void ScreenManager::drawBluetoothStatus(Adafruit_SSD1306& display, int16_t offsetX, const DeviceState& state) noexcept {

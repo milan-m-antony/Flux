@@ -121,5 +121,31 @@ object OneSignalManager {
         }
     }
 
+    /**
+     * Authenticated-user association using OneSignal v5 user identity.
+     */
+    fun login(userId: String) {
+        if (userId.isNotBlank()) {
+            try {
+                Log.i(TAG, "Logging in OneSignal user: $userId")
+                OneSignal.login(userId)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error logging into OneSignal user identity", e)
+            }
+        }
+    }
+
+    /**
+     * Securely disconnect user identity on logout.
+     */
+    fun logout() {
+        try {
+            Log.i(TAG, "Logging out OneSignal user identity")
+            OneSignal.logout()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error logging out of OneSignal user identity", e)
+        }
+    }
+
     fun isConfigured(): Boolean = initialized
 }

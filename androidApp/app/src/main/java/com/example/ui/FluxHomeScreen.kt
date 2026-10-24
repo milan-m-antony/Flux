@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.North
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Thermostat
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -105,13 +107,17 @@ enum class TrendTimeFilter(
 fun FluxHomeScreen(
     viewModel: MainViewModel,
     onNavigateToHistory: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    onNavigateToDeviceSetup: () -> Unit = {}
 ) {
     val latestReading by viewModel.latestReading.collectAsState()
+    val allReadings by viewModel.allReadings.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
+    val connectivityState by viewModel.connectivityState.collectAsState()
 
-    val currentTempC = latestReading?.temp ?: 28.4
+    val hasRealData = latestReading != null || allReadings.isNotEmpty() || connectionState == com.example.ble.ConnectionState.CONNECTED
+    val currentTempC = latestReading?.temp ?: allReadings.firstOrNull()?.temperature ?: 0.0
     var selectedUnit by remember { mutableStateOf(preferredUnit) }
 
     val displayTemp = if (selectedUnit == "F") (currentTempC * 9 / 5) + 32 else currentTempC
@@ -132,13 +138,79 @@ fun FluxHomeScreen(
             // 1. Spacer to cleanly clear the fixed top header with generous breathing room
             Spacer(modifier = Modifier.height(86.dp))
 
+            // First-Device Empty State / Add Device Banner
+            if (!hasRealData) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color(0x10000000))
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(colors.cardBg)
+                        .border(1.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(FluxOrange.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.North, // Generic arrow or search
+                                    contentDescription = null,
+                                    tint = FluxOrange,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "No Device Connected",
+                                    color = colors.textPrimary,
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Pair your Flux ESP32 sensor",
+                                    color = colors.textSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        Button(
+                            onClick = onNavigateToDeviceSetup,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = FluxOrange,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text("Add Device", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             // 2. Large Circular Temperature Gauge (Slightly reduced from 290.dp to 265.dp to preserve generous size)
             TemperatureGauge(
                 temperature = currentTempC.toFloat(),
                 minTemp = 16f,
                 maxTemp = 40f,
                 unitSymbol = unitSymbol,
-                displayTempStr = String.format("%.1f", displayTemp),
+                displayTempStr = if (hasRealData) String.format("%.1f", displayTemp) else "--.-",
+                hasData = hasRealData,
                 darkTheme = darkTheme,
                 colors = colors,
                 modifier = Modifier
@@ -230,6 +302,7 @@ fun FluxHomeScreen(
             TemperatureTrendCard(
                 unitSymbol = unitSymbol,
                 isFahrenheit = selectedUnit == "F",
+                readings = allReadings,
                 darkTheme = darkTheme,
                 colors = colors,
                 modifier = Modifier.fillMaxWidth()
@@ -248,6 +321,7 @@ private fun TemperatureGauge(
     maxTemp: Float,
     unitSymbol: String,
     displayTempStr: String,
+    hasData: Boolean = true,
     modifier: Modifier = Modifier,
     darkTheme: Boolean = false,
     colors: FluxColors = rememberFluxColors(darkTheme)
@@ -421,7 +495,7 @@ private fun TemperatureGauge(
 
                 // Big bold reading
                 Text(
-                    text = "$displayTempStr$unitSymbol",
+                    text = if (hasData) "$displayTempStr$unitSymbol" else "--.-",
                     color = colors.textPrimary,
                     fontSize = 38.sp,
                     fontWeight = FontWeight.Bold,
@@ -430,7 +504,7 @@ private fun TemperatureGauge(
 
                 Spacer(modifier = Modifier.height(3.dp))
 
-                // Stable status with orange dot
+                // Stable status with orange/green dot
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -438,11 +512,11 @@ private fun TemperatureGauge(
                         modifier = Modifier
                             .size(6.5.dp)
                             .clip(CircleShape)
-                            .background(FluxOrange)
+                            .background(if (hasData) FluxGreenOnline else Color(0xFF94A3B8))
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Stable",
+                        text = if (hasData) "Live" else "Offline",
                         color = FluxTextMuted,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.SemiBold
@@ -491,6 +565,7 @@ private fun TemperatureGauge(
 private fun TemperatureTrendCard(
     unitSymbol: String,
     isFahrenheit: Boolean = false,
+    readings: List<com.example.data.Reading> = emptyList(),
     modifier: Modifier = Modifier,
     darkTheme: Boolean = false,
     colors: FluxColors = rememberFluxColors(darkTheme)
@@ -498,7 +573,13 @@ private fun TemperatureTrendCard(
     var selectedFilter by remember { mutableStateOf(TrendTimeFilter.LAST_1_HOUR) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    fun convertTemp(tempC: Float): String {
+    val hasRealTelemetry = readings.isNotEmpty()
+    val realMinTemp = if (hasRealTelemetry) readings.minOf { it.temperature }.toFloat() else null
+    val realMaxTemp = if (hasRealTelemetry) readings.maxOf { it.temperature }.toFloat() else null
+    val realAvgTemp = if (hasRealTelemetry) readings.map { it.temperature }.average().toFloat() else null
+
+    fun convertTemp(tempC: Float?): String {
+        if (tempC == null) return "--"
         val converted = if (isFahrenheit) (tempC * 9 / 5) + 32 else tempC
         return String.format("%.1f%s", converted, unitSymbol)
     }
@@ -619,7 +700,7 @@ private fun TemperatureTrendCard(
                     iconTint = Color(0xFF2563EB),
                     icon = Icons.Outlined.Thermostat,
                     label = "Min",
-                    value = convertTemp(selectedFilter.minTemp),
+                    value = convertTemp(if (hasRealTelemetry) realMinTemp else selectedFilter.minTemp),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
@@ -630,7 +711,7 @@ private fun TemperatureTrendCard(
                     iconTint = Color(0xFFEA580C),
                     icon = Icons.Default.North,
                     label = "Max",
-                    value = convertTemp(selectedFilter.maxTemp),
+                    value = convertTemp(if (hasRealTelemetry) realMaxTemp else selectedFilter.maxTemp),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
@@ -641,7 +722,7 @@ private fun TemperatureTrendCard(
                     iconTint = Color(0xFF64748B),
                     icon = Icons.Outlined.BarChart,
                     label = "Average",
-                    value = convertTemp(selectedFilter.avgTemp),
+                    value = convertTemp(if (hasRealTelemetry) realAvgTemp else selectedFilter.avgTemp),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )

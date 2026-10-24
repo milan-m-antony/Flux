@@ -1,5 +1,8 @@
 #include "BluetoothManager.hpp"
 #include <WiFi.h>
+#include <Preferences.h>
+#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 
 namespace Flux {
 
@@ -13,6 +16,10 @@ static const char* STATUS_CHAR_UUID       = "6E400006-B5A3-F393-E0A9-E50E24DCCA9
 static const char* FIRMWARE_CHAR_UUID     = "6E400007-B5A3-F393-E0A9-E50E24DCCA9E";
 static const char* NAME_CHAR_UUID         = "6E400008-B5A3-F393-E0A9-E50E24DCCA9E";
 static const char* JSON_CHAR_UUID         = "6E400009-B5A3-F393-E0A9-E50E24DCCA9E";
+
+// Supabase Direct Ingestion Constants
+static const char* SUPABASE_REST_URL = "https://pivtrxrhxdqxzactcrrb.supabase.co/rest/v1/telemetry";
+static const char* SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpdnRyeHJoeGRxeHphY3RjcnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjAxMjEsImV4cCI6MjEwODMzNjEyMX0.LGOfzD6MVDQQ725kJEC8JEcfwKUQyxpt3V8RBB7HNxg";
 
 void BluetoothManager::begin(DeviceState* state) noexcept {
     state_ = state;
@@ -84,6 +91,9 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
 
         Serial.println("Flux BLE Initialized");
         Serial.println("Advertising Started");
+
+        // Load saved Wi-Fi credentials from NVS
+        loadSavedWifi();
     } catch (...) {
         Serial.println("BLE Init Failed");
     }
@@ -168,10 +178,104 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         if (comma != std::string::npos) {
             std::string ssid = param.substr(0, comma);
             std::string pass = param.substr(comma + 1);
-            Serial.printf("Connecting to Wi-Fi SSID: %s\n", ssid.c_str());
+            Serial.printf("Received Wi-Fi config over BLE: SSID=%s\n", ssid.c_str());
+            saveWifiCredentials(ssid.c_str(), pass.c_str());
             WiFi.disconnect();
+            WiFi.mode(WIFI_STA);
             WiFi.begin(ssid.c_str(), pass.c_str());
         }
+    }
+}
+
+void BluetoothManager::loadSavedWifi() noexcept {
+    try {
+        Preferences prefs;
+        prefs.begin("flux_wifi", true);
+        String savedSSID = prefs.getString("ssid", "");
+        String savedPass = prefs.getString("pass", "");
+        prefs.end();
+
+        if (savedSSID.length() > 0) {
+            currentWifiSsid_ = savedSSID;
+            if (state_ != nullptr) {
+                state_->wifiSSID = currentWifiSsid_.c_str();
+            }
+            Serial.printf("Auto-reconnecting to saved Wi-Fi: %s\n", savedSSID.c_str());
+            WiFi.mode(WIFI_STA);
+            WiFi.begin(savedSSID.c_str(), savedPass.c_str());
+        } else {
+            Serial.println("No saved Wi-Fi credentials found in NVS.");
+        }
+    } catch (...) {
+        Serial.println("Error reading Wi-Fi from NVS");
+    }
+}
+
+void BluetoothManager::saveWifiCredentials(const char* ssid, const char* pass) noexcept {
+    try {
+        Preferences prefs;
+        prefs.begin("flux_wifi", false);
+        prefs.putString("ssid", ssid);
+        prefs.putString("pass", pass);
+        prefs.end();
+        currentWifiSsid_ = String(ssid);
+        if (state_ != nullptr) {
+            state_->wifiSSID = currentWifiSsid_.c_str();
+        }
+        Serial.printf("Wi-Fi credentials saved to NVS: %s\n", ssid);
+    } catch (...) {
+        Serial.println("Error writing Wi-Fi to NVS");
+    }
+}
+
+void BluetoothManager::attemptCloudUpload() noexcept {
+    if (state_ == nullptr) return;
+    if (WiFi.status() != WL_CONNECTED) {
+        state_->supabaseSyncState = "Offline";
+        return;
+    }
+    // Only upload if sensor is connected and reading is valid
+    if (!state_->sensorConnected || state_->temperature <= -50.0f) {
+        state_->supabaseSyncState = "Sensor Err";
+        return;
+    }
+
+    const unsigned long now = millis();
+    if ((now - lastCloudUploadMs_) < 10000UL) {
+        return; // Upload interval: 10s
+    }
+    lastCloudUploadMs_ = now;
+
+    WiFiClientSecure client;
+    client.setInsecure(); // Non-blocking TLS for ESP32
+    HTTPClient http;
+
+    if (http.begin(client, SUPABASE_REST_URL)) {
+        http.addHeader("Content-Type", "application/json");
+        http.addHeader("apikey", SUPABASE_ANON_KEY);
+        http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
+        http.addHeader("Prefer", "return=minimal");
+        http.setTimeout(3500); // 3.5s timeout prevents blocking loop
+
+        char payload[256];
+        snprintf(payload, sizeof(payload),
+                 "{\"device_id\":\"Flux1\",\"temperature_celsius\":%.2f,\"active_profile\":\"%s\",\"source\":\"ESP32-WIFI\",\"is_alert\":%s}",
+                 state_->temperature,
+                 getProfileName(state_->activeProfile),
+                 state_->isThresholdAlert ? "true" : "false");
+
+        int code = http.POST(payload);
+        if (code >= 200 && code < 300) {
+            state_->lastCloudSyncMs = millis();
+            state_->supabaseSyncState = "Synced";
+            Serial.printf("Supabase direct upload OK (HTTP %d)\n", code);
+        } else {
+            state_->supabaseSyncState = "Upload Err";
+            Serial.printf("Supabase direct upload failed (HTTP %d)\n", code);
+        }
+        http.end();
+    } else {
+        state_->supabaseSyncState = "Conn Err";
     }
 }
 
@@ -250,14 +354,16 @@ void BluetoothManager::update() noexcept {
         }
     }
 
-    // Monitor Wi-Fi connection
+    // Monitor Wi-Fi connection and trigger direct cloud telemetry upload
     if (state_ != nullptr) {
         if (WiFi.status() == WL_CONNECTED) {
             state_->wifiConnected = true;
             state_->wifiRSSI = WiFi.RSSI();
             state_->wifiSSID = WiFi.SSID().c_str();
+            attemptCloudUpload();
         } else {
             state_->wifiConnected = false;
+            state_->supabaseSyncState = "Offline";
         }
     }
 

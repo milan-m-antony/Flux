@@ -35,12 +35,17 @@ public:
 
 private:
     void notifyDataChange() noexcept;
+    void loadSavedWifi() noexcept;
+    void saveWifiCredentials(const char* ssid, const char* pass) noexcept;
+    void attemptCloudUpload() noexcept;
 
     DeviceState* state_ = nullptr;
     bool connected_ = false;
     int16_t rssi_ = -65;
     unsigned long lastRssiUpdateMs_ = 0UL;
     unsigned long lastTempNotifyMs_ = 0UL;
+    unsigned long lastCloudUploadMs_ = 0UL;
+    String currentWifiSsid_ = "";
 
     BLEServer* pServer_ = nullptr;
     BLEService* pService_ = nullptr;

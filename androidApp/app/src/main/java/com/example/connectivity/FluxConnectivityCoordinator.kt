@@ -231,14 +231,15 @@ class FluxConnectivityCoordinator(
             isMeteredWifi -> {
                 val effectiveDbm = _phoneNetworkSignalDbm.value ?: -84
                 val percent = SignalCalibrator.rssiToHotspotPercent(effectiveDbm)
+                val deviceActive = (lastTelemetry > 0 && !isStale)
                 FluxConnectivityState(
                     type = ConnectionType.HOTSPOT,
-                    title = "Hotspot detected",
-                    statusText = "$percent% signal",
+                    title = if (deviceActive) "Device online" else "Hotspot detected",
+                    statusText = if (deviceActive) "$percent% signal" else "Device offline",
                     signalPercent = percent,
                     signalDbm = effectiveDbm,
                     signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
-                    isOnline = true,
+                    isOnline = deviceActive,
                     isCloudReachable = isCloudReachable,
                     isStale = isStale,
                     lastTelemetryTimestamp = lastTelemetry
@@ -249,14 +250,15 @@ class FluxConnectivityCoordinator(
             hasCellular && !hasWifi -> {
                 val effectiveDbm = _phoneNetworkSignalDbm.value ?: -86
                 val percent = SignalCalibrator.rssiToCellularPercent(effectiveDbm)
+                val deviceActive = (lastTelemetry > 0 && !isStale)
                 FluxConnectivityState(
                     type = ConnectionType.MOBILE_DATA,
-                    title = "Internet available",
-                    statusText = "$percent% signal",
+                    title = if (deviceActive) "Cloud telemetry" else "Internet available",
+                    statusText = if (deviceActive) "$percent% signal" else "Device offline",
                     signalPercent = percent,
                     signalDbm = effectiveDbm,
                     signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
-                    isOnline = true,
+                    isOnline = deviceActive,
                     isCloudReachable = isCloudReachable,
                     isStale = isStale,
                     lastTelemetryTimestamp = lastTelemetry

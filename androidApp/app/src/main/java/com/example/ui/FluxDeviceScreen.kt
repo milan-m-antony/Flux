@@ -56,10 +56,10 @@ fun FluxDeviceScreen(
     val isOnline = connectivityState.isOnline
 
     // Live battery & telemetry metrics
-    val batteryPercent = reading?.battery ?: 88
-    val batteryVoltage = reading?.batteryVoltage ?: 4.08
-    val signalPercent = connectivityState.signalPercent ?: 82
-    val signalDbm = connectivityState.signalDbm ?: -57
+    val batteryPercent = reading?.battery ?: if (isOnline) 100 else 0
+    val batteryVoltage = reading?.batteryVoltage ?: if (isOnline) 4.20 else 0.0
+    val signalPercent = connectivityState.signalPercent ?: if (isOnline) 75 else 0
+    val signalDbm = connectivityState.signalDbm ?: if (isOnline) -65 else -99
     val deviceName = connectivityState.deviceName.ifBlank { "Flux1" }
 
     // Floating and glowing animations for the device board
@@ -462,17 +462,33 @@ fun FluxDeviceScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    TechDetailRow("Temperature Sensor", "Dallas DS18B20 (±0.5°C)", colors)
+                    val liveFirmware = reading?.firmware?.ifBlank { "v2.0.0" } ?: if (isOnline) "v2.0.0" else "Unavailable"
+                    val liveMac = if (isOnline) "b0:cb:d8:0c:d5:34" else "Disconnected"
+                    val liveIp = if (reading?.wifiConnected == true) {
+                        if (!reading?.wifiSsid.isNullOrBlank()) "Connected (${reading?.wifiSsid})" else "Connected (DHCP)"
+                    } else if (isOnline) {
+                        "Connected via BLE"
+                    } else {
+                        "Disconnected"
+                    }
+                    val liveProto = when {
+                        connectivityState.type == com.example.connectivity.ConnectionType.BLUETOOTH -> "BLE GATT / MTU 512"
+                        connectivityState.type == com.example.connectivity.ConnectionType.WIFI -> "Direct HTTPS PostgREST"
+                        isOnline -> "Realtime Link"
+                        else -> "Offline"
+                    }
+
+                    TechDetailRow("Temperature Sensor", if (isOnline) "Dallas DS18B20 (±0.5°C)" else "DS18B20 (Awaiting Link)", colors)
                     HorizontalDivider(color = colors.cardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
                     TechDetailRow("Microcontroller", "ESP32 Tensilica LX6 Dual-Core", colors)
                     HorizontalDivider(color = colors.cardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                    TechDetailRow("Firmware Version", "v2.4.1-prod (Build 2026)", colors)
+                    TechDetailRow("Firmware Version", liveFirmware, colors)
                     HorizontalDivider(color = colors.cardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                    TechDetailRow("MAC Address", "24:6F:28:B4:7A:1C", colors)
+                    TechDetailRow("MAC Address", liveMac, colors)
                     HorizontalDivider(color = colors.cardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                    TechDetailRow("IP Address", "192.168.1.142", colors)
+                    TechDetailRow("IP Address", liveIp, colors)
                     HorizontalDivider(color = colors.cardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                    TechDetailRow("Telemetry Protocol", "WebSocket / BLE GATT 1.0s", colors)
+                    TechDetailRow("Telemetry Protocol", liveProto, colors)
                 }
             }
 

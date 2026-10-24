@@ -181,7 +181,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     
     init {
         firebaseAuth?.addAuthStateListener { auth ->
-            _currentUser.value = auth.currentUser
+            val user = auth.currentUser
+            _currentUser.value = user
+            if (user != null) {
+                com.example.util.OneSignalManager.login(user.uid)
+            } else {
+                com.example.util.OneSignalManager.logout()
+            }
         }
         viewModelScope.launch {
             bleManager.latestReading.collect { reading ->
@@ -568,6 +574,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun logout() {
         firebaseAuth?.signOut()
+        com.example.util.OneSignalManager.logout()
         
         // Force account selection on next login by signing out of Google
         val context = getApplication<android.app.Application>()

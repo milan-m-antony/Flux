@@ -154,6 +154,9 @@ fun FluxApp(viewModel: MainViewModel) {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
+                            },
+                            onNavigateToDeviceSetup = {
+                                navController.navigate(DeviceSetupRoute)
                             }
                         )
                     }
