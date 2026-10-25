@@ -41,10 +41,13 @@ The alert engine implements strict safety rules to guarantee reliable notificati
 - **Low Temperature Breach:** Measured temperature falls below `user_settings.low_temp_threshold` (e.g. < 18.0°C).
 - **Sensor Disconnect:** Sensor returns `DEVICE_DISCONNECTED_C` (-127°C) or invalid NaN.
 
-### Anti-Flap Window (Hysteresis)
+### Anti-Flap Window & Hysteresis
 - If a temperature hovers around the threshold (e.g. fluctuating between 28.1°C and 27.9°C), a naive system would send dozens of push notifications.
-- **Flux Hysteresis Rule:** The Edge Function queries `alert_events` for the same device and event type. Notifications are suppressed if an alert was already dispatched within the preceding **15-minute window** for the same ongoing breach.
-- **Re-Arming:** When the temperature stabilizes back inside the normal band, the breach state clears, instantly re-arming the alert engine for any future incident.
+- **Client & Edge Hysteresis Rule:**
+  - **Temperature Margin ($0.3^\circ\text{C}$):** Low and high threshold comparisons require the reading to cross by more than $0.3^\circ\text{C}$ before tripping an alarm.
+  - **Cooldown Period (5 Minutes / 300,000 ms):** `BREACH_COOLDOWN_MS` prevents duplicate alerts for the same condition during an ongoing incident.
+  - **Resolution Events:** When the temperature normalizes back within safe limits, the breach state clears and a `"Temperature Normalized"` event is emitted.
+  - **Sensor Disconnection Detection:** If `reading.status == "Disconnected"` or `reading.temp <= -100.0`, a critical `"Sensor Disconnected"` alert is dispatched. When valid measurements resume, a `"Sensor Restored"` notification is recorded.
 
 ---
 
@@ -70,11 +73,17 @@ const response = await fetch("https://onesignal.com/api/v1/notifications", {
 
 ---
 
-## 5. Android Client Integration
+## 5. Android Client Integration & Local Room DB Ingestion
 
-1. **Permission Handling:** On Android 13+ (API 33+), `Manifest.permission.POST_NOTIFICATIONS` is dynamically requested at runtime via `rememberMultiplePermissionsState`.
-2. **User Identity Pairing:** When a user logs in, `OneSignal.login(userId)` links the phone's push token to the Supabase `auth.uid()`, enabling targeted push delivery without broadcasting to all devices.
-3. **Notification Click Navigation:** When the user taps a Flux notification, the payload contains `device_id` and `type`, opening the app directly to `FluxLiveMonitorScreen` or `FluxAlertSettingsScreen`.
+1. **Permission Handling:** On Android 13+ (API 33+), `Manifest.permission.POST_NOTIFICATIONS` is dynamically requested at runtime.
+2. **Real FCM Integration (`MyFirebaseMessagingService`):**
+   - Ingests incoming push notifications and data payloads (`title`, `body`, `message`, `type`).
+   - Automatically writes records into the local Room database (`FluxDatabase` / `NotificationDao` -> `NotificationEntity`).
+   - Dispatches native system heads-up notifications across the `flux_alerts_channel` channel via `FluxNotificationHelper`.
+3. **Zero Mock Data Policy:**
+   - Simulated test cards, fake FCM buttons, and hardcoded dates have been completely removed.
+   - `FluxAlertsScreen` displays real alerts from Room DB with unread tracking, one-tap "Mark all as read", and swipe/click dismissal.
+4. **User Identity Pairing:** When a user logs in, push tokens are registered to Firestore/OneSignal, enabling targeted delivery without broadcasting.
 
 ---
 
@@ -86,9 +95,10 @@ Flux implements a three-tier defense-in-depth alert delivery pipeline to maximiz
 | :--- | :--- | :--- | :---: | :--- |
 | **Hardware Buzzer (GPIO 25)** | Physical acoustic transducer on ESP32 | On-site operators near the equipment | **Instantaneous (< 10 ms)** | None (100% offline & autonomous) |
 | **In-App Visual/Audio Alarms** | Android foreground UI & sound | User actively using the mobile app | < 1 second | Active BLE or Wi-Fi connection |
-| **Cloud Push Notifications** | Supabase Edge Function -> OneSignal | Remote operators away from the installation | 1–3 seconds | Cellular / Internet connectivity |
+| **Cloud Push Notifications** | Supabase Edge Function & FCM | Remote operators away from the installation | 1–3 seconds | Cellular / Internet connectivity |
 
 ### Hardware Buzzer Configuration & Sync
 - **Local Control:** Toggleable directly on the ESP32 via the OLED **Preferences** menu (`Buzzer: ON/OFF`).
 - **Remote Mobile Control:** In the Android companion app under **Alert Settings -> Delivery Channels**, the **ESP32 Hardware Buzzer (G25)** toggle transmits `SET_BUZZER:1` / `0` over BLE.
 - **Bi-directional State Sync:** The current hardware buzzer state (`"buzzer": true/false`) is reported in the 1.0 Hz BLE JSON telemetry stream so the mobile toggle always reflects the true hardware state.
+

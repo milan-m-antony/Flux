@@ -63,7 +63,9 @@ Transmitted across characteristic `6E400009-B5A3-F393-E0A9-E50E24DCCA9E`.
   "avgTemp": 23.85,
   "elapsedSec": 284,
   "alert": 0,
-  "buzzer": true
+  "buzzer": true,
+  "wifiConnected": true,
+  "espWifiRssi": -58
 }
 ```
 
@@ -84,6 +86,8 @@ Transmitted across characteristic `6E400009-B5A3-F393-E0A9-E50E24DCCA9E`.
 | `elapsedSec` | Long | s | Elapsed session timer duration in seconds | **Flux Extension** |
 | `alert` | Int | bitmask | Alert status: `0`=Normal, `1`=High Alarm, `2`=Low Alarm | **Flux Extension** |
 | `buzzer` | Boolean | bool | Physical audible buzzer enabled state on GPIO 25 | **Flux Extension** |
+| `wifiConnected` | Boolean | bool | ESP32 local Wi-Fi router connection status | **Flux Extension** |
+| `espWifiRssi` | Int | dBm | ESP32 Wi-Fi signal strength in dBm | **Flux Extension** |
 
 ---
 
@@ -103,13 +107,42 @@ Sent from the Android app to ESP32 characteristic `6E400002-B5A3-F393-E0A9-E50E2
 | `THRESH:<low>,<high>` | Configure alarm thresholds | Sets low and high alarm trip points (e.g. `THRESH:18.0,28.0`) |
 | `SET_BUZZER:1` or `{"buzzer":true}` | Enable audible buzzer | Updates `DeviceState.buzzerEnabled = true` and triggers confirmation chirp |
 | `SET_BUZZER:0` or `{"buzzer":false}` | Disable audible buzzer | Updates `DeviceState.buzzerEnabled = false` and mutes active alarms |
+| `SET_WIFI:<ssid>,<pass>` | Provision ESP32 Wi-Fi credentials | Writes network credentials to ESP32 NVS, connects to WLAN, and syncs status |
 
 ---
 
 ## 6. Connection Lifecycle & MTU
 
-1. **MTU Negotiation:** Default BLE MTU is 23 bytes (limiting payload to 20 bytes). The ESP32 firmware configures an MTU of 512 bytes (`BLEDevice::setMTU(512)`). Android requests 512 bytes upon connection (`gatt.requestMtu(512)`), enabling transmission of the complete 140-byte JSON telemetry payload in a single packet without fragmentation.
+1. **MTU Negotiation:** Default BLE MTU is 23 bytes (limiting payload to 20 bytes). The ESP32 firmware configures an MTU of 512 bytes (`BLEDevice::setMTU(512)`). Android requests 512 bytes upon connection (`gatt.requestMtu(512)`), enabling transmission of the complete 160-byte JSON telemetry payload in a single packet without fragmentation.
 2. **Reconnection & Resilience:**
    - If the Android client moves out of range, the ESP32 detects the disconnect callback and immediately resumes advertising.
    - The local OLED and temperature sensor continue measuring and displaying at 1Hz without freezing.
    - When the client returns within range, Android's `BleManager` auto-reconnects and resubscribes.
+
+---
+
+## 7. 1-Step Automated Wi-Fi Provisioning Flow
+
+```
++---------------------+                      +---------------------+
+| Android Companion   |                      | ESP32 Hardware Node |
++----------+----------+                      +----------+----------+
+           |                                            |
+           | 1. Auto-detect Phone SSID via WifiManager  |
+           | 2. Pre-fill saved password from DataStore  |
+           |                                            |
+           | ----- 3. Send "SET_WIFI:<ssid>,<pass>" --->|
+           |                                            | 4. Stores in NVS
+           |                                            | 5. WiFi.begin(ssid, pass)
+           |                                            |
+           |<--- 6. 1Hz Telemetry: wifiConnected=true --|
+           |                                            |
+           | 7. Displays animated success state         |
+           | 8. Shows live signal meter (espWifiRssi)   |
+```
+
+1. **Auto-Detection:** When the user taps the Wi-Fi icon, `FluxQuickWifiSheet` automatically reads the smartphone's active 2.4/5GHz Wi-Fi SSID via Android's `WifiManager`.
+2. **Password Auto-fill:** If the user previously connected, `SettingsRepository` loads the saved password from encrypted DataStore.
+3. **1-Tap Provisioning:** Tapping **"Connect ESP32"** sends `SET_WIFI:<ssid>,<pass>` over the BLE command characteristic.
+4. **Autonomous Connection & Live Feedback:** The ESP32 attempts connection and sets `"wifiConnected": true` in the BLE telemetry JSON stream. The app's bottom sheet transitions to `SUCCESS` and displays the live RSSI signal quality meter.
+

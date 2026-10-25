@@ -1,0 +1,26 @@
+# Logs and temporary files
+*.log
+scrcpy_*.txt
+*.tmp
+
+# Gradle and Build Cache
+.gradle/
+build/
+*/build/
+
+# Android Studio and IDE files
+.idea/
+*.iml
+.navigation/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# PlatformIO
+esp32/.pio/
+esp32/.vscode/
+
+# Local configuration and OS files
+local.properties
+.DS_Store
+Thumbs.db

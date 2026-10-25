@@ -126,20 +126,38 @@ Flux/
 
 ---
 
-## 5. Quick Start Guide
+## 5. Universal Quick Start
 
-### 5.1 Building & Flashing Firmware
-```bash
-cd esp32
-pio run -e esp32dev -t upload --upload-port COM3
-pio device monitor -b 115200
+You can build, test, deploy, and mirror without opening Android Studio.
+
+### 5.1 Universal Single-Command Pipeline
+From the repository root (`c:\project\Flux`):
+
+```cmd
+automate.bat
 ```
+*(or `.\automate.ps1` in PowerShell)*
 
-### 5.2 Compiling Android Application
+This 1-click command automatically:
+1. Detects connected physical Android phone via ADB.
+2. Compiles and packages the Android debug APK.
+3. Installs the APK onto your phone.
+4. Launches the Flux application.
+5. Opens `scrcpy` live hardware-accelerated desktop mirroring.
+
+### 5.2 Automation Modes & Targets
 ```powershell
-cd androidApp
-.\gradlew.bat assembleDebug --no-daemon
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+# Flash ESP32 firmware & open serial monitor (COM10)
+automate.bat -Esp32 -Monitor
+
+# Full system deploy (flash ESP32 + build/install Android app + mirror)
+automate.bat -All
+
+# Real-time phone screen mirror only
+automate.bat -Mirror
+
+# Compilation verification & unit testing
+automate.bat -Test
 ```
 
 ### 5.3 Deploying Supabase & Edge Functions
@@ -147,7 +165,7 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 # 1. Apply database migration
 supabase db push
 
-# 2. Deploy OneSignal push dispatch function
+# 2. Deploy push dispatch function
 supabase functions deploy flux-alert-evaluator
 
 # 3. Configure server-side secrets (never expose in client!)
@@ -171,10 +189,12 @@ Operating at the default **5-second cloud upload rate** ($17,280\text{ readings/
 
 | Component | Status | Details |
 | :--- | :---: | :--- |
-| **ESP32 Firmware** | **Verified & Flashed** | Compiles cleanly via PlatformIO and flashed to hardware (`COM10`); RAM 20.3%, Flash 66.3%. |
-| **Alert Buzzer (GPIO 25)** | **Verified on Hardware** | Non-blocking state machine with boot chime, threshold bursts, tactile pip, and OLED/BLE mute toggles. |
-| **OLED Interface** | **Verified & Built** | SSD1306 display with 3-button debounced navigation and 1.8s startup animation. |
-| **Android UI & Navigation** | **Verified & Built** | Complete Flux Jetpack Compose dark UI with dedicated screens and Bézier trend chart. |
-| **BLE Protocol** | **Verified & Built** | 512 MTU JSON streaming with session metrics, buzzer state, and remote commands. |
-| **Supabase Cloud Backend** | **Verified by Design** | Migration script and trigger ready; zero writes to Firebase. |
-| **OneSignal Push Pipeline** | **Verified by Design** | Server-side Edge Function created with 15-minute anti-flap hysteresis. |
+| **Universal 1-Command Automation** | **Verified & Active** | Root `automate.bat` / `automate.ps1` builds, installs to phone, launches app, and mirrors via `scrcpy`. |
+| **Desktop Screen Mirroring** | **Verified & Active** | Hardware-accelerated `scrcpy` live mirroring with USB and wireless ADB support. |
+| **Automated Wi-Fi Quick Sheet** | **Verified on Hardware** | 1-step bottom sheet with auto phone SSID detection, saved password autofill, and `SET_WIFI` BLE command. |
+| **Alert Engine & FCM** | **Verified & Active** | Real FCM push ingestion into Room DB (`NotificationEntity`), anti-flap hysteresis ($0.3^\circ\text{C}$), and 5-min cooldown. |
+| **Zero Mock Data** | **Verified & Clean** | Removed all simulated cards and fake dates; alerts screen reads purely from live Room DB. |
+| **ESP32 Firmware** | **Verified & Flashed** | PlatformIO firmware flashed on `COM10`; non-blocking 1Hz BLE telemetry, buzzer, and 8-screen OLED. |
+| **Android UI & Navigation** | **Verified & Built** | Strict frozen header alignment, single-viewport dashboard, dynamic C/F units, and real-time Bézier trend chart. |
+| **Supabase & Edge Functions** | **Verified by Design** | Migration script, triggers, and OneSignal dispatch ready with 15-minute anti-flap hysteresis. |
+

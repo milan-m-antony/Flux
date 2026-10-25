@@ -42,3 +42,19 @@ This repository houses **Flux**, a high-precision smart telemetry and thermal mo
 ## 4. Git & Branch Management
 - Commit using Conventional Commits format: `feat(...)`, `fix(...)`, `refactor(...)`.
 - Keep active branches synchronized: `main`, `dev`, and `onesignal-integration`.
+
+---
+
+## 5. Universal Automation & Device Mirroring
+- **Single-Command Pipeline**: Use `.\automate.ps1` (or `automate.bat`) from the workspace root to compile, package, install to connected phone, launch `MainActivity`, and open `scrcpy` live mirroring in 1 step.
+- **CLI-Only Operations**: Android Studio is not required. All builds, tests, device pushes, and logs operate through Gradle, ADB, and PlatformIO.
+- **Screen Mirroring**: `scrcpy` is configured with `--window-title "Flux Mobile Screen"` and `--stay-awake`. Wire-free debugging operates via `adb tcpip 5555`.
+
+---
+
+## 6. Real-Time Telemetry & Zero Mock Data Policy
+- **No Mock or Hardcoded Records**: Simulated alerts, fake test buttons, and hardcoded dates are strictly prohibited.
+- **Room DB Ingestion**: Incoming FCM pushes (`MyFirebaseMessagingService`) and BLE breach events write directly to Room database (`NotificationEntity`).
+- **Anti-Flap Hysteresis**: Maintain a $0.3^\circ\text{C}$ buffer and a 5-minute cooldown (`BREACH_COOLDOWN_MS = 300,000L`) to suppress alert flap.
+- **Recovery Alerts**: Emit resolution notifications (`"Sensor Restored"`, `"Temperature Normalized"`) when safe thresholds return.
+
