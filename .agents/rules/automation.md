@@ -52,3 +52,15 @@ The automation script automatically discovers and configures:
   adb tcpip 5555
   scrcpy --tcpip=<device-ip>:5555
   ```
+
+## 5. Instant Screenshot & Clipboard Companion
+- Single-command capture:
+  ```powershell
+  .\automate.bat -Snap
+  ```
+- Launches the floating pill `[ 📸 Snap & Copy ]` docked to the `Flux Mobile Screen` preview window:
+  ```powershell
+  .\automate.bat -Screenshot
+  ```
+- Clicking **Snap & Copy** captures the screen in 0.3s, copies it directly to the **Windows Clipboard** (`SetImage`), and saves a high-res PNG to `screenshots/`. The user can instantly paste into chat with Antigravity via `Ctrl + V`.
+

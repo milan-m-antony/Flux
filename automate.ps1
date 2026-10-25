@@ -23,6 +23,8 @@ param (
     [switch]$All,
     [switch]$Mirror,
     [switch]$Test,
+    [switch]$Snap,
+    [switch]$Screenshot,
     [switch]$NoMirror,
     [switch]$Monitor,
     [string]$Port = "COM10",
@@ -56,8 +58,19 @@ if (-not $env:ANDROID_HOME) {
     }
 }
 
+# Handle Snap / Screenshot modes immediately
+if ($Snap -or $Screenshot) {
+    $ssScript = "$fluxRoot\scripts\screenshot_tool.ps1"
+    if ($Snap) {
+        & $ssScript -Snap -DeviceId $DeviceId
+    } else {
+        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ssScript`"" -WindowStyle Hidden
+    }
+    exit 0
+}
+
 # Default to Android build & run if no specific target is provided
-if (-not ($Android -or $Esp32 -or $All -or $Mirror -or $Test)) {
+if (-not ($Android -or $Esp32 -or $All -or $Mirror -or $Test -or $Snap -or $Screenshot)) {
     $Android = $true
 }
 
@@ -165,6 +178,12 @@ if ($Mirror) {
     $scrcpyDir = [System.IO.Path]::GetDirectoryName($scrcpy)
     Start-Process -FilePath $scrcpy -WorkingDirectory $scrcpyDir -ArgumentList "--window-title `"Flux Mobile Screen`" --stay-awake"
     Write-FluxStep "scrcpy window active."
+    
+    $ssScript = "$fluxRoot\scripts\screenshot_tool.ps1"
+    if (Test-Path $ssScript) {
+        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ssScript`"" -WindowStyle Hidden
+        Write-FluxStep "Floating screenshot button attached!"
+    }
     exit 0
 }
 
@@ -222,6 +241,12 @@ if ($Android -or $All) {
             $scrcpyDir = [System.IO.Path]::GetDirectoryName($scrcpy)
             Start-Process -FilePath $scrcpy -WorkingDirectory $scrcpyDir -ArgumentList "-s $targetDevice --window-title `"Flux Mobile Screen`" --stay-awake"
             Write-FluxStep "Live screen mirror running!"
+
+            $ssScript = "$fluxRoot\scripts\screenshot_tool.ps1"
+            if (Test-Path $ssScript) {
+                Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ssScript`"" -WindowStyle Hidden
+                Write-FluxStep "Floating screenshot button attached!"
+            }
         } else {
             Write-FluxWarn "scrcpy executable not found. Screen mirroring skipped."
         }

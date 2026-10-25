@@ -2,6 +2,7 @@
 *.log
 scrcpy_*.txt
 *.tmp
+screenshots/
 
 # Gradle and Build Cache
 .gradle/
