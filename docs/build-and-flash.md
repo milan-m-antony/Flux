@@ -6,32 +6,38 @@ The firmware is developed with PlatformIO on the Arduino framework targeting the
 
 ### 1.1 Prerequisites
 - [PlatformIO Core (CLI)](https://platformio.org/install/cli) or PlatformIO IDE extension for VS Code / Cursor.
-- USB-to-UART Bridge Drivers (Silicon Labs CP210x or WCH CH340/CH341 depending on dev board).
+- **USB-to-UART Bridge Drivers:**
+  - For boards with Silicon Labs CP2102/CP2104: Download the official **CP210x Universal Windows Driver**.
+  - Right-click `silabser.inf` and select **Install**, or run as Administrator:
+    ```powershell
+    pnputil /add-driver silabser.inf /install
+    ```
+  - Verify in Windows Device Manager: Ports (COM & LPT) should list `Silicon Labs CP210x USB to UART Bridge (COMx)` with Status OK (e.g. `COM10`).
 - High-quality Micro-USB data cable (ensure it carries data lines, not charging only).
 
 ### 1.2 Build Commands
 
 From the firmware directory (`c:\projects\Flux\esp32`):
 
-```bash
-# 1. Inspect project environment and libraries
-pio project config
+```powershell
+# Using PlatformIO Core via PowerShell
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -d esp32
 
-# 2. Compile firmware binary
-pio run -e esp32dev
-
-# 3. List connected serial devices and COM ports
-pio device list
+# Or directly if pio is in PATH
+pio run -d esp32
 ```
 
 ### 1.3 Flashing to Hardware
 
-```bash
-# 4. Upload binary to target ESP32 board
-pio run -e esp32dev -t upload --upload-port COM3
+```powershell
+# 1. Identify active serial port
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" device list
 
-# 5. Launch serial monitor at 115200 baud
-pio device monitor -b 115200
+# 2. Upload binary to target ESP32 board (e.g., COM10)
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run --target upload -d esp32
+
+# 3. Launch serial monitor at 115200 baud
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" device monitor --baud 115200 -d esp32
 ```
 
 > [!TIP]

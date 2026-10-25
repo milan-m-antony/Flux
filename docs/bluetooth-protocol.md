@@ -62,7 +62,8 @@ Transmitted across characteristic `6E400009-B5A3-F393-E0A9-E50E24DCCA9E`.
   "maxTemp": 26.50,
   "avgTemp": 23.85,
   "elapsedSec": 284,
-  "alert": 0
+  "alert": 0,
+  "buzzer": true
 }
 ```
 
@@ -90,17 +91,18 @@ Transmitted across characteristic `6E400009-B5A3-F393-E0A9-E50E24DCCA9E`.
 
 Sent from the Android app to ESP32 characteristic `6E400002-B5A3-F393-E0A9-E50E24DCCA9E`.
 
-| Command String | Description | ESP32 Action |
+| Command String / JSON | Description | ESP32 Action |
 | :--- | :--- | :--- |
-| `UNIT:C` | Set display unit to Celsius | Updates `DeviceState.preferredUnit = UNIT_C` and refreshes OLED |
-| `UNIT:F` | Set display unit to Fahrenheit | Updates `DeviceState.preferredUnit = UNIT_F` and refreshes OLED |
-| `MODE:0` | Switch to Live Monitor profile | Switches active OLED profile mode to `PROFILE_LIVE_MONITOR` |
-| `MODE:1` | Switch to Environment profile | Switches active OLED profile mode to `PROFILE_ENVIRONMENT` |
-| `MODE:2` | Switch to Liquid Probe profile | Switches active OLED profile mode to `PROFILE_LIQUID` |
-| `MODE:3` | Switch to Fermentation profile | Switches active OLED profile mode to `PROFILE_FERMENTATION` |
+| `UNIT:C` or `{"unit":"C"}` | Set display unit to Celsius | Updates `DeviceState.preferredUnit = TempUnit::Celsius` and refreshes OLED |
+| `UNIT:F` or `{"unit":"F"}` | Set display unit to Fahrenheit | Updates `DeviceState.preferredUnit = TempUnit::Fahrenheit` and refreshes OLED |
+| `MODE:0` or `{"mode":"live"}` | Switch to Live Monitor profile | Switches active OLED profile mode to `ProfileMode::Live` |
+| `MODE:1` or `{"mode":"environment"}` | Switch to Environment profile | Switches active OLED profile mode to `ProfileMode::Environment` |
+| `MODE:2` or `{"mode":"liquid"}` | Switch to Liquid Probe profile | Switches active OLED profile mode to `ProfileMode::Liquid` |
+| `MODE:3` or `{"mode":"fermentation"}` | Switch to Fermentation profile | Switches active OLED profile mode to `ProfileMode::Fermentation` |
 | `RESET_STATS` | Reset session statistics | Resets `minTemp`, `maxTemp`, `avgTemp`, and elapsed session timer to 0 |
 | `THRESH:<low>,<high>` | Configure alarm thresholds | Sets low and high alarm trip points (e.g. `THRESH:18.0,28.0`) |
-| `SET_BUZZER:1` / `SET_BUZZER:0` | Enable / Disable buzzer | Updates `DeviceState.buzzerEnabled` and chirps on enable |
+| `SET_BUZZER:1` or `{"buzzer":true}` | Enable audible buzzer | Updates `DeviceState.buzzerEnabled = true` and triggers confirmation chirp |
+| `SET_BUZZER:0` or `{"buzzer":false}` | Disable audible buzzer | Updates `DeviceState.buzzerEnabled = false` and mutes active alarms |
 
 ---
 

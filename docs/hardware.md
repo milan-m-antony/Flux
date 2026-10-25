@@ -93,6 +93,23 @@
 
 ---
 
+### 4.4 Alert Buzzer (GPIO 25)
+
+- **Device Type:** Universal Active or Passive Piezo Buzzer / Transducer.
+- **ESP32 Signal Pin:** **GPIO 25** (hardware DAC1 / output-capable digital pin).
+- **Tone Generation:** Managed non-blockingly by BuzzerManager via 	one(pin, freq) for passive buzzers and digitalWrite(pin, HIGH/LOW) for active buzzers.
+- **Audio Signatures:**
+  - **Boot Chime:** Ascending two-tone confirmation (2700 Hz -> 3300 Hz) on startup.
+  - **Threshold Breach Alarm:** Rapid repeating double-beep pattern (140ms on @ 2400 Hz -> 80ms rest -> 140ms on @ 2600 Hz -> 1200ms rest).
+  - **Tactile Pip:** Short 45ms click (3000 Hz) on preference toggle enable.
+  - **Instant Mute:** Immediately silenced when muted via OLED preferences or BLE command.
+- **Wiring:**
+  - Positive (Anode / Signal): Connect to ESP32 **GPIO 25**
+  - Negative (Cathode / GND): Connect to ESP32 **GND**
+  - (Optional for sensitive passive transducers): A 100Ω current-limiting resistor or 10kΩ pull-down to ensure zero floating hum.
+
+---
+
 ## 5. Power & Thermal Considerations
 
 1. **Power Consumption:**

@@ -11,13 +11,14 @@ The **Flux** verification suite validates edge-to-cloud reliability across three
 
 ## 2. Automated Build Verification
 
-### 2.1 ESP32 Firmware Build (PlatformIO)
-- **Command:** `pio run -e esp32dev`
-- **Result:** **PASSED / SUCCESS**
+### 2.1 ESP32 Firmware Build & Flash (PlatformIO)
+- **Command:** `& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -d esp32`
+- **Result:** **PASSED / SUCCESS & FLASHED TO HARDWARE (`COM10`)**
 - **Compilation Metrics:**
-  - Build Time: 34.20 seconds
-  - RAM Consumption: 40,296 bytes (12.3% of 327,680 bytes)
-  - Flash Memory Consumption: 1,180,681 bytes (90.1% of 1,310,720 bytes)
+  - Build Time: ~5.3 seconds
+  - RAM Consumption: 66,564 bytes (20.3% of 327,680 bytes)
+  - Flash Memory Consumption: 2,086,422 bytes (66.3% of 3,145,728 bytes)
+  - Target Port: `COM10` (Silicon Labs CP210x USB to UART Bridge at 115200 baud)
   - Output Artifact: `.pio/build/esp32dev/firmware.bin`
 
 ### 2.2 Android Application Build (Gradle)
@@ -55,3 +56,7 @@ The **Flux** verification suite validates edge-to-cloud reliability across three
 | **TC-08** | **Offline Local Operation** | Disable phone Wi-Fi/cellular and ESP32 connectivity | OLED display and sensor read continuously without interruption or delay | *Implemented and verified by design* |
 | **TC-09** | **Offline Buffer Queue** | Accumulate readings while offline, then restore network | Android app buffers up to 500 readings and flushes them to Supabase on reconnection | *Implemented and tested* |
 | **TC-10** | **Push Notification Dispatch** | Exceed upper threshold (> 28.0°C) | Trigger invokes Edge Function; OneSignal delivers push notification to phone | *Implemented awaiting OneSignal credentials* |
+| **TC-11** | **Hardware Buzzer Boot Chime** | Power on ESP32 or reboot | Ascending two-tone acoustic chime (2700 Hz -> 3300 Hz) sounds on GPIO 25 | **Verified on Hardware (COM10)** |
+| **TC-12** | **Threshold Breach Acoustic Burst** | Heat/cool probe past high/low limit while `buzzerEnabled == true` | Repeating dual-tone alarm burst (140ms @ 2400Hz, 80ms rest, 140ms @ 2600Hz) sounds non-blockingly | **Verified in Hardware & Firmware** |
+| **TC-13** | **Buzzer Mute via OLED Menu** | In Settings -> Preferences, toggle Buzzer to OFF | Active threshold alarm stops immediately; re-enabling produces 45ms confirmation chirp (3000 Hz) | **Verified in Hardware** |
+| **TC-14** | **Buzzer Remote Control via BLE** | Toggle "ESP32 Hardware Buzzer" switch in Android app or send `SET_BUZZER:0/1` | ESP32 updates `buzzerEnabled`, reflects in telemetry JSON, and updates OLED display | **Verified in Hardware & Firmware** |

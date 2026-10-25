@@ -4,6 +4,15 @@ Run commands from the Flux project root (`c:\projects\Flux`).
 
 ## 1. ESP32 Firmware
 
+### Driver Setup (Silicon Labs CP210x)
+If Device Manager reports an unrecognized USB device (`CM_PROB_FAILED_INSTALL`):
+1. Download Silicon Labs CP210x Universal Windows Driver.
+2. Right-click `silabser.inf` and click **Install**, or run:
+   ```powershell
+   pnputil /add-driver silabser.inf /install
+   ```
+3. Device will register under Ports as `Silicon Labs CP210x USB to UART Bridge (COM10)`.
+
 ### Build (Compile Check)
 ```powershell
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -d esp32

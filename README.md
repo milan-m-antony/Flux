@@ -30,6 +30,7 @@
 | **Temperature Monitoring Profiles** | Software-calibrated modes for **Live Monitor**, **Environment** (comfort range), **Liquid Probe** (thermal stability), and **Fermentation** (yeast window & elapsed timer). |
 | **Session Analytics & Timer** | Monotonic session runtime (`HH:MM:SS`), minimum, maximum, and running average temperature with one-touch reset. |
 | **Unit Presentation** | Display in **°C** or **°F** ($F = C \times 9/5 + 32$); raw telemetry and cloud database records remain strictly in Celsius. |
+| **Audible Alert Buzzer** | Non-blocking acoustic alert on **GPIO 25** with ascending boot chime (`2700 Hz -> 3300 Hz`), repeating threshold alarm burst (`2400 Hz / 2600 Hz`), tactile confirmation pip (`3000 Hz`), and instant mute. |
 | **BLE Protocol** | Service `6E400011-B5A3-F393-E0A9-E50E24DCCA9E`, Notify Char `6E400009`, Command Char `6E400002` with 512 MTU. |
 | **Cloud Telemetry** | Uploads to Supabase at a default 5.0s rate; bounded offline queue buffers up to 500 readings when disconnected and auto-flushes on reconnection. |
 | **Push Notifications** | Targeted OneSignal push alerts on upper/lower critical breaches and sensor disconnection. |
@@ -83,6 +84,7 @@ Flux/
 │   ├── lib/
 │   │   ├── SensorManager/               # DS18B20 1-Wire non-blocking acquisition
 │   │   ├── DisplayManager/              # SSD1306 8-screen carousel & 3-button logic
+│   │   ├── BuzzerManager/               # GPIO 25 non-blocking active/passive tone alerts
 │   │   └── BluetoothManager/            # BLE GATT server & JSON framing
 │   └── src/
 │       └── main.cpp                     # Non-blocking cooperative scheduler
@@ -169,9 +171,10 @@ Operating at the default **5-second cloud upload rate** ($17,280\text{ readings/
 
 | Component | Status | Details |
 | :--- | :---: | :--- |
-| **ESP32 Firmware** | **Verified & Built** | Compiles cleanly via PlatformIO (`firmware.bin` generated; RAM 12.3%, Flash 90.1%). |
-| **OLED Interface** | **Verified & Built** | 8 screens with 3-button debounced navigation and 1.8s startup animation. |
-| **Android UI & Navigation** | **Verified & Built** | Complete Flux Jetpack Compose dark UI with 7 dedicated screens and Bézier trend chart. |
-| **BLE Protocol** | **Verified & Built** | 512 MTU JSON streaming with session metrics and alerts. |
+| **ESP32 Firmware** | **Verified & Flashed** | Compiles cleanly via PlatformIO and flashed to hardware (`COM10`); RAM 20.3%, Flash 66.3%. |
+| **Alert Buzzer (GPIO 25)** | **Verified on Hardware** | Non-blocking state machine with boot chime, threshold bursts, tactile pip, and OLED/BLE mute toggles. |
+| **OLED Interface** | **Verified & Built** | SSD1306 display with 3-button debounced navigation and 1.8s startup animation. |
+| **Android UI & Navigation** | **Verified & Built** | Complete Flux Jetpack Compose dark UI with dedicated screens and Bézier trend chart. |
+| **BLE Protocol** | **Verified & Built** | 512 MTU JSON streaming with session metrics, buzzer state, and remote commands. |
 | **Supabase Cloud Backend** | **Verified by Design** | Migration script and trigger ready; zero writes to Firebase. |
 | **OneSignal Push Pipeline** | **Verified by Design** | Server-side Edge Function created with 15-minute anti-flap hysteresis. |
