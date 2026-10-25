@@ -133,10 +133,10 @@ You can build, test, deploy, and mirror without opening Android Studio.
 ### 5.1 Universal Single-Command Pipeline
 From the repository root (`c:\project\Flux`):
 
-```cmd
-automate.bat
+```powershell
+.\automate.bat
 ```
-*(or `.\automate.ps1` in PowerShell)*
+*(or `.\automate.ps1` in PowerShell, or `automate.bat` in CMD)*
 
 This 1-click command automatically:
 1. Detects connected physical Android phone via ADB.
@@ -148,16 +148,16 @@ This 1-click command automatically:
 ### 5.2 Automation Modes & Targets
 ```powershell
 # Flash ESP32 firmware & open serial monitor (COM10)
-automate.bat -Esp32 -Monitor
+.\automate.bat -Esp32 -Monitor
 
 # Full system deploy (flash ESP32 + build/install Android app + mirror)
-automate.bat -All
+.\automate.bat -All
 
 # Real-time phone screen mirror only
-automate.bat -Mirror
+.\automate.bat -Mirror
 
 # Compilation verification & unit testing
-automate.bat -Test
+.\automate.bat -Test
 ```
 
 ### 5.3 Deploying Supabase & Edge Functions

@@ -9,24 +9,31 @@ Run all commands from the Flux repository root (`c:\project\Flux`).
 You do **NOT** need Android Studio or complex manual steps. Use the root automation engine to build, install, launch, and mirror your physical Android phone in **one single command**:
 
 ### 1-Click Launch on Connected Device
+
+**In PowerShell (recommended):**
+```powershell
+.\automate.bat
+```
+*(or `.\automate.ps1`)*
+
+**In Command Prompt (cmd.exe):**
 ```cmd
 automate.bat
 ```
-or in PowerShell:
-```powershell
-.\automate.ps1
-```
+
+> [!NOTE]
+> In PowerShell, executable files in the current folder require `.\` at the start (e.g. `.\automate.bat`). `c:\project\Flux` has also been added to your User `PATH` so any newly opened terminal will recognize `automate` from anywhere.
 
 ### Automation Modes & Flags
-| Command | Action |
+| Command (PowerShell) | Action |
 |:---|:---|
-| `automate.bat` (or `.\automate.ps1`) | **Full Pipeline**: Builds APK, installs onto phone via ADB, starts Flux app, and launches `scrcpy` screen mirror on your desktop. |
-| `automate.bat -Esp32` | Compiles and flashes ESP32 firmware to `COM10`. |
-| `automate.bat -Esp32 -Monitor` | Flashes ESP32 firmware and immediately attaches the 115200 baud serial monitor. |
-| `automate.bat -All` | Flashes ESP32, builds & installs the Android APK, launches the app, and opens `scrcpy`. |
-| `automate.bat -Mirror` | Instantly opens the `scrcpy` screen mirror for your connected phone. |
-| `automate.bat -Test` | Runs Kotlin compilation checks and unit tests (`compileDebugKotlin testDebugUnitTest`). |
-| `automate.bat -NoMirror` | Builds, installs, and launches the app on phone without starting the desktop mirror window. |
+| `.\automate.bat` (or `.\automate.ps1`) | **Full Pipeline**: Builds APK, installs onto phone via ADB, starts Flux app, and launches `scrcpy` screen mirror on your desktop. |
+| `.\automate.bat -Esp32` | Compiles and flashes ESP32 firmware to `COM10`. |
+| `.\automate.bat -Esp32 -Monitor` | Flashes ESP32 firmware and immediately attaches the 115200 baud serial monitor. |
+| `.\automate.bat -All` | Flashes ESP32, builds & installs the Android APK, launches the app, and opens `scrcpy`. |
+| `.\automate.bat -Mirror` | Instantly opens the `scrcpy` screen mirror for your connected phone. |
+| `.\automate.bat -Test` | Runs Kotlin compilation checks and unit tests (`compileDebugKotlin testDebugUnitTest`). |
+| `.\automate.bat -NoMirror` | Builds, installs, and launches the app on phone without starting the desktop mirror window. |
 
 ---
 
