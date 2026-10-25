@@ -508,9 +508,12 @@ private fun StepThreeProvisionWifi(
     onSkipWifi: () -> Unit
 ) {
     val context = LocalContext.current
+    val savedSsid by viewModel.savedWifiSsid.collectAsState()
+    val savedPass by viewModel.savedWifiPass.collectAsState()
+
     var autoDetectedSsid by remember { mutableStateOf<String?>(null) }
-    var ssid by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+    var ssid by remember(savedSsid) { mutableStateOf(savedSsid) }
+    var password by remember(savedPass) { mutableStateOf(savedPass) }
     var passwordVisible by remember { mutableStateOf(false) }
     var turnOffBleAfterWifi by remember { mutableStateOf(false) }
     var isLocationEnabled by remember { mutableStateOf(isLocationServiceEnabled(context)) }
@@ -532,6 +535,12 @@ private fun StepThreeProvisionWifi(
             ssid = detected
         } else {
             autoDetectedSsid = null
+            if (ssid.isBlank() && savedSsid.isNotBlank()) {
+                ssid = savedSsid
+            }
+        }
+        if (password.isBlank() && savedPass.isNotBlank()) {
+            password = savedPass
         }
     }
 

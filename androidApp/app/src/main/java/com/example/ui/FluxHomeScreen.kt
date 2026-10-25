@@ -54,53 +54,12 @@ import kotlin.math.sin
 enum class TrendTimeFilter(
     val label: String,
     val subtitle: String,
-    val timestamps: List<String>,
-    val temps: List<Float>,
-    val peakIndex: Int,
-    val minTemp: Float,
-    val maxTemp: Float,
-    val avgTemp: Float
+    val durationMillis: Long
 ) {
-    LAST_1_HOUR(
-        label = "Last 1 Hour",
-        subtitle = "Live temperature over the last 1 hour",
-        timestamps = listOf("10:20", "10:30", "10:40", "10:50", "11:00"),
-        temps = listOf(18.2f, 21.0f, 19.5f, 24.8f, 23.0f, 28.5f, 26.4f, 34.2f, 30.1f),
-        peakIndex = 7, // 34.2°C at points[7]
-        minTemp = 26.1f,
-        maxTemp = 30.8f,
-        avgTemp = 28.3f
-    ),
-    LAST_6_HOURS(
-        label = "Last 6 Hours",
-        subtitle = "Temperature over the last 6 hours",
-        timestamps = listOf("05:00", "06:30", "08:00", "09:30", "11:00"),
-        temps = listOf(19.0f, 22.4f, 21.1f, 26.0f, 25.2f, 29.8f, 28.0f, 32.6f, 29.4f),
-        peakIndex = 7,
-        minTemp = 24.5f,
-        maxTemp = 32.6f,
-        avgTemp = 27.9f
-    ),
-    LAST_24_HOURS(
-        label = "Last 24 Hours",
-        subtitle = "Hourly temperature over the last 24 hours",
-        timestamps = listOf("12:00", "18:00", "00:00", "06:00", "11:00"),
-        temps = listOf(22.0f, 25.5f, 23.8f, 28.0f, 22.0f, 20.4f, 24.0f, 31.5f, 28.0f),
-        peakIndex = 7,
-        minTemp = 20.4f,
-        maxTemp = 31.5f,
-        avgTemp = 26.8f
-    ),
-    LAST_7_DAYS(
-        label = "Last 7 Days",
-        subtitle = "Daily temperature trend over the last 7 days",
-        timestamps = listOf("Mon", "Wed", "Thu", "Sat", "Today"),
-        temps = listOf(23.5f, 26.0f, 24.2f, 27.5f, 26.0f, 30.2f, 27.8f, 33.0f, 28.4f),
-        peakIndex = 7,
-        minTemp = 23.5f,
-        maxTemp = 33.0f,
-        avgTemp = 27.5f
-    )
+    LAST_1_HOUR("Last 1 Hour", "Live temperature over the last 1 hour", 60 * 60 * 1000L),
+    LAST_6_HOURS("Last 6 Hours", "Temperature over the last 6 hours", 6 * 60 * 60 * 1000L),
+    LAST_24_HOURS("Last 24 Hours", "Hourly temperature over the last 24 hours", 24 * 60 * 60 * 1000L),
+    LAST_7_DAYS("Last 7 Days", "Daily temperature trend over the last 7 days", 7 * 24 * 60 * 60 * 1000L)
 }
 
 @Composable
@@ -576,10 +535,16 @@ private fun TemperatureTrendCard(
     var selectedFilter by remember { mutableStateOf(TrendTimeFilter.LAST_1_HOUR) }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    val hasRealTelemetry = readings.isNotEmpty()
-    val realMinTemp = if (hasRealTelemetry) readings.minOf { it.temperature }.toFloat() else null
-    val realMaxTemp = if (hasRealTelemetry) readings.maxOf { it.temperature }.toFloat() else null
-    val realAvgTemp = if (hasRealTelemetry) readings.map { it.temperature }.average().toFloat() else null
+    val filteredReadings = remember(readings, selectedFilter) {
+        val cutoff = System.currentTimeMillis() - selectedFilter.durationMillis
+        val list = readings.filter { it.timestamp >= cutoff }
+        if (list.isNotEmpty()) list else readings
+    }
+
+    val hasRealTelemetry = filteredReadings.isNotEmpty()
+    val realMinTemp = if (hasRealTelemetry) filteredReadings.minOf { it.temperature }.toFloat() else null
+    val realMaxTemp = if (hasRealTelemetry) filteredReadings.maxOf { it.temperature }.toFloat() else null
+    val realAvgTemp = if (hasRealTelemetry) filteredReadings.map { it.temperature }.average().toFloat() else null
 
     fun convertTemp(tempC: Float?): String {
         if (tempC == null) return "--"
@@ -682,7 +647,7 @@ private fun TemperatureTrendCard(
             ) {
                 InteractiveTrendChart(
                     filter = selectedFilter,
-                    readings = readings,
+                    readings = filteredReadings,
                     unitSymbol = unitSymbol,
                     isFahrenheit = isFahrenheit,
                     darkTheme = darkTheme,

@@ -160,6 +160,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val userHeight = settingsRepository.userHeight.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userPhotoUrl = settingsRepository.userPhotoUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
 
+    val savedWifiSsid = settingsRepository.savedWifiSsid.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val savedWifiPass = settingsRepository.savedWifiPass.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
+    val pushAlerts = settingsRepository.pushAlerts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    private var wasInBreach = false
+    private var lastBreachAlertTime = 0L
+    private var wasSensorDisconnected = false
+    private var lastSensorAlertTime = 0L
+    private val BREACH_COOLDOWN_MS = 5 * 60 * 1000L // 5 minutes anti-flap cooldown
+    private val HYSTERESIS_MARGIN = 0.3
+
     private val _lastTelemetryTimestamp = MutableStateFlow(0L)
     val lastTelemetryTimestamp: StateFlow<Long> = _lastTelemetryTimestamp.asStateFlow()
 
@@ -241,13 +252,61 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         calibrationSlope = reading.slope
                     )
 
-                    // Threshold alert check with in-app notification
-                    if (reading.temp < lowTempThreshold.value || reading.temp > highTempThreshold.value) {
-                        createNotification(
-                            title = "Threshold Alert",
-                            message = "Temperature ${reading.temp}°C is outside configured limits (${lowTempThreshold.value}-${highTempThreshold.value}°C).",
-                            type = "ALERT"
-                        )
+                    // 1. Sensor Disconnect Detection with restoration tracking
+                    val isSensorDown = reading.status.equals("Disconnected", ignoreCase = true) || reading.temp <= -100.0
+                    val now = System.currentTimeMillis()
+                    if (isSensorDown) {
+                        if (!wasSensorDisconnected || (now - lastSensorAlertTime > BREACH_COOLDOWN_MS)) {
+                            wasSensorDisconnected = true
+                            lastSensorAlertTime = now
+                            val title = "Sensor Disconnected"
+                            val message = "Thermal probe DS18B20 disconnected or reading invalid. Please check hardware connection."
+                            createNotification(title, message, "ALERT")
+                            if (pushAlerts.value) {
+                                com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = true)
+                            }
+                        }
+                    } else if (wasSensorDisconnected) {
+                        wasSensorDisconnected = false
+                        val title = "Sensor Restored"
+                        val message = "Thermal probe reconnected. Telemetry reading ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C."
+                        createNotification(title, message, "INFO")
+                        if (pushAlerts.value) {
+                            com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = false)
+                        }
+                    }
+
+                    // 2. Threshold Alert Check with anti-flap hysteresis (0.3°C margin) & 5-min cooldown
+                    if (!isSensorDown) {
+                        val isCurrentlyBreached = reading.temp < (lowTempThreshold.value - HYSTERESIS_MARGIN) ||
+                                                  reading.temp > (highTempThreshold.value + HYSTERESIS_MARGIN)
+                        if (isCurrentlyBreached) {
+                            val shouldAlert = !wasInBreach || (now - lastBreachAlertTime > BREACH_COOLDOWN_MS)
+                            if (shouldAlert) {
+                                wasInBreach = true
+                                lastBreachAlertTime = now
+                                val isHigh = reading.temp > highTempThreshold.value
+                                val title = if (isHigh) "High Temperature Alert" else "Low Temperature Alert"
+                                val message = if (isHigh) {
+                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C exceeded maximum limit (${highTempThreshold.value}°C)."
+                                } else {
+                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C dropped below minimum limit (${lowTempThreshold.value}°C)."
+                                }
+                                createNotification(title, message, "ALERT")
+                                if (pushAlerts.value) {
+                                    com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = true)
+                                }
+                            }
+                        } else if (wasInBreach && reading.temp >= lowTempThreshold.value && reading.temp <= highTempThreshold.value) {
+                            // Temperature safely normalized
+                            wasInBreach = false
+                            val title = "Temperature Normalized"
+                            val message = "Thermal reading returned to safe range (${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C)."
+                            createNotification(title, message, "INFO")
+                            if (pushAlerts.value) {
+                                com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = false)
+                            }
+                        }
                     }
 
                     // Direct telemetry upload exclusively to Supabase (Zero writes to Firebase database)
@@ -658,6 +717,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun sendWifiCredentials(ssid: String, pass: String) {
         viewModelScope.launch {
+            settingsRepository.saveWifiCredentials(ssid, pass)
             bleManager.sendCommand("SET_WIFI:$ssid,$pass")
         }
     }

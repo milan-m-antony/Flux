@@ -195,8 +195,11 @@ fun FluxHistoryScreen(
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                    val formattedCurrentDate = remember {
+                        java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                    }
                     Text(
-                        text = "20 Oct 2026",
+                        text = formattedCurrentDate,
                         color = colors.textPrimary,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Bold
@@ -312,8 +315,11 @@ fun FluxHistoryScreen(
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                                val formattedCurrentDate = remember {
+                                    java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                                }
                                 Text(
-                                    text = "20 Oct 2026 • Hourly",
+                                    text = "$formattedCurrentDate • $selectedRange",
                                     color = colors.textSecondary,
                                     fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Medium

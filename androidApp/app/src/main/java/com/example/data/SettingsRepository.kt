@@ -44,6 +44,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val IS_DARK_THEME = booleanPreferencesKey("is_dark_theme")
         val WATER_INTAKE_ML = intPreferencesKey("water_intake_ml")
         val WATER_GOAL_ML = intPreferencesKey("water_goal_ml")
+        val SAVED_WIFI_SSID = stringPreferencesKey("saved_wifi_ssid")
+        val SAVED_WIFI_PASS = stringPreferencesKey("saved_wifi_pass")
     }
 
     val lastDeviceAddress: Flow<String?> = dataStore.data.map { it[LAST_DEVICE_ADDRESS] }
@@ -56,6 +58,9 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val supabaseUrl: Flow<String> = dataStore.data.map { it[SUPABASE_URL] ?: DEFAULT_SUPABASE_URL }
     val supabaseAnonKey: Flow<String> = dataStore.data.map { it[SUPABASE_ANON_KEY] ?: DEFAULT_SUPABASE_ANON_KEY }
     val onesignalAppId: Flow<String> = dataStore.data.map { it[ONESIGNAL_APP_ID] ?: DEFAULT_ONESIGNAL_APP_ID }
+
+    val savedWifiSsid: Flow<String> = dataStore.data.map { it[SAVED_WIFI_SSID] ?: "" }
+    val savedWifiPass: Flow<String> = dataStore.data.map { it[SAVED_WIFI_PASS] ?: "" }
 
     val pushAlerts: Flow<Boolean> = dataStore.data.map { it[PUSH_ALERTS] ?: true }
     val soundAlerts: Flow<Boolean> = dataStore.data.map { it[SOUND_ALERTS] ?: true }
@@ -151,6 +156,13 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     suspend fun saveWaterGoal(goalMl: Int) {
         dataStore.edit { prefs ->
             prefs[WATER_GOAL_ML] = goalMl
+        }
+    }
+
+    suspend fun saveWifiCredentials(ssid: String, pass: String) {
+        dataStore.edit { prefs ->
+            prefs[SAVED_WIFI_SSID] = ssid
+            prefs[SAVED_WIFI_PASS] = pass
         }
     }
 }

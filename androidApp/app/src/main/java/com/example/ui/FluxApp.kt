@@ -14,10 +14,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.ui.components.FluxQuickWifiSheet
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -122,6 +126,10 @@ fun FluxApp(viewModel: MainViewModel) {
     val connectionState by viewModel.connectionState.collectAsState()
     val connectivityState by viewModel.connectivityState.collectAsState()
     val isOnline = connectivityState.isOnline
+    val allNotifications by viewModel.allNotifications.collectAsState()
+    val hasUnreadAlerts = allNotifications.any { !it.isRead }
+
+    var showWifiSetupSheet by remember { mutableStateOf(false) }
 
     FluxBackground(darkTheme = isDarkTheme) {
         Scaffold(
@@ -232,7 +240,7 @@ fun FluxApp(viewModel: MainViewModel) {
                                 navController.navigate(DeviceRoute)
                             },
                             onNavigateToWifiSetup = {
-                                navController.navigate(DeviceSetupRoute)
+                                showWifiSetupSheet = true
                             }
                         )
                     }
@@ -286,7 +294,7 @@ fun FluxApp(viewModel: MainViewModel) {
                             viewModel = viewModel,
                             onBack = { navController.navigateUp() },
                             onNavigateToDiagnostics = { navController.navigate(FluxDiagnosticsRoute) },
-                            onNavigateToWifiSetup = { navController.navigate(DeviceSetupRoute) }
+                            onNavigateToWifiSetup = { showWifiSetupSheet = true }
                         )
                     }
                     composable<FluxLiveMonitorRoute> {
@@ -339,7 +347,7 @@ fun FluxApp(viewModel: MainViewModel) {
                             isBleConnected = connectionState == com.example.ble.ConnectionState.CONNECTED,
                             isWifiConnected = connectivityState.type == com.example.connectivity.ConnectionType.WIFI,
                             darkTheme = isDarkTheme,
-                            hasUnreadAlerts = true,
+                            hasUnreadAlerts = hasUnreadAlerts,
                             onNotificationClick = {
                                 navController.navigate(AlertsRoute) {
                                     popUpTo(navController.graph.findStartDestination().id) { saveState = true }
@@ -376,6 +384,14 @@ fun FluxApp(viewModel: MainViewModel) {
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
                         darkTheme = isDarkTheme
+                    )
+                }
+
+                // Automated 1-Step Quick Wi-Fi Setup Sheet
+                if (showWifiSetupSheet) {
+                    FluxQuickWifiSheet(
+                        viewModel = viewModel,
+                        onDismiss = { showWifiSetupSheet = false }
                     )
                 }
             }

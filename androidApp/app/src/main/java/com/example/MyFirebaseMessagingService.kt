@@ -1,18 +1,19 @@
 package com.example
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
-import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import com.google.firebase.messaging.FirebaseMessagingService
-import com.google.firebase.messaging.RemoteMessage
-import kotlin.random.Random
+import com.example.data.AppDatabase
+import com.example.data.NotificationEntity
+import com.example.util.FluxNotificationHelper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessagingService
+import com.google.firebase.messaging.RemoteMessage
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
@@ -22,23 +23,54 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
         Log.d(TAG, "onMessageReceived called. From: ${remoteMessage.from}")
 
-        // Check if message contains a data payload.
-        if (remoteMessage.data.isNotEmpty()) {
-            Log.d(TAG, "Message data payload: ${remoteMessage.data}")
-            // Handle data payload (e.g. background data refresh)
+        // 1. Resolve notification title and body from notification payload OR data payload
+        val title = remoteMessage.notification?.title
+            ?: remoteMessage.data["title"]
+            ?: "Flux Telemetry Alert"
+
+        val body = remoteMessage.notification?.body
+            ?: remoteMessage.data["message"]
+            ?: remoteMessage.data["body"]
+            ?: "New notification from your Flux thermal monitoring node."
+
+        val type = remoteMessage.data["type"]
+            ?: if (title.contains("Alert", ignoreCase = true) || body.contains("Alert", ignoreCase = true) || body.contains("exceeded", ignoreCase = true)) "ALERT"
+               else if (title.contains("Warning", ignoreCase = true)) "WARNING"
+               else "INFO"
+
+        Log.d(TAG, "FCM Payload extracted: title='$title', body='$body', type='$type'")
+
+        // 2. Persist real notification into Room Database so it appears in FluxAlertsScreen
+        val timeStr = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
+        val entity = NotificationEntity(
+            title = title,
+            message = body,
+            time = timeStr,
+            type = type,
+            isRead = false
+        )
+
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                AppDatabase.getDatabase(applicationContext).notificationDao().insertNotification(entity)
+                Log.d(TAG, "FCM Alert successfully recorded into Room Database.")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to insert FCM notification into Room Database", e)
+            }
         }
 
-        // Check if message contains a notification payload.
-        remoteMessage.notification?.let {
-            Log.d(TAG, "Message Notification Body: ${it.body}")
-            showNotification(it.title, it.body)
-        }
+        // 3. Dispatch system heads-up notification in Android notification shade
+        FluxNotificationHelper.showSystemNotification(
+            context = this,
+            title = title,
+            message = body,
+            isAlert = type == "ALERT"
+        )
     }
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
         Log.d(TAG, "onNewToken called. New token generated: $token")
-        // Send the token to the server
         sendRegistrationToServer(token)
     }
 
@@ -53,42 +85,5 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         } else {
             Log.d(TAG, "No authenticated user. Token will not be saved to Firestore.")
         }
-    }
-
-    private fun showNotification(title: String?, message: String?) {
-        Log.d(TAG, "Creating notification builder for title: $title, message: $message")
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val channelId = "default_channel_id"
-        val builder = NotificationCompat.Builder(this, channelId)
-            .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title ?: "Flux Notification")
-            .setContentText(message)
-            .setAutoCancel(true)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        // Since android Oreo notification channel is needed.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Log.d(TAG, "Creating notification channel (API 26+)")
-            val channel = NotificationChannel(
-                channelId,
-                "Flux Default Channel",
-                NotificationManager.IMPORTANCE_HIGH
-            )
-            // Configure additional channel settings here if needed
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val notificationId = Random.nextInt()
-        Log.d(TAG, "Dispatching notification with ID: $notificationId")
-        notificationManager.notify(notificationId, builder.build())
     }
 }
