@@ -174,9 +174,9 @@ if ($Android -or $All) {
     Write-FluxStep "Checking connected Android devices via ADB..."
     
     $devicesOutput = & $adb devices
-    $deviceLines = $devicesOutput | Where-Object { $_ -match "\tdevice$" }
+    $deviceLines = @($devicesOutput | Where-Object { $_ -match "\s+device$" })
     
-    if (-not $deviceLines) {
+    if ($deviceLines.Count -eq 0) {
         Write-FluxWarn "No connected Android devices detected with USB debugging authorized."
         Write-FluxWarn "Output from adb devices:"
         $devicesOutput | ForEach-Object { Write-Host "   $_" -ForegroundColor DarkGray }
@@ -184,7 +184,7 @@ if ($Android -or $All) {
         exit 1
     }
 
-    $targetDevice = if ($DeviceId) { $DeviceId } else { ($deviceLines[0] -split "\t")[0] }
+    $targetDevice = if ($DeviceId) { $DeviceId } else { ($deviceLines[0] -split "\s+")[0].Trim() }
     Write-FluxStep "Target Device: $targetDevice"
 
     Write-FluxStep "Building Android Debug APK (assembleDebug)..."
