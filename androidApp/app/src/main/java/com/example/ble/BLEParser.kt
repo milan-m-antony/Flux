@@ -20,6 +20,7 @@ data class BLEStateData(
     val avgTemp: Double = 0.0,
     val elapsedSec: Long = 0L,
     val alert: Boolean = false,
+    val buzzer: Boolean = true,
     val wifiConnected: Boolean = false,
     val wifiRssi: Int = 0,
     val wifiSsid: String = ""

@@ -61,6 +61,7 @@
 | **DS18B20 1-Wire Probe** | **GPIO 4** | Bidirectional 1-Wire | Requires **4.7kΩ pull-up** between Data (DQ) and 3.3V |
 | **SSD1306 OLED (SDA)** | **GPIO 21** | I2C Data (`Wire.h`) | Default I2C Address `0x3C` |
 | **SSD1306 OLED (SCL)** | **GPIO 22** | I2C Clock (`Wire.h`) | Powered via 3.3V rail |
+| **Alert Buzzer** | **GPIO 25** | Digital / Tone Output | Connected to Buzzer (+) / (-) to GND |
 | **Button 1 (Left / Prev)** | **GPIO 16** | `INPUT_PULLUP` (Active LOW) | Connected to GND when pressed |
 | **Button 2 (Select / OK)** | **GPIO 17** | `INPUT_PULLUP` (Active LOW) | Short-press action; hold > 1.2s for Dashboard return |
 | **Button 3 (Right / Next)**| **GPIO 18** | `INPUT_PULLUP` (Active LOW) | Connected to GND when pressed |

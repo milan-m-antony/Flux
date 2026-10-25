@@ -74,6 +74,7 @@ class BleManager(private val context: Context) {
                 avgTemp = data.avgTemp,
                 elapsedSec = data.elapsedSec,
                 isAlert = data.alert,
+                buzzer = data.buzzer,
                 wifiConnected = data.wifiConnected,
                 wifiRssi = data.wifiRssi,
                 wifiSsid = data.wifiSsid
@@ -115,5 +116,9 @@ class BleManager(private val context: Context) {
 
     fun sendCommand(command: String): Boolean {
         return repository.sendCommand(command)
+    }
+
+    fun setBuzzerEnabled(enabled: Boolean): Boolean {
+        return sendCommand(if (enabled) "SET_BUZZER:1" else "SET_BUZZER:0")
     }
 }

@@ -12,6 +12,7 @@
 #include <NavigationManager.hpp>
 #include <SettingsManager.hpp>
 #include <UIManager.hpp>
+#include <BuzzerManager.hpp>
 
 namespace Flux {
 
@@ -33,6 +34,7 @@ private:
     NavigationManager* navManager_ = nullptr;
     SettingsManager* settingsManager_ = nullptr;
     UIManager* uiManager_ = nullptr;
+    BuzzerManager* buzzerManager_ = nullptr;
 };
 
 } // namespace Flux

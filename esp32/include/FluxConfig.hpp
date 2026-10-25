@@ -13,6 +13,9 @@ constexpr unsigned long StatusReportIntervalMs = 1000UL;
 // DS18B20 1-Wire data pin
 constexpr uint8_t TemperatureSensorPin = 4U;
 
+// Audible Alert Buzzer output pin
+constexpr uint8_t BuzzerPin = 25U;
+
 // System startup labels
 constexpr const char* DeviceStartedLabel = "Flux Telemetry Started";
 constexpr const char* FreeHeapLabel = "Free Heap";

@@ -31,11 +31,13 @@ fun FluxAlertSettingsScreen(
     val lowThresholdC by viewModel.lowTempThreshold.collectAsState()
     val highThresholdC by viewModel.highTempThreshold.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
+    val latestReading by viewModel.latestReading.collectAsState()
 
     var lowVal by remember(lowThresholdC) { mutableFloatStateOf(lowThresholdC.toFloat()) }
     var highVal by remember(highThresholdC) { mutableFloatStateOf(highThresholdC.toFloat()) }
     var pushEnabled by remember { mutableStateOf(true) }
     var soundEnabled by remember { mutableStateOf(true) }
+    var hardwareBuzzerEnabled by remember(latestReading?.buzzer) { mutableStateOf(latestReading?.buzzer ?: true) }
     var saveSuccess by remember { mutableStateOf(false) }
 
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
@@ -210,6 +212,32 @@ fun FluxAlertSettingsScreen(
                         Switch(
                             checked = soundEnabled,
                             onCheckedChange = { soundEnabled = it },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = AccentGreen,
+                                checkedTrackColor = AccentGreen.copy(alpha = 0.3f),
+                                uncheckedThumbColor = TextSecondary,
+                                uncheckedTrackColor = ElevatedSurface
+                            )
+                        )
+                    }
+
+                    HorizontalDivider(color = ElevatedSurface)
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("ESP32 Hardware Buzzer (G25)", color = TextPrimary, fontSize = 14.sp)
+                            Text("Audible alarm beeps from device on threshold breach", color = TextSecondary, fontSize = 12.sp)
+                        }
+                        Switch(
+                            checked = hardwareBuzzerEnabled,
+                            onCheckedChange = {
+                                hardwareBuzzerEnabled = it
+                                viewModel.setBuzzerEnabled(it)
+                            },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = AccentGreen,
                                 checkedTrackColor = AccentGreen.copy(alpha = 0.3f),

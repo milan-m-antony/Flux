@@ -54,7 +54,7 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
         pServer_->setCallbacks(this);
 
         // Create BLE Service with 35 handles to accommodate characteristics & descriptors
-        pService_ = pServer_->createService(BLEUUID(std::string(SERVICE_UUID)), 35);
+        pService_ = pServer_->createService(BLEUUID(SERVICE_UUID), 35);
 
         // Helper to add standard read/notify/write characteristics with BLE2902 descriptors
         auto addChar = [this](const char* uuid, bool writable = false) -> BLECharacteristic* {
@@ -143,8 +143,9 @@ void BluetoothManager::onDisconnect(BLEServer* pServer) {
 
 void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
     if (state_ == nullptr) return;
-    std::string val = pCharacteristic->getValue();
-    if (val.empty()) return;
+    String rawVal = pCharacteristic->getValue();
+    if (rawVal.isEmpty()) return;
+    std::string val(rawVal.c_str());
 
     Serial.printf("BLE Received Command: %s\n", val.c_str());
 
@@ -205,6 +206,13 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         } else {
             WiFi.begin(ssid.c_str(), pass.c_str());
         }
+    } else if (val.find("SET_BUZZER:1") != std::string::npos || val.find("BUZZER_ON") != std::string::npos || val.find("\"buzzer\":true") != std::string::npos) {
+        state_->buzzerEnabled = true;
+        state_->requestBuzzerChirp = true;
+        Serial.println("Buzzer enabled via BLE");
+    } else if (val.find("SET_BUZZER:0") != std::string::npos || val.find("BUZZER_OFF") != std::string::npos || val.find("\"buzzer\":false") != std::string::npos) {
+        state_->buzzerEnabled = false;
+        Serial.println("Buzzer disabled via BLE");
     } else if (val.find("BLE_OFF") != std::string::npos || val.find("STOP_BLE") != std::string::npos) {
         Serial.println("Stopping BLE Advertising upon request");
         BLEDevice::getAdvertising()->stop();
@@ -347,9 +355,9 @@ void BluetoothManager::notifyDataChange() noexcept {
 
     // 2. Format and send System JSON payload via 6E400009 characteristic
     unsigned long elapsedSec = (millis() - state_->sessionStartMs) / 1000UL;
-    char json[380];
+    char json[420];
     snprintf(json, sizeof(json),
-             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s,\"wifiConnected\":%s,\"wifiRssi\":%d,\"wifiSsid\":\"%s\"}",
+             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s,\"buzzer\":%s,\"wifiConnected\":%s,\"wifiRssi\":%d,\"wifiSsid\":\"%s\"}",
              state_->temperature,
              state_->batteryPercentage,
              state_->batteryVoltage,
@@ -365,6 +373,7 @@ void BluetoothManager::notifyDataChange() noexcept {
              state_->avgTemperature,
              elapsedSec,
              state_->isThresholdAlert ? "true" : "false",
+             state_->buzzerEnabled ? "true" : "false",
              state_->wifiConnected ? "true" : "false",
              state_->wifiRSSI,
              state_->wifiSSID ? state_->wifiSSID : "");

@@ -82,6 +82,7 @@ Transmitted across characteristic `6E400009-B5A3-F393-E0A9-E50E24DCCA9E`.
 | `avgTemp` | Float | °C | Cumulative average of valid samples in session | **Flux Extension** |
 | `elapsedSec` | Long | s | Elapsed session timer duration in seconds | **Flux Extension** |
 | `alert` | Int | bitmask | Alert status: `0`=Normal, `1`=High Alarm, `2`=Low Alarm | **Flux Extension** |
+| `buzzer` | Boolean | bool | Physical audible buzzer enabled state on GPIO 25 | **Flux Extension** |
 
 ---
 
@@ -99,6 +100,7 @@ Sent from the Android app to ESP32 characteristic `6E400002-B5A3-F393-E0A9-E50E2
 | `MODE:3` | Switch to Fermentation profile | Switches active OLED profile mode to `PROFILE_FERMENTATION` |
 | `RESET_STATS` | Reset session statistics | Resets `minTemp`, `maxTemp`, `avgTemp`, and elapsed session timer to 0 |
 | `THRESH:<low>,<high>` | Configure alarm thresholds | Sets low and high alarm trip points (e.g. `THRESH:18.0,28.0`) |
+| `SET_BUZZER:1` / `SET_BUZZER:0` | Enable / Disable buzzer | Updates `DeviceState.buzzerEnabled` and chirps on enable |
 
 ---
 

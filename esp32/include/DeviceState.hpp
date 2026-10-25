@@ -58,6 +58,7 @@ struct DeviceState {
     bool isThresholdAlert = false;
     unsigned long alertSentAnimMs = 0UL; // Timestamp of alert occurrence for screen animations
     bool buzzerEnabled = true;
+    bool requestBuzzerChirp = false;
     
     // Sensor Health
     bool sensorConnected = false;

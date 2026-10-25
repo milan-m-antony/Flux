@@ -636,6 +636,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setBuzzerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            bleManager.setBuzzerEnabled(enabled)
+        }
+    }
+
     fun saveActiveProfile(profile: String) {
         viewModelScope.launch {
             settingsRepository.saveProfile(profile)

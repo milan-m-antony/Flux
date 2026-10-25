@@ -18,6 +18,7 @@ void DeviceApp::begin() noexcept {
     static NavigationManager navigation{};
     static UIManager uiManager{};
     static DisplayManager displayManager{};
+    static BuzzerManager buzzer{};
 
     // Wire up listeners
     buttons.setListener(&navigation);
@@ -33,6 +34,7 @@ void DeviceApp::begin() noexcept {
     navManager_ = &navigation;
     uiManager_ = &uiManager;
     displayManager_ = &displayManager;
+    buzzerManager_ = &buzzer;
 
     // Initialize state & managers
     statusReporter_->begin();
@@ -44,6 +46,7 @@ void DeviceApp::begin() noexcept {
     settingsManager_->begin(&state_);
     navManager_->begin(&state_);
     uiManager_->begin(navManager_);
+    buzzerManager_->begin(&state_);
 
     // Begin DisplayManager, which handles Low-level SSD1306 and pacing
     displayManager_->begin(&state_, uiManager_, navManager_);
@@ -51,6 +54,7 @@ void DeviceApp::begin() noexcept {
     Serial.println("Display Ready");
     Serial.println("Buttons Ready");
     Serial.println("Temperature Ready");
+    Serial.println("Buzzer Ready (GPIO 25)");
     Serial.println("System Ready");
 }
 
@@ -81,6 +85,9 @@ void DeviceApp::update() noexcept {
     }
     if (settingsManager_ != nullptr) {
         settingsManager_->update();
+    }
+    if (buzzerManager_ != nullptr) {
+        buzzerManager_->update();
     }
 }
 

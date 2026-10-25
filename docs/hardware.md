@@ -33,6 +33,7 @@
 | **Pull-up Resistor** | 4.7 kΩ (1/4 W) | 1 | Pull-up for 1-Wire Bus | Between VCC (3.3V) & GPIO 4 |
 | **Display** | 0.96-inch SSD1306 OLED (128x64, 4-pin) | 1 | I2C (Address: `0x3C`) | GPIO 21 (SDA), GPIO 22 (SCL) |
 | **Navigation Buttons** | Momentary Push Buttons (Tactile) | 3 | Digital Input (`INPUT_PULLUP`) | GPIO 16 (L), GPIO 17 (OK), GPIO 18 (R) |
+| **Alert Buzzer** | 5V/3.3V Active or Passive Piezo Buzzer | 1 | Digital / PWM Audio Output | GPIO 25 (+) to GND (-) |
 | **Power Source** | Micro-USB Cable / 5V DC 1A Adapter | 1 | USB Power Bus | ESP32 V5 / VIN |
 
 ---
@@ -44,6 +45,7 @@
 | **GPIO 4** | Bidirectional | DS18B20 Probe | 1-Wire Data Line (`ONE_WIRE_BUS`) | Requires external 4.7kΩ pull-up to 3.3V |
 | **GPIO 21** | Output / Input | SSD1306 OLED | I2C Serial Data (`I2C_SDA`) | Integrated internal/module pull-up |
 | **GPIO 22** | Output | SSD1306 OLED | I2C Serial Clock (`I2C_SCL`) | Integrated internal/module pull-up |
+| **GPIO 25** | Output | Alert Buzzer | Audible Alert Indicator | Positive to GPIO 25, Negative to GND |
 | **GPIO 16** | Input | Button 1 (Left / Prev) | Menu navigation left / decrement | Configured as `INPUT_PULLUP` (Active LOW) |
 | **GPIO 17** | Input | Button 2 (OK / Select) | Select, toggle, confirm, reset stats | Configured as `INPUT_PULLUP` (Active LOW) |
 | **GPIO 18** | Input | Button 3 (Right / Next) | Menu navigation right / increment | Configured as `INPUT_PULLUP` (Active LOW) |
