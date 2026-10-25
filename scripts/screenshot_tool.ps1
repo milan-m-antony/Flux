@@ -1,13 +1,12 @@
 <#
 .SYNOPSIS
-    Flux Mobile Screen Capture & Clipboard Companion
+    Flux Mobile Screen Capture - Direct Clipboard Copy
 .DESCRIPTION
-    Captures pixel-perfect screenshots of the connected Android device via ADB,
-    copies the image directly to the Windows Clipboard for instant Ctrl+V pasting into Antigravity chat,
-    and saves high-resolution PNGs to the local screenshots folder.
+    Captures the mobile screen directly into the Windows Clipboard.
+    Zero folder storage. No special characters or emojis.
 .EXAMPLE
-    .\screenshot_tool.ps1           # Launches floating companion pill docked to Flux Mobile Screen
-    .\screenshot_tool.ps1 -Snap     # Instantly captures, copies to clipboard, and exits
+    .\screenshot_tool.ps1           # Launches floating button docked to Flux Mobile Screen
+    .\screenshot_tool.ps1 -Snap     # Instantly copies screenshot to clipboard and exits
 #>
 
 [CmdletBinding()]
@@ -26,11 +25,6 @@ if (-not (Test-Path $adb)) {
     if (-not $adb) { $adb = "adb.exe" }
 }
 
-$screenshotDir = "c:\project\Flux\screenshots"
-if (-not (Test-Path $screenshotDir)) {
-    New-Item -ItemType Directory -Path $screenshotDir -Force | Out-Null
-}
-
 function Get-TargetDevice {
     if ($DeviceId) { return $DeviceId }
     $devicesOutput = & $adb devices
@@ -41,16 +35,13 @@ function Get-TargetDevice {
     return $null
 }
 
-function Capture-MobileScreenshot {
+function Copy-MobileScreenshotToClipboard {
     $dev = Get-TargetDevice
     if (-not $dev) {
-        [System.Windows.Forms.MessageBox]::Show("No authorized Android device connected via ADB.", "Flux Capture Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
-        return $null
+        return $false
     }
 
-    $timestamp = (Get-Date).ToString("yyyyMMdd_HHmmss")
-    $savePath = "$screenshotDir\flux_$timestamp.png"
-
+    $tempFile = [System.IO.Path]::GetTempFileName() + ".png"
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $adb
     $psi.Arguments = "-s $dev exec-out screencap -p"
@@ -60,41 +51,46 @@ function Capture-MobileScreenshot {
 
     try {
         $proc = [System.Diagnostics.Process]::Start($psi)
-        $fs = [System.IO.File]::Create($savePath)
+        $fs = [System.IO.File]::Create($tempFile)
         $proc.StandardOutput.BaseStream.CopyTo($fs)
         $fs.Close()
         $proc.WaitForExit()
 
-        if ((Get-Item $savePath).Length -gt 1000) {
-            # Load and copy to clipboard
-            $img = [System.Drawing.Image]::FromFile($savePath)
+        if ((Test-Path $tempFile) -and (Get-Item $tempFile).Length -gt 1000) {
+            $bytes = [System.IO.File]::ReadAllBytes($tempFile)
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+
+            $ms = New-Object System.IO.MemoryStream(,$bytes)
+            $img = [System.Drawing.Image]::FromStream($ms)
             [System.Windows.Forms.Clipboard]::SetImage($img)
             $img.Dispose()
+            $ms.Dispose()
+
             [System.Media.SystemSounds]::Asterisk.Play()
-            return $savePath
+            return $true
         } else {
-            Remove-Item $savePath -Force -ErrorAction SilentlyContinue
-            return $null
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            return $false
         }
     } catch {
-        return $null
+        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        return $false
     }
 }
 
 # --- CLI ONE-SHOT SNAP MODE ---
 if ($Snap) {
-    $result = Capture-MobileScreenshot
-    if ($result) {
-        Write-Host "[+] Screenshot saved: $result" -ForegroundColor Green
-        Write-Host "[+] Copied to Windows Clipboard! Paste with Ctrl+V into Antigravity chat." -ForegroundColor Cyan
+    $ok = Copy-MobileScreenshotToClipboard
+    if ($ok) {
+        Write-Host "[+] Screenshot copied to clipboard! Press Ctrl+V in chat." -ForegroundColor Green
     } else {
-        Write-Host "[x] Failed to capture mobile screenshot." -ForegroundColor Red
+        Write-Host "[x] Failed to capture mobile screen." -ForegroundColor Red
         exit 1
     }
     exit 0
 }
 
-# --- FLOATING WPF COMPANION TOOLBAR ---
+# --- FLOATING WPF BUTTON ---
 Add-Type @"
   using System;
   using System.Runtime.InteropServices;
@@ -116,43 +112,42 @@ Add-Type @"
 [xml]$xaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Flux Screenshot Bar"
-        Height="42" Width="260"
+        Title="Flux Screenshot Tool"
+        Height="36" Width="175"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
         ResizeMode="NoResize">
-    <Border Background="#E60F172A"
+    <Border Background="#F00F172A"
             BorderBrush="#FF6B00"
             BorderThickness="1.5"
-            CornerRadius="21"
-            Padding="4,2,4,2">
+            CornerRadius="18"
+            Padding="3,2,3,2">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="12" Color="#000000" Opacity="0.65" ShadowDepth="3"/>
+            <DropShadowEffect BlurRadius="10" Color="#000000" Opacity="0.6" ShadowDepth="2"/>
         </Border.Effect>
         <Grid VerticalAlignment="Center">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="34"/>
-                <ColumnDefinition Width="28"/>
+                <ColumnDefinition Width="24"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Snap Button -->
+            <!-- Copy Screenshot Button -->
             <Button Name="BtnSnap" Grid.Column="0"
                     Background="#FF6B00"
                     Foreground="#FFFFFF"
-                    FontFamily="Segoe UI Semibold"
-                    FontSize="12"
+                    FontFamily="Segoe UI"
+                    FontSize="11.5"
                     FontWeight="Bold"
                     BorderThickness="0"
-                    Height="30"
-                    Margin="2,0,4,0"
+                    Height="26"
+                    Margin="2,0,3,0"
                     Cursor="Hand">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border Name="bdr" Background="{TemplateBinding Background}" CornerRadius="15">
+                        <Border Name="bdr" Background="{TemplateBinding Background}" CornerRadius="13">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
@@ -165,55 +160,28 @@ Add-Type @"
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Button.Template>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="📸 " FontSize="13"/>
-                    <TextBlock Name="TxtSnapLabel" Text="Snap &amp; Copy" VerticalAlignment="Center"/>
-                </StackPanel>
-            </Button>
-
-            <!-- Open Folder Button -->
-            <Button Name="BtnFolder" Grid.Column="1"
-                    Background="#1E293B"
-                    Foreground="#94A3B8"
-                    FontSize="13"
-                    BorderThickness="0"
-                    Height="30"
-                    Width="30"
-                    Margin="0,0,2,0"
-                    ToolTip="Open Screenshots Folder"
-                    Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border Name="bdrFolder" Background="{TemplateBinding Background}" CornerRadius="15">
-                            <TextBlock Text="📁" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bdrFolder" Property="Background" Value="#334155"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
+                <TextBlock Name="TxtSnapLabel" Text="Copy Screenshot" VerticalAlignment="Center"/>
             </Button>
 
             <!-- Close Button -->
-            <Button Name="BtnClose" Grid.Column="2"
+            <Button Name="BtnClose" Grid.Column="1"
                     Background="Transparent"
                     Foreground="#94A3B8"
-                    FontSize="12"
+                    FontFamily="Segoe UI"
+                    FontSize="11"
                     FontWeight="Bold"
                     BorderThickness="0"
-                    Height="30"
-                    Width="24"
+                    Height="24"
+                    Width="22"
                     Cursor="Hand">
                 <Button.Template>
                     <ControlTemplate TargetType="Button">
-                        <Border Name="bdrClose" Background="{TemplateBinding Background}" CornerRadius="12">
-                            <TextBlock Text="✕" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                        <Border Name="bdrClose" Background="{TemplateBinding Background}" CornerRadius="11">
+                            <TextBlock Text="X" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#94A3B8"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bdrClose" Property="Background" Value="#475569"/>
+                                <Setter TargetName="bdrClose" Property="Background" Value="#334155"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -229,10 +197,9 @@ $window = [System.Windows.Markup.XamlReader]::Load($reader)
 
 $btnSnap = $window.FindName("BtnSnap")
 $txtLabel = $window.FindName("TxtSnapLabel")
-$btnFolder = $window.FindName("BtnFolder")
 $btnClose = $window.FindName("BtnClose")
 
-# Allow dragging the pill from anywhere
+# Allow dragging the pill
 $window.Add_MouseLeftButtonDown({
     $window.DragMove()
 })
@@ -242,37 +209,29 @@ $btnClose.Add_Click({
     $window.Close()
 })
 
-# Open screenshots folder
-$btnFolder.Add_Click({
-    if (Test-Path $screenshotDir) {
-        [System.Diagnostics.Process]::Start("explorer.exe", $screenshotDir) | Out-Null
-    }
-})
-
 # Snap & Copy click action
 $btnSnap.Add_Click({
     $txtLabel.Text = "Capturing..."
     $window.Dispatcher.Invoke([Action]{}, [System.Windows.Threading.DispatcherPriority]::Render)
 
-    $saved = Capture-MobileScreenshot
+    $ok = Copy-MobileScreenshotToClipboard
 
-    if ($saved) {
-        $txtLabel.Text = "✅ Copied (Ctrl+V)!"
+    if ($ok) {
+        $txtLabel.Text = "Copied!"
         $btnSnap.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#10B981")
         
-        # Reset after 2 seconds
         $timer = New-Object System.Windows.Threading.DispatcherTimer
-        $timer.Interval = [TimeSpan]::FromSeconds(2.0)
+        $timer.Interval = [TimeSpan]::FromSeconds(1.5)
         $timer.Add_Tick({
-            $txtLabel.Text = "Snap & Copy"
+            $txtLabel.Text = "Copy Screenshot"
             $btnSnap.Background = [System.Windows.Media.BrushConverter]::new().ConvertFromString("#FF6B00")
             $timer.Stop()
         })
         $timer.Start()
     } else {
-        $txtLabel.Text = "⚠️ Failed"
-        Start-Sleep -Milliseconds 800
-        $txtLabel.Text = "Snap & Copy"
+        $txtLabel.Text = "Failed"
+        Start-Sleep -Milliseconds 600
+        $txtLabel.Text = "Copy Screenshot"
     }
 })
 
@@ -283,10 +242,9 @@ $window.Add_Loaded({
         $rect = New-Object RECT
         if ([Win32Helper]::GetWindowRect($hwnd, [ref]$rect)) {
             $window.Left = [Math]::Max(10, $rect.Left + 15)
-            $window.Top = [Math]::Max(10, $rect.Top - 48)
+            $window.Top = [Math]::Max(10, $rect.Top - 40)
         }
     } else {
-        # Default top-center of screen
         $window.Left = ([System.Windows.SystemParameters]::PrimaryScreenWidth - $window.Width) / 2
         $window.Top = 30
     }

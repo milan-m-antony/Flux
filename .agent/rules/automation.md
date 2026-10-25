@@ -58,9 +58,9 @@ The automation script automatically discovers and configures:
   ```powershell
   .\automate.bat -Snap
   ```
-- Launches the floating pill `[ 📸 Snap & Copy ]` docked to the `Flux Mobile Screen` preview window:
+- Launches the floating pill `[ Copy Screenshot ] [ X ]` docked to the `Flux Mobile Screen` preview window:
   ```powershell
   .\automate.bat -Screenshot
   ```
-- Clicking **Snap & Copy** captures the screen in 0.3s, copies it directly to the **Windows Clipboard** (`SetImage`), and saves a high-res PNG to `screenshots/`. The user can instantly paste into chat with Antigravity via `Ctrl + V`.
+- Clicking **Copy Screenshot** captures the mobile screen directly into the **Windows Clipboard** (`SetImage`) in memory (no files saved on disk). The user can instantly paste into chat with Antigravity via `Ctrl + V`.
 

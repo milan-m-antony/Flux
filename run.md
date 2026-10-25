@@ -31,8 +31,8 @@ automate.bat
 | `.\automate.bat -Esp32` | Compiles and flashes ESP32 firmware to `COM10`. |
 | `.\automate.bat -Esp32 -Monitor` | Flashes ESP32 firmware and immediately attaches the 115200 baud serial monitor. |
 | `.\automate.bat -All` | Flashes ESP32, builds & installs the Android APK, launches the app, and opens `scrcpy`. |
-| `.\automate.bat -Snap` | **Instant Screenshot**: Captures mobile screen directly and copies to Windows Clipboard for instant `Ctrl + V` in Antigravity chat. |
-| `.\automate.bat -Screenshot` | Launches the floating **`📸 Snap & Copy`** companion button docked to the Flux Mobile Screen preview. |
+| `.\automate.bat -Snap` | **Instant Screenshot**: Captures mobile screen directly to Windows Clipboard for instant `Ctrl + V` in Antigravity chat (no files saved). |
+| `.\automate.bat -Screenshot` | Launches the floating **`Copy Screenshot`** button docked to the Flux Mobile Screen preview. |
 | `.\automate.bat -Mirror` | Instantly opens the `scrcpy` screen mirror and attaches the screenshot button. |
 | `.\automate.bat -Test` | Runs Kotlin compilation checks and unit tests (`compileDebugKotlin testDebugUnitTest`). |
 | `.\automate.bat -NoMirror` | Builds, installs, and launches the app on phone without starting the desktop mirror window. |
@@ -44,10 +44,10 @@ automate.bat
 View, control, and capture your connected Android device on your laptop with zero latency.
 
 ### 2.1 Instant Screenshot to Clipboard (For Antigravity Chat)
-- **Floating Button:** The preview automatically displays a sleek dark/orange floating button **`[ 📸 Snap & Copy ]`** docked to the window:
-  - Click **`📸 Snap & Copy`**: Automatically captures full 1080x2340 resolution screen and copies it to the **Windows Clipboard**!
+- **Floating Button:** The preview displays a sleek floating pill **`[ Copy Screenshot ] [ X ]`** docked right above the window:
+  - Click **`Copy Screenshot`**: Automatically captures full 1080x2340 resolution screen and copies it directly into the **Windows Clipboard** (no files stored on disk).
   - Switch to Antigravity chat and press **`Ctrl` + `V`** to paste the screenshot instantly.
-  - Saved PNG files are stored in `c:\project\Flux\screenshots\`. Click the **`📁`** button on the pill to open the folder.
+  - Button flashes **`Copied!`** for immediate feedback.
 - **Desktop Shortcut:** Double-click **`Flux Mobile Screenshot`** on your Desktop.
 - **Terminal:** Run `.\automate.bat -Snap` anywhere.
 
