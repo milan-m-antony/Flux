@@ -38,6 +38,8 @@ private:
     void loadSavedWifi() noexcept;
     void saveWifiCredentials(const char* ssid, const char* pass) noexcept;
     void attemptCloudUpload() noexcept;
+    void startApProvisioningServer() noexcept;
+    void handleApClient() noexcept;
 
     DeviceState* state_ = nullptr;
     bool connected_ = false;
@@ -46,6 +48,7 @@ private:
     unsigned long lastTempNotifyMs_ = 0UL;
     unsigned long lastCloudUploadMs_ = 0UL;
     String currentWifiSsid_ = "";
+    bool apServerStarted_ = false;
 
     BLEServer* pServer_ = nullptr;
     BLEService* pService_ = nullptr;

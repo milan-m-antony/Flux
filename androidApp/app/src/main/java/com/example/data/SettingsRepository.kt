@@ -48,6 +48,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val WATER_GOAL_ML = intPreferencesKey("water_goal_ml")
         val SAVED_WIFI_SSID = stringPreferencesKey("saved_wifi_ssid")
         val SAVED_WIFI_PASS = stringPreferencesKey("saved_wifi_pass")
+        val SMART_SWITCH_MODE = stringPreferencesKey("smart_switch_mode") // "automatic" or "manual"
+        val MANUAL_PREFERRED_TRANSPORT = stringPreferencesKey("manual_preferred_transport") // "bluetooth" or "wifi"
     }
 
     val lastDeviceAddress: Flow<String?> = dataStore.data.map { it[LAST_DEVICE_ADDRESS] }
@@ -64,6 +66,8 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     val savedWifiSsid: Flow<String> = dataStore.data.map { it[SAVED_WIFI_SSID] ?: "" }
     val savedWifiPass: Flow<String> = dataStore.data.map { it[SAVED_WIFI_PASS] ?: "" }
+    val smartSwitchMode: Flow<String> = dataStore.data.map { it[SMART_SWITCH_MODE] ?: "automatic" }
+    val manualPreferredTransport: Flow<String> = dataStore.data.map { it[MANUAL_PREFERRED_TRANSPORT] ?: "bluetooth" }
 
     val pushAlerts: Flow<Boolean> = dataStore.data.map { it[PUSH_ALERTS] ?: true }
     val soundAlerts: Flow<Boolean> = dataStore.data.map { it[SOUND_ALERTS] ?: true }
@@ -168,10 +172,24 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
-    suspend fun saveWifiCredentials(ssid: String, pass: String) {
+    suspend fun saveWifiCredentials(ssid: String, pass: String = "") {
         dataStore.edit { prefs ->
             prefs[SAVED_WIFI_SSID] = ssid
-            prefs[SAVED_WIFI_PASS] = pass
+            if (pass.isNotEmpty()) {
+                prefs[SAVED_WIFI_PASS] = pass
+            }
+        }
+    }
+
+    suspend fun saveSmartSwitchMode(mode: String) {
+        dataStore.edit { prefs ->
+            prefs[SMART_SWITCH_MODE] = mode
+        }
+    }
+
+    suspend fun saveManualPreferredTransport(transport: String) {
+        dataStore.edit { prefs ->
+            prefs[MANUAL_PREFERRED_TRANSPORT] = transport
         }
     }
 }

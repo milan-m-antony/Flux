@@ -187,6 +187,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _espWifiRssi = MutableStateFlow<Int?>(null)
     val espWifiRssi: StateFlow<Int?> = _espWifiRssi.asStateFlow()
 
+    val smartSwitchMode = settingsRepository.smartSwitchMode.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        "automatic"
+    )
+    val manualPreferredTransport = settingsRepository.manualPreferredTransport.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5000),
+        "bluetooth"
+    )
+
     val connectivityCoordinator = FluxConnectivityCoordinator(
         context = application,
         scope = viewModelScope,
@@ -194,7 +205,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         espWifiConnected = _espWifiConnected,
         espWifiRssi = _espWifiRssi,
         lastTelemetryTimestamp = _lastTelemetryTimestamp,
-        cloudSyncStatus = supabaseSyncStatus
+        cloudSyncStatus = supabaseSyncStatus,
+        smartSwitchMode = smartSwitchMode,
+        manualPreferredTransport = manualPreferredTransport
     )
     val connectivityState: StateFlow<FluxConnectivityState> = connectivityCoordinator.connectivityState
     
@@ -337,10 +350,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         
-        // Auto connect if saved
+        // Auto connect if saved (gated by manual transport preference)
         viewModelScope.launch {
-            settingsRepository.lastDeviceAddress.collect { addr: String? ->
-                if (addr != null && bleManager.connectionState.value == ConnectionState.DISCONNECTED) {
+            combine(
+                settingsRepository.lastDeviceAddress,
+                smartSwitchMode,
+                manualPreferredTransport
+            ) { addr, mode, pref ->
+                Triple(addr, mode, pref)
+            }.collect { (addr, mode, pref) ->
+                val isManualWifi = mode.equals("manual", ignoreCase = true) && pref.equals("wifi", ignoreCase = true)
+                if (addr != null && !isManualWifi && bleManager.connectionState.value == ConnectionState.DISCONNECTED) {
                     bleManager.connect(addr)
                 }
             }
@@ -755,6 +775,51 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveBackendUrl(url: String) {
         viewModelScope.launch {
             settingsRepository.saveBackendUrl(url)
+        }
+    }
+
+    fun setSmartSwitchMode(mode: String) {
+        viewModelScope.launch {
+            settingsRepository.saveSmartSwitchMode(mode)
+            connectivityCoordinator.recalculateConnectivity()
+        }
+    }
+
+    fun setManualPreferredTransport(transport: String) {
+        viewModelScope.launch {
+            settingsRepository.saveManualPreferredTransport(transport)
+            connectivityCoordinator.recalculateConnectivity()
+        }
+    }
+
+    suspend fun provisionWifiOverAp(ssid: String, pass: String): Result<Boolean> {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                settingsRepository.saveWifiCredentials(ssid, pass)
+                val url = java.net.URL("http://192.168.4.1/wifi")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.connectTimeout = 6000
+                conn.readTimeout = 8000
+                conn.doOutput = true
+                conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                val jsonPayload = org.json.JSONObject().apply {
+                    put("ssid", ssid)
+                    put("pass", pass)
+                }.toString()
+                conn.outputStream.use { os ->
+                    os.write(jsonPayload.toByteArray(Charsets.UTF_8))
+                }
+                val code = conn.responseCode
+                conn.disconnect()
+                if (code in 200..299) {
+                    Result.success(true)
+                } else {
+                    Result.failure(Exception("ESP32 SoftAP returned HTTP $code"))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
         }
     }
 

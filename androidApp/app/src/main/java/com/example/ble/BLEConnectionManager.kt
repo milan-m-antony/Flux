@@ -49,12 +49,13 @@ class BLEConnectionManager(
     private var lastAddress: String? = null
     private var isAutoReconnecting = false
     private var discoveryStarted = false
+    private var userExplicitDisconnect = false
 
     private val gattCallback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 _connectionState.value = BLEState.FAILED
-                disconnect()
+                disconnect(isUserRequested = false)
                 retryOrScheduleReconnect()
                 return;
             }
@@ -96,7 +97,7 @@ class BLEConnectionManager(
                 readRssiRepeatedly()
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 _connectionState.value = BLEState.DISCONNECTED
-                this@BLEConnectionManager.gatt = null
+                disconnect(isUserRequested = false)
                 retryOrScheduleReconnect()
             }
         }
@@ -178,7 +179,10 @@ class BLEConnectionManager(
     }
 
     fun connect(address: String) {
-        disconnect()
+        userExplicitDisconnect = false
+        handler.removeCallbacksAndMessages(null)
+        isAutoReconnecting = false
+        disconnect(isUserRequested = false)
         lastAddress = address
         _connectionState.value = BLEState.CONNECTING
         val device = adapter?.getRemoteDevice(address)
@@ -189,9 +193,16 @@ class BLEConnectionManager(
         }
     }
 
-    fun disconnect() {
-        gatt?.disconnect()
-        gatt?.close()
+    fun disconnect(isUserRequested: Boolean = true) {
+        if (isUserRequested) {
+            userExplicitDisconnect = true
+        }
+        handler.removeCallbacksAndMessages(null)
+        isAutoReconnecting = false
+        try {
+            gatt?.disconnect()
+            gatt?.close()
+        } catch (_: Exception) {}
         gatt = null
         _connectionState.value = BLEState.DISCONNECTED
         _deviceName.value = ""
@@ -199,18 +210,24 @@ class BLEConnectionManager(
     }
 
     private fun retryOrScheduleReconnect() {
+        if (userExplicitDisconnect) return
+        if (adapter?.isEnabled != true) return
         val savedAddr = sharedPrefs.getString("last_address", null) ?: lastAddress
         if (savedAddr != null && !isAutoReconnecting) {
             isAutoReconnecting = true
             _connectionState.value = BLEState.RECONNECTING
             handler.postDelayed({
                 isAutoReconnecting = false
-                connect(savedAddr)
+                if (!userExplicitDisconnect && adapter?.isEnabled == true) {
+                    connect(savedAddr)
+                }
             }, 5000)
         }
     }
 
     fun autoReconnectIfPossible() {
+        if (userExplicitDisconnect) return
+        if (adapter?.isEnabled != true) return
         val savedAddr = sharedPrefs.getString("last_address", null)
         if (savedAddr != null && _connectionState.value == BLEState.DISCONNECTED) {
             connect(savedAddr)

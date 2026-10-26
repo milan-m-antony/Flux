@@ -132,5 +132,74 @@ class FluxConnectivityTest {
         assertFalse(offlineState.isOnline)
         assertEquals("Flux1", offlineState.deviceName)
     }
+
+    @Test
+    fun testSmartSwitchModeDefaultsAndValues() {
+        // Default mode must be AUTOMATIC
+        val defaultState = FluxConnectivityState()
+        assertEquals(SmartSwitchMode.AUTOMATIC, defaultState.switchMode)
+        assertEquals(ManualTransportPreference.BLUETOOTH, defaultState.manualPreference)
+        assertFalse(defaultState.espWifiConnected)
+        assertFalse(defaultState.bleConnected)
+
+        // Enum labels and descriptions exist and are user-friendly
+        assertEquals("Automatic", SmartSwitchMode.AUTOMATIC.label)
+        assertEquals("Manual", SmartSwitchMode.MANUAL.label)
+        assertTrue(SmartSwitchMode.AUTOMATIC.description.contains("Bluetooth"))
+        assertTrue(SmartSwitchMode.MANUAL.description.contains("selection"))
+    }
+
+    @Test
+    fun testManualTransportPreferences() {
+        assertEquals("Bluetooth", ManualTransportPreference.BLUETOOTH.label)
+        assertEquals("Wi-Fi", ManualTransportPreference.WIFI.label)
+
+        // Manual state with Bluetooth preference
+        val bleManualState = FluxConnectivityState(
+            type = ConnectionType.BLUETOOTH,
+            switchMode = SmartSwitchMode.MANUAL,
+            manualPreference = ManualTransportPreference.BLUETOOTH,
+            bleConnected = true,
+            espWifiConnected = false,
+            isOnline = true
+        )
+        assertEquals(SmartSwitchMode.MANUAL, bleManualState.switchMode)
+        assertEquals(ManualTransportPreference.BLUETOOTH, bleManualState.manualPreference)
+        assertEquals(ConnectionType.BLUETOOTH, bleManualState.type)
+        assertTrue(bleManualState.bleConnected)
+        assertFalse(bleManualState.espWifiConnected)
+
+        // Manual state with Wi-Fi preference
+        val wifiManualState = FluxConnectivityState(
+            type = ConnectionType.WIFI,
+            switchMode = SmartSwitchMode.MANUAL,
+            manualPreference = ManualTransportPreference.WIFI,
+            bleConnected = false,
+            espWifiConnected = true,
+            isOnline = true
+        )
+        assertEquals(SmartSwitchMode.MANUAL, wifiManualState.switchMode)
+        assertEquals(ManualTransportPreference.WIFI, wifiManualState.manualPreference)
+        assertEquals(ConnectionType.WIFI, wifiManualState.type)
+        assertTrue(wifiManualState.espWifiConnected)
+        assertFalse(wifiManualState.bleConnected)
+    }
+
+    @Test
+    fun testSmartSwitchSeparationOfConcerns() {
+        // Phone Wi-Fi / cellular and ESP32 Wi-Fi must be independent properties
+        val state = FluxConnectivityState(
+            type = ConnectionType.BLUETOOTH,
+            isOnline = true,
+            espWifiConnected = true, // ESP32 has its own Wi-Fi connection
+            phoneWifiAvailable = false, // Phone has no Wi-Fi
+            phoneCellularAvailable = true, // Phone is on cellular
+            switchMode = SmartSwitchMode.AUTOMATIC
+        )
+        assertTrue("ESP32 Wi-Fi should be true", state.espWifiConnected)
+        assertFalse("Phone Wi-Fi should be false", state.phoneWifiAvailable)
+        assertTrue("Phone cellular should be true", state.phoneCellularAvailable)
+        assertEquals(ConnectionType.BLUETOOTH, state.type)
+    }
 }
 

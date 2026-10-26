@@ -28,6 +28,28 @@ enum class SignalLevel(val color: Color) {
 }
 
 /**
+ * Smart Switch Operating Modes
+ */
+enum class SmartSwitchMode(val label: String, val description: String) {
+    AUTOMATIC(
+        "Automatic",
+        "Flux automatically routes connections via Bluetooth when nearby, ESP32 Wi-Fi for direct device telemetry, and phone network for cloud access."
+    ),
+    MANUAL(
+        "Manual",
+        "You control your preferred connection link. Flux respects your selection without unexpected auto-switching."
+    )
+}
+
+/**
+ * Transport preference when in Manual Smart Switch mode
+ */
+enum class ManualTransportPreference(val label: String) {
+    BLUETOOTH("Bluetooth"),
+    WIFI("Wi-Fi")
+}
+
+/**
  * Production-ready immutable state representing dynamic connection status and signal strength.
  */
 data class FluxConnectivityState(
@@ -41,7 +63,13 @@ data class FluxConnectivityState(
     val isOnline: Boolean = false,
     val isCloudReachable: Boolean = false,
     val isStale: Boolean = false,
-    val lastTelemetryTimestamp: Long = 0L
+    val lastTelemetryTimestamp: Long = 0L,
+    val switchMode: SmartSwitchMode = SmartSwitchMode.AUTOMATIC,
+    val manualPreference: ManualTransportPreference = ManualTransportPreference.BLUETOOTH,
+    val espWifiConnected: Boolean = false,
+    val bleConnected: Boolean = false,
+    val phoneWifiAvailable: Boolean = false,
+    val phoneCellularAvailable: Boolean = false
 )
 
 /**

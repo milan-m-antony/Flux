@@ -30,7 +30,9 @@ class FluxConnectivityCoordinator(
     private val espWifiConnected: StateFlow<Boolean>,
     private val espWifiRssi: StateFlow<Int?>,
     private val lastTelemetryTimestamp: StateFlow<Long>,
-    private val cloudSyncStatus: StateFlow<String>
+    private val cloudSyncStatus: StateFlow<String>,
+    private val smartSwitchMode: StateFlow<String> = MutableStateFlow("automatic"),
+    private val manualPreferredTransport: StateFlow<String> = MutableStateFlow("bluetooth")
 ) {
     private val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
     private val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
@@ -140,7 +142,9 @@ class FluxConnectivityCoordinator(
                 cloudSyncStatus,
                 _phoneHasWifi,
                 _phoneHasCellular,
-                _phoneIsMetered
+                _phoneIsMetered,
+                smartSwitchMode,
+                manualPreferredTransport
             ) { _ ->
                 // Recalculate whenever any dependency updates
                 recalculateConnectivity()
@@ -149,12 +153,15 @@ class FluxConnectivityCoordinator(
     }
 
     /**
-     * Strict 5-tier priority selection logic matching the specification:
-     * 1. BLE setup or active local BLE session -> Bluetooth (Nearby connection)
-     * 2. Registered ESP32 device online through Wi-Fi -> Wi-Fi (Device online)
-     * 3. ESP32 unreachable or telemetry stale -> Device offline / Stale data
-     * 4. Phone mobile data -> Mobile data (Internet available)
-     * 5. Hotspot detected -> Hotspot (Hotspot detected)
+     * Smart Switch Connectivity Logic:
+     * - Automatic Mode:
+     *   1. BLE setup or active local BLE session -> Bluetooth (Nearby connection)
+     *   2. Registered ESP32 device online through Wi-Fi -> Wi-Fi (Device online)
+     *   3. Hotspot detected -> Hotspot
+     *   4. Phone mobile data -> Mobile data (Internet available)
+     *   5. ESP32 unreachable or telemetry stale -> Device offline / Stale data
+     * - Manual Mode:
+     *   Strictly respects user-preferred transport (Bluetooth or Wi-Fi) without unwanted auto-switching.
      */
     fun recalculateConnectivity() {
         val now = System.currentTimeMillis()
@@ -175,133 +182,310 @@ class FluxConnectivityCoordinator(
         val hasWifi = _phoneHasWifi.value
         val isMeteredWifi = hasWifi && _phoneIsMetered.value
 
-        val newState = when {
-            // Priority 1: BLE setup or active local BLE session
-            isBleConnected -> {
-                val effectiveDbm = bleRssiVal ?: -55
-                val percent = SignalCalibrator.rssiToBlePercent(effectiveDbm)
-                val liveName = bleManager.latestReading.value?.deviceName?.ifBlank {
-                    bleManager.deviceName.value.ifBlank { "Flux1" }
-                } ?: bleManager.deviceName.value.ifBlank { "Flux1" }
-                FluxConnectivityState(
-                    type = ConnectionType.BLUETOOTH,
-                    deviceName = liveName,
-                    title = "Nearby connection",
-                    statusText = "$percent% signal",
-                    signalPercent = percent,
-                    signalDbm = effectiveDbm,
-                    signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
-                    isOnline = true,
-                    isCloudReachable = isCloudReachable,
-                    isStale = false,
-                    lastTelemetryTimestamp = lastTelemetry
-                )
-            }
+        val mode = if (smartSwitchMode.value.equals("manual", ignoreCase = true)) {
+            SmartSwitchMode.MANUAL
+        } else {
+            SmartSwitchMode.AUTOMATIC
+        }
 
-            isBleScanning -> {
-                FluxConnectivityState(
-                    type = ConnectionType.BLUETOOTH,
-                    deviceName = "Searching...",
-                    title = "Connecting...",
-                    statusText = "Searching",
-                    signalPercent = null,
-                    signalDbm = null,
-                    signalLevel = SignalLevel.UNAVAILABLE,
-                    isOnline = false,
-                    isCloudReachable = isCloudReachable,
-                    isStale = false,
-                    lastTelemetryTimestamp = lastTelemetry
-                )
-            }
+        val manualPref = if (manualPreferredTransport.value.equals("wifi", ignoreCase = true)) {
+            ManualTransportPreference.WIFI
+        } else {
+            ManualTransportPreference.BLUETOOTH
+        }
 
-            // Priority 2: Registered ESP32 device online through Wi-Fi (fresh telemetry received within 60s)
-            isEspWifiOnline && lastTelemetry > 0 && !isStale -> {
-                val effectiveDbm = espWifiRssiVal ?: -57
-                val percent = SignalCalibrator.rssiToWifiPercent(effectiveDbm)
-                FluxConnectivityState(
-                    type = ConnectionType.WIFI,
-                    deviceName = "Flux1",
-                    title = "Device online",
-                    statusText = "$percent% signal",
-                    signalPercent = percent,
-                    signalDbm = effectiveDbm,
-                    signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
-                    isOnline = true,
-                    isCloudReachable = isCloudReachable,
-                    isStale = false,
-                    lastTelemetryTimestamp = lastTelemetry
-                )
+        val newState = if (mode == SmartSwitchMode.MANUAL) {
+            when (manualPref) {
+                ManualTransportPreference.BLUETOOTH -> {
+                    when {
+                        isBleConnected -> {
+                            val effectiveDbm = bleRssiVal ?: -55
+                            val percent = SignalCalibrator.rssiToBlePercent(effectiveDbm)
+                            val liveName = bleManager.latestReading.value?.deviceName?.ifBlank {
+                                bleManager.deviceName.value.ifBlank { "Flux1" }
+                            } ?: bleManager.deviceName.value.ifBlank { "Flux1" }
+                            FluxConnectivityState(
+                                type = ConnectionType.BLUETOOTH,
+                                deviceName = liveName,
+                                title = "Nearby connection",
+                                statusText = "$percent% signal",
+                                signalPercent = percent,
+                                signalDbm = effectiveDbm,
+                                signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
+                                isOnline = true,
+                                isCloudReachable = isCloudReachable,
+                                isStale = false,
+                                lastTelemetryTimestamp = lastTelemetry,
+                                switchMode = mode,
+                                manualPreference = manualPref,
+                                espWifiConnected = isEspWifiOnline,
+                                bleConnected = true,
+                                phoneWifiAvailable = hasWifi,
+                                phoneCellularAvailable = hasCellular
+                            )
+                        }
+                        isBleScanning -> {
+                            FluxConnectivityState(
+                                type = ConnectionType.BLUETOOTH,
+                                deviceName = "Searching...",
+                                title = "Connecting...",
+                                statusText = "Searching",
+                                signalPercent = null,
+                                signalDbm = null,
+                                signalLevel = SignalLevel.UNAVAILABLE,
+                                isOnline = false,
+                                isCloudReachable = isCloudReachable,
+                                isStale = false,
+                                lastTelemetryTimestamp = lastTelemetry,
+                                switchMode = mode,
+                                manualPreference = manualPref,
+                                espWifiConnected = isEspWifiOnline,
+                                bleConnected = false,
+                                phoneWifiAvailable = hasWifi,
+                                phoneCellularAvailable = hasCellular
+                            )
+                        }
+                        else -> {
+                            FluxConnectivityState(
+                                type = ConnectionType.BLUETOOTH,
+                                deviceName = "Flux1",
+                                title = "Bluetooth disconnected",
+                                statusText = "Manual mode: BLE",
+                                signalPercent = null,
+                                signalDbm = null,
+                                signalLevel = SignalLevel.UNAVAILABLE,
+                                isOnline = false,
+                                isCloudReachable = isCloudReachable,
+                                isStale = false,
+                                lastTelemetryTimestamp = lastTelemetry,
+                                switchMode = mode,
+                                manualPreference = manualPref,
+                                espWifiConnected = isEspWifiOnline,
+                                bleConnected = false,
+                                phoneWifiAvailable = hasWifi,
+                                phoneCellularAvailable = hasCellular
+                            )
+                        }
+                    }
+                }
+                ManualTransportPreference.WIFI -> {
+                    if (isEspWifiOnline && lastTelemetry > 0 && !isStale) {
+                        val effectiveDbm = espWifiRssiVal ?: -57
+                        val percent = SignalCalibrator.rssiToWifiPercent(effectiveDbm)
+                        FluxConnectivityState(
+                            type = ConnectionType.WIFI,
+                            deviceName = "Flux1",
+                            title = "Device online",
+                            statusText = "$percent% signal",
+                            signalPercent = percent,
+                            signalDbm = effectiveDbm,
+                            signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
+                            isOnline = true,
+                            isCloudReachable = isCloudReachable,
+                            isStale = false,
+                            lastTelemetryTimestamp = lastTelemetry,
+                            switchMode = mode,
+                            manualPreference = manualPref,
+                            espWifiConnected = true,
+                            bleConnected = isBleConnected,
+                            phoneWifiAvailable = hasWifi,
+                            phoneCellularAvailable = hasCellular
+                        )
+                    } else {
+                        FluxConnectivityState(
+                            type = ConnectionType.WIFI,
+                            deviceName = "Flux1",
+                            title = if (isStale) "Stale data" else "Device Wi-Fi offline",
+                            statusText = "Manual mode: Wi-Fi",
+                            signalPercent = null,
+                            signalDbm = null,
+                            signalLevel = SignalLevel.UNAVAILABLE,
+                            isOnline = false,
+                            isCloudReachable = isCloudReachable,
+                            isStale = isStale,
+                            lastTelemetryTimestamp = lastTelemetry,
+                            switchMode = mode,
+                            manualPreference = manualPref,
+                            espWifiConnected = isEspWifiOnline,
+                            bleConnected = isBleConnected,
+                            phoneWifiAvailable = hasWifi,
+                            phoneCellularAvailable = hasCellular
+                        )
+                    }
+                }
             }
+        } else {
+            // AUTOMATIC MODE
+            when {
+                // Priority 1: BLE setup or active local BLE session
+                isBleConnected -> {
+                    val effectiveDbm = bleRssiVal ?: -55
+                    val percent = SignalCalibrator.rssiToBlePercent(effectiveDbm)
+                    val liveName = bleManager.latestReading.value?.deviceName?.ifBlank {
+                        bleManager.deviceName.value.ifBlank { "Flux1" }
+                    } ?: bleManager.deviceName.value.ifBlank { "Flux1" }
+                    FluxConnectivityState(
+                        type = ConnectionType.BLUETOOTH,
+                        deviceName = liveName,
+                        title = "Nearby connection",
+                        statusText = "$percent% signal",
+                        signalPercent = percent,
+                        signalDbm = effectiveDbm,
+                        signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
+                        isOnline = true,
+                        isCloudReachable = isCloudReachable,
+                        isStale = false,
+                        lastTelemetryTimestamp = lastTelemetry,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = isEspWifiOnline,
+                        bleConnected = true,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
 
-            // Priority 5: Personal Hotspot detected on phone with active telemetry
-            isMeteredWifi && lastTelemetry > 0 && !isStale -> {
-                val effectiveDbm = _phoneNetworkSignalDbm.value ?: -84
-                val percent = SignalCalibrator.rssiToHotspotPercent(effectiveDbm)
-                FluxConnectivityState(
-                    type = ConnectionType.HOTSPOT,
-                    deviceName = "Flux1",
-                    title = "Device online",
-                    statusText = "$percent% signal",
-                    signalPercent = percent,
-                    signalDbm = effectiveDbm,
-                    signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
-                    isOnline = true,
-                    isCloudReachable = isCloudReachable,
-                    isStale = false,
-                    lastTelemetryTimestamp = lastTelemetry
-                )
-            }
+                isBleScanning -> {
+                    FluxConnectivityState(
+                        type = ConnectionType.BLUETOOTH,
+                        deviceName = "Searching...",
+                        title = "Connecting...",
+                        statusText = "Searching",
+                        signalPercent = null,
+                        signalDbm = null,
+                        signalLevel = SignalLevel.UNAVAILABLE,
+                        isOnline = false,
+                        isCloudReachable = isCloudReachable,
+                        isStale = false,
+                        lastTelemetryTimestamp = lastTelemetry,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = isEspWifiOnline,
+                        bleConnected = false,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
 
-            // Priority 4: Phone mobile data active fallback with active telemetry
-            hasCellular && !hasWifi && lastTelemetry > 0 && !isStale -> {
-                val effectiveDbm = _phoneNetworkSignalDbm.value ?: -86
-                val percent = SignalCalibrator.rssiToCellularPercent(effectiveDbm)
-                FluxConnectivityState(
-                    type = ConnectionType.MOBILE_DATA,
-                    deviceName = "Flux1",
-                    title = "Cloud telemetry",
-                    statusText = "$percent% signal",
-                    signalPercent = percent,
-                    signalDbm = effectiveDbm,
-                    signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
-                    isOnline = true,
-                    isCloudReachable = isCloudReachable,
-                    isStale = false,
-                    lastTelemetryTimestamp = lastTelemetry
-                )
-            }
+                // Priority 2: Registered ESP32 device online through Wi-Fi (fresh telemetry received within 60s)
+                isEspWifiOnline && lastTelemetry > 0 && !isStale -> {
+                    val effectiveDbm = espWifiRssiVal ?: -57
+                    val percent = SignalCalibrator.rssiToWifiPercent(effectiveDbm)
+                    FluxConnectivityState(
+                        type = ConnectionType.WIFI,
+                        deviceName = "Flux1",
+                        title = "Device online",
+                        statusText = "$percent% signal",
+                        signalPercent = percent,
+                        signalDbm = effectiveDbm,
+                        signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
+                        isOnline = true,
+                        isCloudReachable = isCloudReachable,
+                        isStale = false,
+                        lastTelemetryTimestamp = lastTelemetry,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = true,
+                        bleConnected = isBleConnected,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
 
-            // Telemetry stale
-            isStale && lastTelemetry > 0 -> {
-                FluxConnectivityState(
-                    type = ConnectionType.NONE,
-                    deviceName = "Flux1",
-                    title = "Stale data",
-                    statusText = "Offline",
-                    signalPercent = null,
-                    signalDbm = null,
-                    signalLevel = SignalLevel.UNAVAILABLE,
-                    isOnline = false,
-                    isCloudReachable = false,
-                    isStale = true,
-                    lastTelemetryTimestamp = lastTelemetry
-                )
-            }
+                // Priority 5: Personal Hotspot detected on phone with active telemetry
+                isMeteredWifi && lastTelemetry > 0 && !isStale -> {
+                    val effectiveDbm = _phoneNetworkSignalDbm.value ?: -84
+                    val percent = SignalCalibrator.rssiToHotspotPercent(effectiveDbm)
+                    FluxConnectivityState(
+                        type = ConnectionType.HOTSPOT,
+                        deviceName = "Flux1",
+                        title = "Device online",
+                        statusText = "$percent% signal",
+                        signalPercent = percent,
+                        signalDbm = effectiveDbm,
+                        signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
+                        isOnline = true,
+                        isCloudReachable = isCloudReachable,
+                        isStale = false,
+                        lastTelemetryTimestamp = lastTelemetry,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = isEspWifiOnline,
+                        bleConnected = isBleConnected,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
 
-            else -> {
-                FluxConnectivityState(
-                    type = ConnectionType.NONE,
-                    deviceName = "",
-                    title = "Device offline",
-                    statusText = "Offline",
-                    signalPercent = null,
-                    signalDbm = null,
-                    signalLevel = SignalLevel.UNAVAILABLE,
-                    isOnline = false,
-                    isCloudReachable = false,
-                    isStale = false,
-                    lastTelemetryTimestamp = 0L
-                )
+                // Priority 4: Phone mobile data active fallback with active telemetry
+                hasCellular && !hasWifi && lastTelemetry > 0 && !isStale -> {
+                    val effectiveDbm = _phoneNetworkSignalDbm.value ?: -86
+                    val percent = SignalCalibrator.rssiToCellularPercent(effectiveDbm)
+                    FluxConnectivityState(
+                        type = ConnectionType.MOBILE_DATA,
+                        deviceName = "Flux1",
+                        title = "Cloud telemetry",
+                        statusText = "$percent% signal",
+                        signalPercent = percent,
+                        signalDbm = effectiveDbm,
+                        signalLevel = SignalCalibrator.evaluateSignalLevel(percent),
+                        isOnline = true,
+                        isCloudReachable = isCloudReachable,
+                        isStale = false,
+                        lastTelemetryTimestamp = lastTelemetry,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = isEspWifiOnline,
+                        bleConnected = isBleConnected,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
+
+                // Telemetry stale
+                isStale && lastTelemetry > 0 -> {
+                    FluxConnectivityState(
+                        type = ConnectionType.NONE,
+                        deviceName = "Flux1",
+                        title = "Stale data",
+                        statusText = "Offline",
+                        signalPercent = null,
+                        signalDbm = null,
+                        signalLevel = SignalLevel.UNAVAILABLE,
+                        isOnline = false,
+                        isCloudReachable = false,
+                        isStale = true,
+                        lastTelemetryTimestamp = lastTelemetry,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = isEspWifiOnline,
+                        bleConnected = isBleConnected,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
+
+                else -> {
+                    FluxConnectivityState(
+                        type = ConnectionType.NONE,
+                        deviceName = "",
+                        title = "Device offline",
+                        statusText = "Offline",
+                        signalPercent = null,
+                        signalDbm = null,
+                        signalLevel = SignalLevel.UNAVAILABLE,
+                        isOnline = false,
+                        isCloudReachable = false,
+                        isStale = false,
+                        lastTelemetryTimestamp = 0L,
+                        switchMode = mode,
+                        manualPreference = manualPref,
+                        espWifiConnected = isEspWifiOnline,
+                        bleConnected = isBleConnected,
+                        phoneWifiAvailable = hasWifi,
+                        phoneCellularAvailable = hasCellular
+                    )
+                }
             }
         }
 

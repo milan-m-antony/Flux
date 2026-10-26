@@ -1,11 +1,14 @@
 #include "BluetoothManager.hpp"
 #include <WiFi.h>
+#include <WebServer.h>
 #include <Preferences.h>
 #include <nvs_flash.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
 
 namespace Flux {
+
+static WebServer s_apServer(80);
 
 // Constants for UUIDs
 static const char* SERVICE_UUID           = "6E400011-B5A3-F393-E0A9-E50E24DCCA9E";
@@ -113,6 +116,9 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
 
         // Load saved Wi-Fi credentials from NVS
         loadSavedWifi();
+
+        // Start SoftAP setup server for fallback Wi-Fi configuration (port 80)
+        startApProvisioningServer();
     } catch (...) {
         Serial.println("BLE Init Failed");
     }
@@ -420,6 +426,101 @@ void BluetoothManager::update() noexcept {
 
         // Format and send System JSON payload
         notifyDataChange();
+    }
+
+    // Process incoming HTTP Wi-Fi provisioning requests in AP mode
+    handleApClient();
+}
+
+void BluetoothManager::startApProvisioningServer() noexcept {
+    try {
+        WiFi.mode(WIFI_AP_STA);
+        WiFi.softAP("Flux-Setup");
+        Serial.printf("SoftAP Provisioning Online: SSID='Flux-Setup' Gateway=%s\n",
+                      WiFi.softAPIP().toString().c_str());
+
+        // GET /status: Query ESP32 connection state
+        s_apServer.on("/status", HTTP_GET, [this]() {
+            s_apServer.sendHeader("Access-Control-Allow-Origin", "*");
+            char buf[256];
+            snprintf(buf, sizeof(buf),
+                     "{\"status\":\"ok\",\"device\":\"Flux1\",\"wifiConnected\":%s,\"wifiSSID\":\"%s\",\"wifiRssi\":%d,\"bleEnabled\":%s}",
+                     (state_ && state_->wifiConnected) ? "true" : "false",
+                     (state_ && state_->wifiSSID) ? state_->wifiSSID : "",
+                     (state_) ? state_->wifiRSSI : 0,
+                     (state_ && state_->bluetoothEnabled) ? "true" : "false");
+            s_apServer.send(200, "application/json", buf);
+        });
+
+        // POST /wifi: Configure Wi-Fi via SoftAP
+        s_apServer.on("/wifi", HTTP_POST, [this]() {
+            s_apServer.sendHeader("Access-Control-Allow-Origin", "*");
+            String ssid = "";
+            String pass = "";
+
+            if (s_apServer.hasArg("plain")) {
+                String body = s_apServer.arg("plain");
+                int sIdx = body.indexOf("\"ssid\"");
+                if (sIdx >= 0) {
+                    int c = body.indexOf(':', sIdx);
+                    int q1 = body.indexOf('"', c);
+                    int q2 = body.indexOf('"', q1 + 1);
+                    if (q1 >= 0 && q2 > q1) ssid = body.substring(q1 + 1, q2);
+                }
+                int pIdx = body.indexOf("\"pass\"");
+                if (pIdx < 0) pIdx = body.indexOf("\"password\"");
+                if (pIdx >= 0) {
+                    int c = body.indexOf(':', pIdx);
+                    int q1 = body.indexOf('"', c);
+                    int q2 = body.indexOf('"', q1 + 1);
+                    if (q1 >= 0 && q2 > q1) pass = body.substring(q1 + 1, q2);
+                }
+            }
+            if (ssid.isEmpty() && s_apServer.hasArg("ssid")) {
+                ssid = s_apServer.arg("ssid");
+                pass = s_apServer.arg("pass");
+            }
+
+            if (ssid.length() > 0) {
+                Serial.printf("SoftAP Provisioning: Setting SSID='%s'\n", ssid.c_str());
+                saveWifiCredentials(ssid.c_str(), pass.c_str());
+                WiFi.disconnect();
+                if (pass.isEmpty()) {
+                    WiFi.begin(ssid.c_str());
+                } else {
+                    WiFi.begin(ssid.c_str(), pass.c_str());
+                }
+                char resp[160];
+                snprintf(resp, sizeof(resp), "{\"status\":\"connecting\",\"ssid\":\"%s\"}", ssid.c_str());
+                s_apServer.send(200, "application/json", resp);
+            } else {
+                s_apServer.send(400, "application/json", "{\"error\":\"Missing Wi-Fi name\"}");
+            }
+        });
+
+        // Preflight CORS and 404 handler
+        s_apServer.onNotFound([this]() {
+            s_apServer.sendHeader("Access-Control-Allow-Origin", "*");
+            s_apServer.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+            s_apServer.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+            if (s_apServer.method() == HTTP_OPTIONS) {
+                s_apServer.send(204);
+            } else {
+                s_apServer.send(404, "text/plain", "Not Found");
+            }
+        });
+
+        s_apServer.begin();
+        apServerStarted_ = true;
+        Serial.println("SoftAP HTTP Server listening on port 80");
+    } catch (...) {
+        Serial.println("Failed to start SoftAP HTTP Server");
+    }
+}
+
+void BluetoothManager::handleApClient() noexcept {
+    if (apServerStarted_) {
+        s_apServer.handleClient();
     }
 }
 

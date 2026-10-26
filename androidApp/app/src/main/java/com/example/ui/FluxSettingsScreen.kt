@@ -20,6 +20,11 @@ import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material.icons.outlined.SyncAlt
+import androidx.compose.material.icons.outlined.Bluetooth
+import androidx.compose.material.icons.filled.Check
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
@@ -70,6 +75,8 @@ fun FluxSettingsScreen(
     val batteryPercent = reading?.battery
     val signalPercent = connectivityState.signalPercent
     val signalDbm = connectivityState.signalDbm
+    val smartSwitchMode by viewModel.smartSwitchMode.collectAsState()
+    val manualPreferredTransport by viewModel.manualPreferredTransport.collectAsState()
 
     var alertsEnabled by remember { mutableStateOf(true) }
     var currentMinLimit by remember(lowThreshold) { mutableStateOf(lowThreshold.toInt()) }
@@ -342,6 +349,303 @@ fun FluxSettingsScreen(
                                 color = if (selectedUnit == "F") Color.White else colors.textSecondary,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Card: Smart Switch Mode (Automatic vs Manual)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
+                    .background(colors.cardBg, RoundedCornerShape(26.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
+                    .padding(horizontal = 18.dp, vertical = 16.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Header Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.SyncAlt,
+                                contentDescription = null,
+                                tint = FluxOrange,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column {
+                            Text(
+                                text = "Smart Switch Mode",
+                                color = colors.textPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Connection routing and failover behavior",
+                                color = colors.textSecondary,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Segmented Selector: Automatic vs Manual
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(colors.pillBg, RoundedCornerShape(20.dp))
+                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
+                            .padding(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Automatic Option
+                        val isAuto = smartSwitchMode.equals("automatic", ignoreCase = true)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (isAuto) FluxOrange else Color.Transparent)
+                                .clickable {
+                                    viewModel.setSmartSwitchMode("automatic")
+                                    Toast.makeText(context, "Smart Switch: Automatic mode enabled", Toast.LENGTH_SHORT).show()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isAuto) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = "Automatic",
+                                    color = if (isAuto) Color.White else colors.textSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        // Manual Option
+                        val isManual = !isAuto
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(if (isManual) FluxOrange else Color.Transparent)
+                                .clickable {
+                                    viewModel.setSmartSwitchMode("manual")
+                                    Toast.makeText(context, "Smart Switch: Manual mode enabled", Toast.LENGTH_SHORT).show()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (isManual) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                }
+                                Text(
+                                    text = "Manual",
+                                    color = if (isManual) Color.White else colors.textSecondary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Description text
+                    Text(
+                        text = if (smartSwitchMode.equals("automatic", ignoreCase = true)) {
+                            "Flux dynamically routes telemetry via Bluetooth when nearby, ESP32 Wi-Fi for telemetry, and phone network for cloud access. Active links are held without flapping."
+                        } else {
+                            "Manual mode: You choose the preferred connection transport below. Flux respects your selection without unexpected auto-switching."
+                        },
+                        color = colors.textSecondary,
+                        fontSize = 11.5.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+
+                    // If Manual is selected, display transport selection controls
+                    if (smartSwitchMode.equals("manual", ignoreCase = true)) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Divider(color = colors.cardBorder, thickness = 0.5.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = "Preferred Transport",
+                            color = colors.textPrimary,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            val isBlePreferred = manualPreferredTransport.equals("bluetooth", ignoreCase = true)
+
+                            // Bluetooth Transport Pill
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isBlePreferred) (if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB))
+                                        else colors.pillBg
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isBlePreferred) FluxOrange else colors.pillBorder,
+                                        RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable {
+                                        viewModel.setManualPreferredTransport("bluetooth")
+                                        Toast.makeText(context, "Preferred link: Bluetooth", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Bluetooth,
+                                            contentDescription = null,
+                                            tint = if (isBlePreferred) FluxOrange else colors.textSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Bluetooth",
+                                            color = colors.textPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    val bleConnected = connectivityState.bleConnected
+                                    Text(
+                                        text = if (bleConnected) "Connected" else "Disconnected",
+                                        color = if (bleConnected) FluxGreenOnline else colors.textSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+
+                            val isWifiPreferred = manualPreferredTransport.equals("wifi", ignoreCase = true)
+
+                            // Wi-Fi Transport Pill
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isWifiPreferred) (if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB))
+                                        else colors.pillBg
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isWifiPreferred) FluxOrange else colors.pillBorder,
+                                        RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable {
+                                        viewModel.setManualPreferredTransport("wifi")
+                                        Toast.makeText(context, "Preferred link: Wi-Fi", Toast.LENGTH_SHORT).show()
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.Wifi,
+                                            contentDescription = null,
+                                            tint = if (isWifiPreferred) FluxOrange else colors.textSecondary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Wi-Fi",
+                                            color = colors.textPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(3.dp))
+                                    val wifiOnline = connectivityState.espWifiConnected
+                                    Text(
+                                        text = if (wifiOnline) "Online" else "Offline",
+                                        color = if (wifiOnline) FluxGreenOnline else colors.textSecondary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Quick system settings helper
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    try {
+                                        context.startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS))
+                                    } catch (_: Exception) {
+                                        try {
+                                            context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                                        } catch (_: Exception) {}
+                                    }
+                                },
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Open Android Network & Radio Settings",
+                                color = FluxOrange,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = FluxOrange,
+                                modifier = Modifier.size(14.dp)
                             )
                         }
                     }
