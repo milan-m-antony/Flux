@@ -5,7 +5,7 @@
 
 services:
   - type: web
-    name: flux-backend
+    name: flux-telemetry-backend
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
