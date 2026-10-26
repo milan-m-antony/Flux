@@ -2,27 +2,34 @@
 
 namespace Flux {
 
-BuzzerManager::BuzzerManager(uint8_t pin) noexcept
-    : pin_(pin) {}
+BuzzerManager::BuzzerManager(uint8_t pin, bool activeLow) noexcept
+    : pin_(pin), activeLow_(activeLow) {}
 
 void BuzzerManager::begin(DeviceState* state) noexcept {
     state_ = state;
     silence();
 
-    // Ensure pin is set to OUTPUT, explicitly driven LOW, and any tone detached at boot
+    // Ensure pin is set to OUTPUT and driven to inactive state immediately at boot
     soundOff();
 
-    Serial.printf("BuzzerManager initialized on GPIO %u (Temperature Alert Only)\n", pin_);
+    Serial.printf("BuzzerManager initialized on GPIO %u (Active-%s, Temperature Alert Only)\n",
+                  pin_, activeLow_ ? "Low" : "High");
 }
 
 void BuzzerManager::soundOn(uint16_t freq) noexcept {
     if (!isSounding_) {
-        #if defined(ESP32)
-        tone(pin_, freq);
-        #else
-        digitalWrite(pin_, HIGH);
-        #endif
         isSounding_ = true;
+        pinMode(pin_, OUTPUT);
+        if (activeLow_) {
+            // Active-low buzzer (KY-012/PNP): Driven LOW turns ON the buzzer solidly
+            digitalWrite(pin_, LOW);
+        } else {
+            #if defined(ESP32)
+            tone(pin_, freq);
+            #else
+            digitalWrite(pin_, HIGH);
+            #endif
+        }
     }
 }
 
@@ -31,7 +38,12 @@ void BuzzerManager::soundOff() noexcept {
     noTone(pin_);
     #endif
     pinMode(pin_, OUTPUT);
-    digitalWrite(pin_, LOW);
+    if (activeLow_) {
+        // Active-low buzzer (KY-012/PNP): Driven HIGH turns OFF the buzzer completely
+        digitalWrite(pin_, HIGH);
+    } else {
+        digitalWrite(pin_, LOW);
+    }
     isSounding_ = false;
 }
 
@@ -76,11 +88,11 @@ void BuzzerManager::update() noexcept {
 
     // 2. Alert Pattern State Machine (Non-blocking, cooperative millis timing)
     // Periodic repeating alert burst:
-    // Step 0: Pip 1 (2400 Hz) for 120 ms
-    // Step 1: Pause for 80 ms
-    // Step 2: Pip 2 (2400 Hz) for 120 ms
-    // Step 3: Pause for 80 ms
-    // Step 4: Pip 3 (2600 Hz) for 150 ms
+    // Step 0: Pip 1 (120 ms)
+    // Step 1: Pause (80 ms)
+    // Step 2: Pip 2 (120 ms)
+    // Step 3: Pause (80 ms)
+    // Step 4: Pip 3 (150 ms)
     // Step 5: Quiet rest period between bursts (2000 ms)
     if (currentPattern_ != BuzzerPattern::AlertBeep) {
         currentPattern_ = BuzzerPattern::AlertBeep;

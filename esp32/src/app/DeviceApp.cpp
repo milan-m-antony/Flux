@@ -79,6 +79,14 @@ void DeviceApp::update() noexcept {
     }
     if (statusReporter_ != nullptr) {
         statusReporter_->update();
+        static unsigned long lastDiagMs = 0;
+        if (millis() - lastDiagMs >= 1000) {
+            lastDiagMs = millis();
+            Serial.printf("[DIAG] Temp=%.2f C | Lo=%.1f Hi=%.1f | Alert=%d | BuzzerSounding=%d | buzzerEnabled=%d | Status=%s\n",
+                          state_.temperature, state_.lowThreshold, state_.highThreshold,
+                          state_.isThresholdAlert, buzzerManager_ ? buzzerManager_->isSounding() : -1,
+                          state_.buzzerEnabled, state_.sensorStatus ? state_.sensorStatus : "null");
+        }
     }
     if (powerManager_ != nullptr) {
         powerManager_->update();

@@ -15,7 +15,7 @@ enum class BuzzerPattern : uint8_t {
 
 class BuzzerManager {
 public:
-    explicit BuzzerManager(uint8_t pin = Config::BuzzerPin) noexcept;
+    explicit BuzzerManager(uint8_t pin = Config::BuzzerPin, bool activeLow = Config::BuzzerActiveLow) noexcept;
 
     void begin(DeviceState* state) noexcept;
     void update() noexcept;
@@ -26,6 +26,8 @@ public:
 
     bool isSounding() const noexcept { return isSounding_; }
     uint8_t getPin() const noexcept { return pin_; }
+    bool isActiveLow() const noexcept { return activeLow_; }
+    void setActiveLow(bool activeLow) noexcept { activeLow_ = activeLow; }
     BuzzerPattern getPattern() const noexcept { return currentPattern_; }
     uint8_t getPatternStep() const noexcept { return patternStep_; }
 
@@ -34,6 +36,7 @@ private:
     void soundOff() noexcept;
 
     uint8_t pin_;
+    bool activeLow_ = Config::BuzzerActiveLow;
     DeviceState* state_ = nullptr;
     bool isSounding_ = false;
 

@@ -13,8 +13,9 @@ constexpr unsigned long StatusReportIntervalMs = 1000UL;
 // DS18B20 1-Wire data pin
 constexpr uint8_t TemperatureSensorPin = 4U;
 
-// Audible Alert Buzzer output pin
+// Audible Alert Buzzer output pin and active polarity
 constexpr uint8_t BuzzerPin = 25U;
+constexpr bool BuzzerActiveLow = true; // Active-Low buzzer module (KY-012/PNP): LOW = sound, HIGH = silent
 
 // System startup labels
 constexpr const char* DeviceStartedLabel = "Flux Telemetry Started";
