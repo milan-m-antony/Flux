@@ -1,6 +1,10 @@
 # Flux IoT Backend Service
 
-Production-ready, Dockerized Node.js + TypeScript + Express backend for the **Flux Smart Telemetry System**. Designed for seamless deployment on [Render](https://render.com) and integration with Supabase PostgreSQL and Firebase Authentication.
+Production-ready, Dockerized Node.js + TypeScript + Express backend for the **Flux Smart Telemetry System**. Deployed live on [Render](https://render.com) in the **Singapore** cluster (`singapore`) and integrated with Supabase PostgreSQL and Firebase Authentication.
+
+- **Live Endpoint:** `https://flux-telemetry-backend-glwn.onrender.com`
+- **Health Probe:** `https://flux-telemetry-backend-glwn.onrender.com/health`
+- **Readiness Probe:** `https://flux-telemetry-backend-glwn.onrender.com/ready`
 
 ---
 

@@ -31,10 +31,10 @@
 | **Temperature Monitoring Profiles** | Software-calibrated modes for **Live Monitor**, **Environment** (comfort range), **Liquid Probe** (thermal stability), and **Fermentation** (yeast window & elapsed timer). |
 | **Session Analytics & Timer** | Monotonic session runtime (`HH:MM:SS`), minimum, maximum, and running average temperature with one-touch reset. |
 | **Unit Presentation** | Display in **°C** or **°F** ($F = C \times 9/5 + 32$); raw telemetry and cloud database records remain strictly in Celsius. |
-| **Audible Alert Buzzer** | Non-blocking acoustic alert on **GPIO 25** dedicated strictly to genuine active temperature-threshold alarms (2400 Hz / 2600 Hz burst). Complete silence during boot, navigation, and BLE connect/disconnect; instant silencing on normal temperature, sensor disconnect, read fault, or mute. |
+| **Audible Alert Buzzer** | Non-blocking acoustic alarm on **GPIO 25** with active-low module polarity support (`Config::BuzzerActiveLow = true`). Dedicated strictly to genuine active temperature-threshold alarms (repeating 3-pip burst). Complete silence during boot, navigation, and BLE connect/disconnect; instant silencing on normal temperature, sensor disconnect, read fault, or mute. |
 | **BLE Protocol** | Service `6E400011-B5A3-F393-E0A9-E50E24DCCA9E`, Notify Char `6E400009`, Command Char `6E400002` with 512 MTU. |
-| **Cloud Telemetry** | Uploads to Supabase at a default 5.0s rate; bounded offline queue buffers up to 500 readings when disconnected and auto-flushes on reconnection. |
-| **Push Notifications** | Targeted OneSignal push alerts on upper/lower critical breaches and sensor disconnection. |
+| **Cloud Telemetry** | Durable Room-backed queue (`QueuedTelemetryEntity`) buffers up to 500 readings offline and transmits to the Render backend API with exponential backoff & jitter. |
+| **Push Notifications** | Targeted OneSignal push alerts on upper/lower critical breaches and sensor disconnection with anti-flap hysteresis. |
 
 ---
 
@@ -56,17 +56,55 @@
 |  128x64 OLED|          | Temp Probe  |          | Navigation  |
 |  (I2C)      |          |  (1-Wire)   |          |  (Digital)  |
 +-------------+          +-------------+          +-------------+
+                                |
+                         +------v------+
+                         | Alert Buzzer|
+                         |  (GPIO 25)  |
+                         +-------------+
 ```
 
-| Component | ESP32 GPIO | Mode / Interface | Wiring Note |
+| Component | ESP32 GPIO | Mode / Interface | Wiring & Polarity Note |
 | :--- | :---: | :--- | :--- |
 | **DS18B20 1-Wire Probe** | **GPIO 4** | Bidirectional 1-Wire | Requires **4.7kΩ pull-up** between Data (DQ) and 3.3V |
 | **SSD1306 OLED (SDA)** | **GPIO 21** | I2C Data (`Wire.h`) | Default I2C Address `0x3C` |
 | **SSD1306 OLED (SCL)** | **GPIO 22** | I2C Clock (`Wire.h`) | Powered via 3.3V rail |
-| **Alert Buzzer** | **GPIO 25** | Digital / Tone Output | Connected to Buzzer (+) / (-) to GND |
+| **Audible Alert Buzzer** | **GPIO 25** | Digital Output (Active-Low) | Positive/Signal to GPIO 25, Negative to GND. Driven HIGH to silence, LOW to sound. |
 | **Button 1 (Left / Prev)** | **GPIO 16** | `INPUT_PULLUP` (Active LOW) | Connected to GND when pressed |
 | **Button 2 (Select / OK)** | **GPIO 17** | `INPUT_PULLUP` (Active LOW) | Short-press action; hold > 1.2s for Dashboard return |
 | **Button 3 (Right / Next)**| **GPIO 18** | `INPUT_PULLUP` (Active LOW) | Connected to GND when pressed |
+
+### 3.1 Acoustic Buzzer Subsystem & Hardware Protection
+
+The audible buzzer subsystem on **GPIO 25** is engineered for industrial telemetry environments to guarantee safety without nuisance alarms:
+
+1. **Active-Low Polarity Architecture:**
+   - Active buzzer modules (e.g. KY-012, PNP driver circuits) activate when the input signal is pulled **LOW** to Ground and turn off when driven **HIGH** to 3.3V.
+   - Traditional microcontrollers initialize GPIOs as floating inputs or drive them LOW, which causes active-low buzzers to sound continuously at boot.
+   - Flux configures `Config::BuzzerActiveLow = true` in `FluxConfig.hpp` and explicitly drives GPIO 25 **HIGH (`soundOff()`)** during initialization in `BuzzerManager::begin()`, eliminating startup pops, clicks, or continuous buzzing.
+2. **Strict Genuine Alert Gating:**
+   - The buzzer sounds **ONLY** when all three conditions are satisfied:
+     ```cpp
+     const bool alertActive = (state_ != nullptr &&
+                               state_->buzzerEnabled &&
+                               state_->sensorConnected &&
+                               state_->isThresholdAlert);
+     ```
+3. **Fail-Safe Sensor Disconnect & Read Fault Protection:**
+   - If the DS18B20 probe disconnects, reports `-127.0°C`, or generates a bus read error (e.g. 85.0°C uninitialized power-on reset), `state_->sensorConnected` is immediately set to `false`.
+   - The buzzer state machine calls `silence()` instantly, preventing stale breach limits from causing false continuous alarms.
+   - The OLED display renders `PROBE DISCONNECTED` or sensor fault warning without sounding the buzzer.
+4. **Instant Silencing on Normalization:**
+   - The exact moment valid temperature returns to the safe normal range (between configured low and high thresholds), the repeating pattern resets and the buzzer is immediately silenced.
+5. **Zero Interference Policy:**
+   - Non-alert confirmation chirps (`playChirp`), boot chimes, and BLE connection sounds are permanently suppressed, ensuring a quiet, professional user experience.
+6. **Cooperative Non-Blocking Alert Pattern:**
+   - When a genuine alarm is tripped, `BuzzerManager` executes a non-blocking `millis()` state machine with a 3-pip burst:
+     - **Pip 1:** 120 ms sound
+     - **Pause:** 80 ms rest
+     - **Pip 2:** 120 ms sound
+     - **Pause:** 80 ms rest
+     - **Pip 3:** 150 ms sound
+     - **Inter-Cycle Quiet Period:** 2,000 ms silence before repeating.
 
 *Full hardware documentation available in [`docs/hardware.md`](docs/hardware.md).*
 
@@ -202,7 +240,11 @@ Operating at the default **5-second cloud upload rate** ($17,280\text{ readings/
 | **Automated Wi-Fi Quick Sheet** | **Verified on Hardware** | 1-step bottom sheet with auto phone SSID detection, saved password autofill, and `SET_WIFI` BLE command. |
 | **Alert Engine & FCM** | **Verified & Active** | Real FCM push ingestion into Room DB (`NotificationEntity`), anti-flap hysteresis ($0.3^\circ\text{C}$), and 5-min cooldown. |
 | **Zero Mock Data** | **Verified & Clean** | Removed all simulated cards and fake dates; alerts screen reads purely from live Room DB. |
-| **ESP32 Firmware** | **Verified & Flashed** | PlatformIO firmware flashed on `COM10`; non-blocking 1Hz BLE telemetry, buzzer, and 8-screen OLED. |
+| **ESP32 Firmware** | **Verified & Flashed** | PlatformIO firmware flashed on `COM10`; non-blocking 1Hz BLE telemetry, active-low buzzer on GPIO 25, and 8-screen OLED. |
+| **Acoustic Alert Buzzer** | **Verified on Hardware** | Active-low polarity configured (`BuzzerActiveLow = true`). Complete silence at boot and during UI operations; sounds strictly on genuine temperature breaches (3-pip burst); silences immediately upon recovery, mute, or probe disconnect. |
+| **Render Docker Backend** | **Live & Connected** | Deployed in Singapore (`singapore` cluster) on Render at `https://flux-telemetry-backend-glwn.onrender.com`. Multi-stage Docker container (Node 22) with Supabase database connected and 20/20 Jest unit tests passing. |
+| **Durable Offline Queue** | **Verified in Room DB** | Durable SQLite Room queue (`QueuedTelemetryEntity`, bounded to 500 records) with exponential backoff & jitter replacing in-memory queue. |
 | **Android UI & Navigation** | **Verified & Built** | Strict frozen header alignment, single-viewport dashboard, dynamic C/F units, and real-time Bézier trend chart. |
-| **Supabase & Edge Functions** | **Verified by Design** | Migration script, triggers, and OneSignal dispatch ready with 15-minute anti-flap hysteresis. |
+| **Supabase & Edge Functions** | **Verified by Design** | PostgreSQL schema, RLS hardening, triggers, and OneSignal dispatch ready with 15-minute anti-flap hysteresis. |
+
 

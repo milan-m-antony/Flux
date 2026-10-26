@@ -26,12 +26,18 @@ graph TD
         BLE -->|GATT Notifications MTU 512| BleClient[BleManager & BLEScanner]
         BleClient -->|BleReading Stream| VM[MainViewModel]
         VM -->|StateFlows| ComposeUI[Jetpack Compose UI: Dashboard & Profiles]
-        VM -->|5s Bounded Uploads| SupaRepo[SupabaseRepository]
-        SupaRepo -->|Offline Queue Buffer| DiskQueue[Bounded Local Buffer: 500 max]
+        VM -->|Durable Room Storage| RoomQueue[(Room DB: QueuedTelemetryEntity 500 max)]
+        RoomQueue -->|Batch Flush FIFO| SupaRepo[SupabaseRepository]
+    end
+
+    subgraph Backend Tier [Render Cloud: Singapore Cluster]
+        SupaRepo -->|HTTPS Bearer Auth| RenderAPI[Express / TypeScript Docker Container]
+        RenderAPI -->|Cryptographic Verification| FirebaseAuth[Firebase Admin SDK]
+        RenderAPI -->|Service Role Key & Ownership| SupaClient[Supabase Client SDK]
     end
 
     subgraph Cloud Tier [Supabase & OneSignal]
-        SupaRepo -->|HTTPS REST Ingestion| SupaDB[(Supabase PostgreSQL + RLS)]
+        SupaClient -->|SQL Ingestion & Device State| SupaDB[(Supabase PostgreSQL + RLS)]
         SupaDB -->|WAL Replication| Realtime[Supabase Realtime Stream]
         Realtime -->|Live Device State| VM
         SupaDB -->|AFTER INSERT Trigger| AlertTrg[pg_net / DB Trigger]
@@ -59,11 +65,11 @@ The ESP32 firmware cleanly divides responsibilities to ensure the local display,
 - **`BuzzerManager`:**
   - Drives physical alert buzzer on GPIO 25.
   - 100% non-blocking cooperative state machine driven by `millis()` deltas (zero `delay()` calls).
-  - Generates ascending boot chime (`2700 Hz -> 3300 Hz`) on power-up to confirm wiring.
-  - Sounds repeating dual-tone alarm burst (`140ms @ 2400 Hz -> 80ms rest -> 140ms @ 2600 Hz -> 1200ms rest`) during temperature threshold breaches.
-  - Generates single tactile feedback pip (`3000 Hz` for 45ms) when enabled.
-  - Instant mute on setting disable or when temperature returns to safe limits.
-  - Universal hardware support for active buzzers (`digitalWrite`) and passive piezo transducers (`tone()`).
+  - Configured with active-low module polarity (`Config::BuzzerActiveLow = true`, LOW = sound, HIGH = silent) and driven HIGH at boot to prevent startup clicks or continuous buzzes.
+  - Strictly gated by genuine temperature threshold alarms (`buzzerEnabled && sensorConnected && isThresholdAlert`).
+  - Sounds a repeating 3-pip alarm burst (120ms sound, 80ms rest, 120ms sound, 80ms rest, 150ms sound, 2000ms inter-burst quiet period).
+  - All non-alert chirps, boot sounds, and tactile feedback pips are suppressed for zero interference.
+  - Instant silencing upon temperature normalization, buzzer mute, probe disconnect (-127°C), or sensor read faults.
 - **`NavigationManager` & `ButtonDebouncer`:**
   - Debounces 3 physical buttons on GPIO 16, 17, and 18 with 50ms transition filtering.
   - Maps short-press navigation and action triggers.

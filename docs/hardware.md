@@ -95,18 +95,26 @@
 
 ### 4.4 Alert Buzzer (GPIO 25)
 
-- **Device Type:** Universal Active or Passive Piezo Buzzer / Transducer.
-- **ESP32 Signal Pin:** **GPIO 25** (hardware DAC1 / output-capable digital pin).
-- **Tone Generation:** Managed non-blockingly by BuzzerManager via 	one(pin, freq) for passive buzzers and digitalWrite(pin, HIGH/LOW) for active buzzers.
-- **Audio Signatures:**
-  - **Boot Chime:** Ascending two-tone confirmation (2700 Hz -> 3300 Hz) on startup.
-  - **Threshold Breach Alarm:** Rapid repeating double-beep pattern (140ms on @ 2400 Hz -> 80ms rest -> 140ms on @ 2600 Hz -> 1200ms rest).
-  - **Tactile Pip:** Short 45ms click (3000 Hz) on preference toggle enable.
-  - **Instant Mute:** Immediately silenced when muted via OLED preferences or BLE command.
+- **Device Type:** Active Piezo Buzzer Module (e.g. KY-012, PNP transistor driven) or Passive Piezo Transducer.
+- **ESP32 Signal Pin:** **GPIO 25** (Output-capable digital pin).
+- **Polarity Configuration:** Configured as **Active-Low** (`Config::BuzzerActiveLow = true`).
+  - Active buzzer modules (e.g. KY-012) turn **ON** when the signal line is pulled **LOW** to Ground and turn **OFF** when driven **HIGH** to 3.3V.
+  - To prevent floating boot hums or constant buzzing on startup, GPIO 25 is driven **HIGH (`soundOff()`)** immediately in `BuzzerManager::begin()`.
+- **Acoustic Operating Logic:**
+  - **Complete Idle Silence:** Boot chimes, tactile button clicks, and BLE connect/disconnect chirps are strictly suppressed to guarantee zero interfering background noise.
+  - **Genuine Alert Gating:** Sounds strictly during a confirmed temperature threshold breach (`buzzerEnabled && sensorConnected && isThresholdAlert`).
+  - **Failsafe Disconnect Silencing:** If the DS18B20 probe disconnects (-127°C) or reports a read fault, the buzzer is silenced immediately (`silence()`) and the pattern state machine is reset.
+  - **Recovery Silencing:** The exact moment temperature returns to the normal safe range, the buzzer pattern resets and silences immediately.
+- **Acoustic Signature (3-Pip Repeating Burst):**
+  - Pip 1: 120 ms sound
+  - Pause: 80 ms rest
+  - Pip 2: 120 ms sound
+  - Pause: 80 ms rest
+  - Pip 3: 150 ms sound
+  - Quiet Window: 2,000 ms silence before next cycle.
 - **Wiring:**
-  - Positive (Anode / Signal): Connect to ESP32 **GPIO 25**
-  - Negative (Cathode / GND): Connect to ESP32 **GND**
-  - (Optional for sensitive passive transducers): A 100Ω current-limiting resistor or 10kΩ pull-down to ensure zero floating hum.
+  - Positive / Signal: Connect to ESP32 **GPIO 25**
+  - Negative / GND: Connect to ESP32 **GND**
 
 ---
 
