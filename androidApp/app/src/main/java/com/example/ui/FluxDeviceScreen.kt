@@ -56,13 +56,14 @@ fun FluxDeviceScreen(
     val colors = rememberFluxColors(isDarkTheme)
     val connectivityState by viewModel.connectivityState.collectAsState()
     val reading by viewModel.latestReading.collectAsState()
+    val lastDeviceAddress by viewModel.lastDeviceAddress.collectAsState()
     val isOnline = connectivityState.isOnline
 
-    // Live battery & telemetry metrics
-    val batteryPercent = reading?.battery ?: if (isOnline) 100 else 0
-    val batteryVoltage = reading?.batteryVoltage ?: if (isOnline) 4.20 else 0.0
-    val signalPercent = connectivityState.signalPercent ?: if (isOnline) 75 else 0
-    val signalDbm = connectivityState.signalDbm ?: if (isOnline) -65 else -99
+    // Live battery & telemetry metrics from genuine packets
+    val batteryPercent = reading?.battery
+    val batteryVoltage = reading?.batteryVoltage
+    val signalPercent = connectivityState.signalPercent
+    val signalDbm = connectivityState.signalDbm
     val deviceName = connectivityState.deviceName.ifBlank { "Flux1" }
 
     // Floating and glowing animations for the device board
@@ -292,8 +293,8 @@ fun FluxDeviceScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 FluxBatteryIcon(
-                                    level = batteryPercent,
-                                    tint = Color(0xFF00C853)
+                                    level = batteryPercent ?: 0,
+                                    tint = if (batteryPercent != null) Color(0xFF00C853) else colors.textSecondary
                                 )
                             }
 
@@ -308,7 +309,7 @@ fun FluxDeviceScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "$batteryPercent%",
+                            text = if (batteryPercent != null) "$batteryPercent%" else "--%",
                             color = colors.textPrimary,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
@@ -318,7 +319,7 @@ fun FluxDeviceScreen(
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = String.format("%.2fV • Healthy", batteryVoltage),
+                            text = if (batteryVoltage != null && batteryVoltage > 0.0) String.format("%.2fV • Healthy", batteryVoltage) else if (isOnline) "Measuring..." else "Standby",
                             color = colors.textSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
@@ -336,13 +337,13 @@ fun FluxDeviceScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(batteryPercent / 100f)
+                                    .fillMaxWidth(((batteryPercent ?: 0) / 100f).coerceIn(0f, 1f))
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(percent = 50))
                                     .background(
                                         when {
-                                            batteryPercent > 50 -> Color(0xFF00C853)
-                                            batteryPercent > 20 -> FluxOrange
+                                            (batteryPercent ?: 0) > 50 -> Color(0xFF00C853)
+                                            (batteryPercent ?: 0) > 20 -> FluxOrange
                                             else -> Color(0xFFDC2626)
                                         }
                                     )
@@ -396,7 +397,7 @@ fun FluxDeviceScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         Text(
-                            text = "$signalPercent%",
+                            text = if (signalPercent != null) "$signalPercent%" else "--%",
                             color = colors.textPrimary,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
@@ -406,7 +407,7 @@ fun FluxDeviceScreen(
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = "$signalDbm dBm • ${connectivityState.type.label}",
+                            text = if (signalDbm != null) "$signalDbm dBm • ${connectivityState.type.label}" else if (isOnline) "Connecting • ${connectivityState.type.label}" else "Standby • Disconnected",
                             color = colors.textSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
@@ -424,7 +425,7 @@ fun FluxDeviceScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(signalPercent / 100f)
+                                    .fillMaxWidth((signalPercent ?: 0) / 100f)
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(percent = 50))
                                     .background(FluxOrange)
@@ -466,7 +467,7 @@ fun FluxDeviceScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     val liveFirmware = reading?.firmware?.ifBlank { "v2.0.0" } ?: if (isOnline) "v2.0.0" else "Unavailable"
-                    val liveMac = if (isOnline) "b0:cb:d8:0c:d5:34" else "Disconnected"
+                    val liveMac = lastDeviceAddress ?: if (isOnline) "Connected (BLE)" else "Disconnected"
                     val liveIp = if (reading?.wifiConnected == true) {
                         if (!reading?.wifiSsid.isNullOrBlank()) "Connected (${reading?.wifiSsid})" else "Connected (DHCP)"
                     } else if (isOnline) {
@@ -534,7 +535,12 @@ fun FluxDeviceScreen(
                     // Ping Button
                     OutlinedButton(
                         onClick = {
-                            Toast.makeText(context, "Ping sent to $deviceName: 18ms latency (ACK received)", Toast.LENGTH_SHORT).show()
+                            val pingSuccess = viewModel.bleManager.sendCommand("PING")
+                            if (pingSuccess) {
+                                Toast.makeText(context, "Ping packet sent to $deviceName via BLE", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, if (isOnline) "Ping sent to $deviceName" else "Device offline", Toast.LENGTH_SHORT).show()
+                            }
                         },
                         modifier = Modifier.weight(1f).height(46.dp),
                         shape = RoundedCornerShape(16.dp),

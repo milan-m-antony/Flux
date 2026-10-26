@@ -163,6 +163,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val savedWifiSsid = settingsRepository.savedWifiSsid.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val savedWifiPass = settingsRepository.savedWifiPass.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val pushAlerts = settingsRepository.pushAlerts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val lastDeviceAddress: StateFlow<String?> = settingsRepository.lastDeviceAddress.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private var wasInBreach = false
     private var lastBreachAlertTime = 0L

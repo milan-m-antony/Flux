@@ -67,9 +67,9 @@ fun FluxSettingsScreen(
     val reading by viewModel.latestReading.collectAsState()
     val connectivityState by viewModel.connectivityState.collectAsState()
     val isOnline = connectivityState.isOnline
-    val batteryPercent = reading?.battery ?: if (isOnline) 100 else null
-    val signalPercent = connectivityState.signalPercent ?: if (isOnline) 75 else null
-    val signalDbm = connectivityState.signalDbm ?: if (isOnline) -65 else null
+    val batteryPercent = reading?.battery
+    val signalPercent = connectivityState.signalPercent
+    val signalDbm = connectivityState.signalDbm
 
     var alertsEnabled by remember { mutableStateOf(true) }
     var currentMinLimit by remember(lowThreshold) { mutableStateOf(lowThreshold.toInt()) }
@@ -720,7 +720,7 @@ fun FluxSettingsScreen(
                             DeviceDetailRow(
                                 icon = Icons.Outlined.Thermostat,
                                 label = "Battery",
-                                value = if (batteryPercent != null) "$batteryPercent% • Healthy" else "Unavailable",
+                                value = if (batteryPercent != null) "$batteryPercent% • Healthy" else if (isOnline) "Measuring..." else "Unavailable",
                                 colors = colors
                             )
 
@@ -730,7 +730,7 @@ fun FluxSettingsScreen(
                             DeviceDetailRow(
                                 icon = Icons.Outlined.Wifi,
                                 label = "Signal",
-                                value = if (signalPercent != null && signalDbm != null) "$signalPercent% ($signalDbm dBm)" else "Disconnected",
+                                value = if (signalPercent != null && signalDbm != null) "$signalPercent% ($signalDbm dBm)" else if (isOnline) "Connecting..." else "Disconnected",
                                 colors = colors
                             )
                         }

@@ -223,6 +223,8 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
             state_->bluetoothEnabled = false;
             state_->bluetoothConnected = false;
         }
+    } else if (val.find("PING") != std::string::npos) {
+        Serial.println("BLE PING received - peripheral responsive");
     }
 }
 

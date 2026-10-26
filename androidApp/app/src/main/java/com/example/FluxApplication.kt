@@ -9,6 +9,9 @@ class FluxApplication : Application() {
         super.onCreate()
         Log.i("FluxApplication", "Initializing Flux Application...")
         
+        // Ensure high-priority alert notification channel is created
+        com.example.util.FluxNotificationHelper.ensureNotificationChannel(this)
+
         // Initialize OneSignal with provided App ID
         OneSignalManager.init(this, OneSignalManager.DEFAULT_APP_ID)
     }

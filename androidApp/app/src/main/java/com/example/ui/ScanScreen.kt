@@ -93,7 +93,7 @@ fun ScanScreen(viewModel: MainViewModel, onNavigateToHome: () -> Unit, onBack: (
             color = MaterialTheme.colorScheme.onSurface
         )
         Text(
-            text = "Find and pair your Na+ sensor",
+            text = "Find and pair your Flux thermal sensor",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
