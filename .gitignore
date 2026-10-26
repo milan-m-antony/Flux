@@ -5,9 +5,8 @@ scrcpy_*.txt
 screenshots/
 
 # Gradle and Build Cache
-.gradle/
-build/
-*/build/
+**/.gradle/
+**/build/
 
 # Android Studio and IDE files
 .idea/
@@ -24,13 +23,11 @@ esp32/.vscode/
 # Local configuration and OS files
 local.properties
 .env
+.env.*
 .DS_Store
 Thumbs.db
 
 # Node.js / Backend
-node_modules/
-dist/
-coverage/
-backend/node_modules/
-backend/dist/
-backend/coverage/
+**/node_modules/
+**/dist/
+**/coverage/
