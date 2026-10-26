@@ -16,7 +16,7 @@ This repository contains the production firmware for the Flux edge telemetry dev
 ## Features Implemented
 
 - **DS18B20 Precision Temperature Sensing:** Non-blocking 12-bit conversion with CRC verification.
-- **Audible Alert Buzzer (GPIO 25):** 100% non-blocking cooperative state machine with boot chime (`2700 Hz -> 3300 Hz`), repeating dual-tone threshold alarm burst (`2400 Hz / 2600 Hz`), tactile confirmation pip (`3000 Hz`), and instant mute.
+- **Audible Alert Buzzer (GPIO 25):** 100% non-blocking cooperative state machine reserved exclusively for genuine active temperature-threshold alarms (`2400 Hz / 2600 Hz` periodic pip burst). Complete silence during boot, menu navigation, and BLE connect/disconnect; instant silencing on normal temperature, sensor disconnect, read fault, or mute.
 - **SSD1306 Local OLED Display:** 8 hierarchical screens including Main Monitor, Mode Selection, Settings, Preferences, Wi-Fi, Bluetooth, and Device Diagnostics.
 - **Tactile Button Debouncer:** 50ms software debouncing with long-press (> 1.2s) instant return to Main Monitor.
 - **BLE GATT Streaming Server:** 512 MTU single-packet JSON telemetry broadcast at 1.0 Hz with session stats and buzzer state.

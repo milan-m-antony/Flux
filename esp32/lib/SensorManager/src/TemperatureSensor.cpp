@@ -44,7 +44,13 @@ bool TemperatureSensor::readTemperatureDiagnostics(uint8_t index, uint8_t* devic
     rawTemperature = sensor_.getTemp(deviceAddress);
 
     // Detect sensor disconnect or invalid readings.
-    if (rawTemperature == DEVICE_DISCONNECTED_RAW) {
+    if (rawTemperature == DEVICE_DISCONNECTED_RAW ||
+        rawTemperature == DEVICE_FAULT_OPEN_RAW ||
+        rawTemperature == DEVICE_FAULT_SHORTGND_RAW ||
+        rawTemperature == DEVICE_FAULT_SHORTVDD_RAW ||
+        rawTemperature == DEVICE_POWER_ON_RESET_RAW ||
+        rawTemperature == DEVICE_INSUFFICIENT_POWER_RAW ||
+        rawTemperature <= -7040) {
         return false;
     }
 

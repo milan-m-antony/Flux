@@ -147,10 +147,14 @@ void ScreenManager::drawMainMonitor(Adafruit_SSD1306& display, int16_t offsetX, 
         display.setTextColor(SSD1306_WHITE);
     }
 
-    // Status State Determination (Normal / Warning / Critical / Sensor Err)
+    // Status State Determination (Normal / Warning / Critical / Sensor Err / Read Fault)
     const char* statusStr = "Normal";
     if (!state.sensorConnected || state.temperature <= -50.0f) {
-        statusStr = "Sensor Err";
+        if (state.sensorStatus != nullptr && strcmp(state.sensorStatus, "Read Fault") == 0) {
+            statusStr = "Read Fault";
+        } else {
+            statusStr = "Sensor Err";
+        }
     } else if (state.temperature >= state.highThreshold + 5.0f) {
         statusStr = "Critical";
     } else if (state.temperature > state.highThreshold || state.temperature < state.lowThreshold) {

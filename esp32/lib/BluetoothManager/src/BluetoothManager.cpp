@@ -208,7 +208,6 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         }
     } else if (val.find("SET_BUZZER:1") != std::string::npos || val.find("BUZZER_ON") != std::string::npos || val.find("\"buzzer\":true") != std::string::npos) {
         state_->buzzerEnabled = true;
-        state_->requestBuzzerChirp = true;
         Serial.println("Buzzer enabled via BLE");
     } else if (val.find("SET_BUZZER:0") != std::string::npos || val.find("BUZZER_OFF") != std::string::npos || val.find("\"buzzer\":false") != std::string::npos) {
         state_->buzzerEnabled = false;

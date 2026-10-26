@@ -30,7 +30,7 @@
 | **Temperature Monitoring Profiles** | Software-calibrated modes for **Live Monitor**, **Environment** (comfort range), **Liquid Probe** (thermal stability), and **Fermentation** (yeast window & elapsed timer). |
 | **Session Analytics & Timer** | Monotonic session runtime (`HH:MM:SS`), minimum, maximum, and running average temperature with one-touch reset. |
 | **Unit Presentation** | Display in **°C** or **°F** ($F = C \times 9/5 + 32$); raw telemetry and cloud database records remain strictly in Celsius. |
-| **Audible Alert Buzzer** | Non-blocking acoustic alert on **GPIO 25** with ascending boot chime (`2700 Hz -> 3300 Hz`), repeating threshold alarm burst (`2400 Hz / 2600 Hz`), tactile confirmation pip (`3000 Hz`), and instant mute. |
+| **Audible Alert Buzzer** | Non-blocking acoustic alert on **GPIO 25** dedicated strictly to genuine active temperature-threshold alarms (2400 Hz / 2600 Hz burst). Complete silence during boot, navigation, and BLE connect/disconnect; instant silencing on normal temperature, sensor disconnect, read fault, or mute. |
 | **BLE Protocol** | Service `6E400011-B5A3-F393-E0A9-E50E24DCCA9E`, Notify Char `6E400009`, Command Char `6E400002` with 512 MTU. |
 | **Cloud Telemetry** | Uploads to Supabase at a default 5.0s rate; bounded offline queue buffers up to 500 readings when disconnected and auto-flushes on reconnection. |
 | **Push Notifications** | Targeted OneSignal push alerts on upper/lower critical breaches and sensor disconnection. |

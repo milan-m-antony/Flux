@@ -7,31 +7,28 @@ BuzzerManager::BuzzerManager(uint8_t pin) noexcept
 
 void BuzzerManager::begin(DeviceState* state) noexcept {
     state_ = state;
-    isSounding_ = false;
-    currentPattern_ = BuzzerPattern::Off;
-    patternStep_ = 0;
-    stepStartMs_ = millis();
-    lastAlertCycleMs_ = 0UL;
+    silence();
 
-    pinMode(pin_, OUTPUT);
-    digitalWrite(pin_, LOW);
+    // Ensure pin is set to OUTPUT, explicitly driven LOW, and any tone detached at boot
+    soundOff();
 
     Serial.printf("BuzzerManager initialized on GPIO %u (Temperature Alert Only)\n", pin_);
 }
 
 void BuzzerManager::soundOn(uint16_t freq) noexcept {
-    #if defined(ESP32)
-    tone(pin_, freq);
-    #else
-    digitalWrite(pin_, HIGH);
-    #endif
-    isSounding_ = true;
+    if (!isSounding_) {
+        #if defined(ESP32)
+        tone(pin_, freq);
+        #else
+        digitalWrite(pin_, HIGH);
+        #endif
+        isSounding_ = true;
+    }
 }
 
 void BuzzerManager::soundOff() noexcept {
     #if defined(ESP32)
     noTone(pin_);
-    ledcDetach(pin_);
     #endif
     pinMode(pin_, OUTPUT);
     digitalWrite(pin_, LOW);
@@ -42,63 +39,114 @@ void BuzzerManager::silence() noexcept {
     soundOff();
     currentPattern_ = BuzzerPattern::Off;
     patternStep_ = 0;
+    stepStartMs_ = 0UL;
     lastAlertCycleMs_ = 0UL;
 }
 
 void BuzzerManager::playChirp(uint16_t /*durationMs*/, uint16_t /*freq*/) noexcept {
-    // Sound is strictly reserved for temperature alerts only
+    // Non-alert confirmation chirps are strictly disabled per requirements
 }
 
 void BuzzerManager::update() noexcept {
     const unsigned long nowMs = millis();
 
-    // 1. Mute guard: If buzzer is disabled in Settings or state is missing, force silence
-    if (state_ == nullptr || !state_->buzzerEnabled) {
-        if (isSounding_) {
-            soundOff();
+    // Clear any stale chirp request without emitting sound
+    if (state_ != nullptr && state_->requestBuzzerChirp) {
+        state_->requestBuzzerChirp = false;
+    }
+
+    // 1. Alert Condition Evaluation:
+    // Buzzer sounds ONLY during a genuine active temperature-threshold alert:
+    // - State pointer is valid
+    // - Buzzer is enabled in Preferences / BLE
+    // - Sensor is connected and healthy
+    // - Threshold breach is actively asserted
+    const bool alertActive = (state_ != nullptr &&
+                              state_->buzzerEnabled &&
+                              state_->sensorConnected &&
+                              state_->isThresholdAlert);
+
+    // If alert condition is not met, ensure immediate silence and reset repeating pattern
+    if (!alertActive) {
+        if (currentPattern_ != BuzzerPattern::Off || isSounding_) {
+            silence();
         }
-        lastAlertCycleMs_ = 0UL;
         return;
     }
 
-    // 2. Temperature Alert: ONLY sound when sensor is connected AND temperature breached threshold
-    bool alertActive = (state_->sensorConnected && state_->isThresholdAlert);
+    // 2. Alert Pattern State Machine (Non-blocking, cooperative millis timing)
+    // Periodic repeating alert burst:
+    // Step 0: Pip 1 (2400 Hz) for 120 ms
+    // Step 1: Pause for 80 ms
+    // Step 2: Pip 2 (2400 Hz) for 120 ms
+    // Step 3: Pause for 80 ms
+    // Step 4: Pip 3 (2600 Hz) for 150 ms
+    // Step 5: Quiet rest period between bursts (2000 ms)
+    if (currentPattern_ != BuzzerPattern::AlertBeep) {
+        currentPattern_ = BuzzerPattern::AlertBeep;
+        patternStep_ = 0;
+        stepStartMs_ = nowMs;
+        lastAlertCycleMs_ = nowMs;
+        soundOn(2400);
+        return;
+    }
 
-    if (alertActive) {
-        if (lastAlertCycleMs_ == 0UL) {
-            lastAlertCycleMs_ = nowMs;
+    const unsigned long stepElapsed = nowMs - stepStartMs_;
+
+    switch (patternStep_) {
+    case 0: // Pip 1
+        if (stepElapsed >= 120) {
+            soundOff();
+            patternStep_ = 1;
+            stepStartMs_ = nowMs;
         }
+        break;
 
-        // Periodic non-continuous alarm burst:
-        // 3 crisp distinct alert pips (~550ms total), followed by a quiet 10-second rest:
-        // [0-120ms: Pip 1 (2400Hz)] -> [120-200ms: Rest]
-        // [200-320ms: Pip 2 (2400Hz)] -> [320-400ms: Rest]
-        // [400-550ms: Pip 3 (2600Hz)] -> [550-10000ms: Silence / Rest]
-        unsigned long cycleElapsed = nowMs - lastAlertCycleMs_;
+    case 1: // Pause 1
+        if (stepElapsed >= 80) {
+            soundOn(2400);
+            patternStep_ = 2;
+            stepStartMs_ = nowMs;
+        }
+        break;
 
-        if (cycleElapsed < 120) {
-            soundOn(2400);
-        } else if (cycleElapsed < 200) {
+    case 2: // Pip 2
+        if (stepElapsed >= 120) {
             soundOff();
-        } else if (cycleElapsed < 320) {
-            soundOn(2400);
-        } else if (cycleElapsed < 400) {
-            soundOff();
-        } else if (cycleElapsed < 550) {
+            patternStep_ = 3;
+            stepStartMs_ = nowMs;
+        }
+        break;
+
+    case 3: // Pause 2
+        if (stepElapsed >= 80) {
             soundOn(2600);
-        } else if (cycleElapsed < 10000UL) {
+            patternStep_ = 4;
+            stepStartMs_ = nowMs;
+        }
+        break;
+
+    case 4: // Pip 3
+        if (stepElapsed >= 150) {
             soundOff();
-        } else {
-            // Restart the 10-second alert cycle
-            lastAlertCycleMs_ = nowMs;
+            patternStep_ = 5;
+            stepStartMs_ = nowMs;
+        }
+        break;
+
+    case 5: // Quiet rest period before next repeating burst (2000 ms)
+        if (stepElapsed >= 2000) {
             soundOn(2400);
+            patternStep_ = 0;
+            stepStartMs_ = nowMs;
+            lastAlertCycleMs_ = nowMs;
         }
-    } else {
-        // Temperature normalized or sensor disconnected: immediately turn off sound
-        if (isSounding_) {
-            soundOff();
-        }
-        lastAlertCycleMs_ = 0UL;
+        break;
+
+    default:
+        // Recover cleanly from any unexpected pattern step
+        silence();
+        break;
     }
 }
 

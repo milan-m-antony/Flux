@@ -26,6 +26,8 @@ public:
 
     bool isSounding() const noexcept { return isSounding_; }
     uint8_t getPin() const noexcept { return pin_; }
+    BuzzerPattern getPattern() const noexcept { return currentPattern_; }
+    uint8_t getPatternStep() const noexcept { return patternStep_; }
 
 private:
     void soundOn(uint16_t freq) noexcept;

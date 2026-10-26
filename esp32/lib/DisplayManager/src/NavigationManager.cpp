@@ -160,9 +160,6 @@ void NavigationManager::onButtonEvent(ButtonId button, ButtonEvent event) noexce
             } else if (prefIndex_ == 3) {
                 // Toggle Buzzer
                 state_->buzzerEnabled = !state_->buzzerEnabled;
-                if (state_->buzzerEnabled) {
-                    state_->requestBuzzerChirp = true;
-                }
             }
         }
         return;

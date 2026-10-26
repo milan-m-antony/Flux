@@ -42,47 +42,49 @@ void SensorManager::update() noexcept {
             uint8_t addr[8];
             int16_t rawTemp = 0;
             float tempVal = 0.0f;
-            if (tempSensor_.readTemperatureDiagnostics(0, addr, rawTemp, tempVal)) {
-                // Ensure valid reading (DS18B20 returns -127 if disconnected/bus error)
-                if (tempVal > -55.0f && tempVal < 125.0f) {
-                    state_->sensorConnected = true;
-                    state_->temperature = tempVal;
-                    state_->temperatureF = (tempVal * 9.0f / 5.0f) + 32.0f;
-                    state_->addHistory(tempVal);
+            const bool readOk = tempSensor_.readTemperatureDiagnostics(0, addr, rawTemp, tempVal);
 
-                    // Update session statistics
-                    if (tempVal < state_->minTemperature) {
-                        state_->minTemperature = tempVal;
-                    }
-                    if (tempVal > state_->maxTemperature) {
-                        state_->maxTemperature = tempVal;
-                    }
-                    state_->tempSum += tempVal;
-                    state_->sampleCount++;
-                    state_->avgTemperature = static_cast<float>(state_->tempSum / state_->sampleCount);
+            // DS18B20 Power-On Reset (POR) default value is +85.0C (raw 0x0550).
+            // If the sensor is read before its first temperature conversion finishes,
+            // or suffered a bus brownout, it returns 85.0C. Do not treat this as a valid alert.
+            if (readOk && rawTemp == 0x0550 && state_->sampleCount == 0) {
+                tempSensor_.requestTemperature();
+                return;
+            }
 
-                    // Threshold and profile evaluation
-                    if (tempVal < state_->lowThreshold || tempVal > state_->highThreshold) {
-                        if (!state_->isThresholdAlert) {
-                            state_->alertSentAnimMs = millis();
-                        }
-                        state_->isThresholdAlert = true;
-                        state_->sensorStatus = "Threshold Alert";
-                    } else {
-                        state_->isThresholdAlert = false;
-                        state_->sensorStatus = "Normal";
+            if (readOk && (tempVal > -55.0f && tempVal < 125.0f)) {
+                state_->sensorConnected = true;
+                state_->temperature = tempVal;
+                state_->temperatureF = (tempVal * 9.0f / 5.0f) + 32.0f;
+                state_->addHistory(tempVal);
+
+                // Update session statistics
+                if (tempVal < state_->minTemperature) {
+                    state_->minTemperature = tempVal;
+                }
+                if (tempVal > state_->maxTemperature) {
+                    state_->maxTemperature = tempVal;
+                }
+                state_->tempSum += tempVal;
+                state_->sampleCount++;
+                state_->avgTemperature = static_cast<float>(state_->tempSum / state_->sampleCount);
+
+                // Threshold and profile evaluation using configured low and high limits
+                if (tempVal < state_->lowThreshold || tempVal > state_->highThreshold) {
+                    if (!state_->isThresholdAlert) {
+                        state_->alertSentAnimMs = millis();
                     }
+                    state_->isThresholdAlert = true;
+                    state_->sensorStatus = "Threshold Alert";
                 } else {
-                    tempSensorConnected_ = false;
-                    state_->sensorConnected = false;
                     state_->isThresholdAlert = false;
-                    state_->sensorStatus = "Read Fault";
+                    state_->sensorStatus = "Normal";
                 }
             } else {
                 tempSensorConnected_ = false;
                 state_->sensorConnected = false;
                 state_->isThresholdAlert = false;
-                state_->sensorStatus = "Disconnected";
+                state_->sensorStatus = readOk ? "Read Fault" : "Disconnected";
             }
             tempSensor_.requestTemperature();
         } else {
