@@ -5,7 +5,7 @@
 # ==============================================================================
 
 # --- Stage 1: Build & Compile TypeScript ---
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN npm run build
 RUN npm prune --production
 
 # --- Stage 2: Minimal Production Image ---
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 WORKDIR /app
 
