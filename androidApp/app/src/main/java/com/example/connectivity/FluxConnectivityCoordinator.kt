@@ -43,10 +43,12 @@ class FluxConnectivityCoordinator(
     private val _phoneIsMetered = MutableStateFlow(false)
     private val _phoneNetworkSignalDbm = MutableStateFlow<Int?>(null)
     private val _isInternetValidated = MutableStateFlow(false)
+    private val _phoneWifiSsid = MutableStateFlow<String?>(null)
 
     // Primary output StateFlow
     private val _connectivityState = MutableStateFlow(FluxConnectivityState())
     val connectivityState: StateFlow<FluxConnectivityState> = _connectivityState.asStateFlow()
+    val phoneWifiSsid: StateFlow<String?> = _phoneWifiSsid.asStateFlow()
 
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private var periodicFreshnessJob: Job? = null
@@ -63,33 +65,25 @@ class FluxConnectivityCoordinator(
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             .build()
 
-        networkCallback = object : ConnectivityManager.NetworkCallback() {
-            override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
-                val hasWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
-                val hasCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
-                val isMetered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
-                val validated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-
-                var signalDbm: Int? = null
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val strength = capabilities.signalStrength
-                    if (strength != NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) {
-                        signalDbm = strength
-                    }
+        networkCallback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            object : ConnectivityManager.NetworkCallback(FLAG_INCLUDE_LOCATION_INFO) {
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    handleNetworkCapabilities(capabilities)
                 }
 
-                _phoneHasWifi.value = hasWifi
-                _phoneHasCellular.value = hasCellular
-                _phoneIsMetered.value = isMetered
-                _isInternetValidated.value = validated
-                if (signalDbm != null) {
-                    _phoneNetworkSignalDbm.value = signalDbm
+                override fun onLost(network: Network) {
+                    evaluateActiveNetwork()
                 }
             }
+        } else {
+            object : ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+                    handleNetworkCapabilities(capabilities)
+                }
 
-            override fun onLost(network: Network) {
-                // Re-evaluate active capabilities
-                evaluateActiveNetwork()
+                override fun onLost(network: Network) {
+                    evaluateActiveNetwork()
+                }
             }
         }
 
@@ -101,20 +95,74 @@ class FluxConnectivityCoordinator(
         }
     }
 
+    private fun handleNetworkCapabilities(capabilities: NetworkCapabilities) {
+        val hasWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        val hasCellular = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+        val isMetered = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+        val validated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+
+        var signalDbm: Int? = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val strength = capabilities.signalStrength
+            if (strength != NetworkCapabilities.SIGNAL_STRENGTH_UNSPECIFIED) {
+                signalDbm = strength
+            }
+        }
+
+        _phoneHasWifi.value = hasWifi
+        _phoneHasCellular.value = hasCellular
+        _phoneIsMetered.value = isMetered
+        _isInternetValidated.value = validated
+        if (signalDbm != null) {
+            _phoneNetworkSignalDbm.value = signalDbm
+        }
+
+        if (hasWifi) {
+            updatePhoneWifiSsid(capabilities)
+        } else {
+            _phoneWifiSsid.value = null
+        }
+    }
+
+    private fun updatePhoneWifiSsid(capabilities: NetworkCapabilities?) {
+        try {
+            if (capabilities != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
+                val name = wifiInfo?.ssid
+                if (!name.isNullOrBlank() && name != "<unknown ssid>" && name != "0x" && name != "\"\"") {
+                    _phoneWifiSsid.value = name.removeSurrounding("\"")
+                    return
+                }
+            }
+            val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
+            val raw = wifiManager?.connectionInfo?.ssid
+            if (!raw.isNullOrBlank() && raw != "<unknown ssid>" && raw != "0x" && raw != "\"\"") {
+                _phoneWifiSsid.value = raw.removeSurrounding("\"")
+            }
+        } catch (_: Exception) {}
+    }
+
     private fun evaluateActiveNetwork() {
         if (cm == null) return
         val activeNetwork = cm.activeNetwork
         val capabilities = cm.getNetworkCapabilities(activeNetwork)
         if (capabilities != null) {
-            _phoneHasWifi.value = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            val hasWifi = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+            _phoneHasWifi.value = hasWifi
             _phoneHasCellular.value = capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
             _phoneIsMetered.value = !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
             _isInternetValidated.value = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            if (hasWifi) {
+                updatePhoneWifiSsid(capabilities)
+            } else {
+                _phoneWifiSsid.value = null
+            }
         } else {
             _phoneHasWifi.value = false
             _phoneHasCellular.value = false
             _phoneIsMetered.value = false
             _isInternetValidated.value = false
+            _phoneWifiSsid.value = null
         }
     }
 

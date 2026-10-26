@@ -210,6 +210,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         manualPreferredTransport = manualPreferredTransport
     )
     val connectivityState: StateFlow<FluxConnectivityState> = connectivityCoordinator.connectivityState
+    val phoneWifiSsid: StateFlow<String?> = connectivityCoordinator.phoneWifiSsid
     
     private val bluetoothReceiver = object : android.content.BroadcastReceiver() {
         override fun onReceive(ctx: android.content.Context?, intent: android.content.Intent?) {

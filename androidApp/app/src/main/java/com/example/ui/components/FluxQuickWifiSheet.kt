@@ -1,10 +1,13 @@
 package com.example.ui.components
 
 import android.content.Context
+import android.content.Intent
+import android.location.LocationManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -12,6 +15,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -40,6 +45,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.MainViewModel
 import com.example.ble.ConnectionState
 import com.example.ui.theme.*
@@ -78,19 +86,56 @@ fun FluxQuickWifiSheet(
 
     val savedSsid by viewModel.savedWifiSsid.collectAsState()
     val savedPass by viewModel.savedWifiPass.collectAsState()
+    val phoneWifiSsid by viewModel.phoneWifiSsid.collectAsState()
 
-    // Detect phone's current Wi-Fi name
-    var detectedWifiName by remember { mutableStateOf(getConnectedWifiName(context)) }
+    var isLocationServiceOn by remember { mutableStateOf(isLocationServiceEnabled(context)) }
 
-    // Wi-Fi Name input state
-    var wifiName by remember(detectedWifiName, savedSsid) {
-        mutableStateOf(
-            when {
-                !detectedWifiName.isNullOrBlank() -> detectedWifiName!!
-                savedSsid.isNotBlank() -> savedSsid
-                else -> ""
+    // Direct initial Wi-Fi detection
+    val initialDetectedName = remember {
+        val direct = getConnectedWifiName(context)
+        when {
+            !direct.isNullOrBlank() -> direct
+            !phoneWifiSsid.isNullOrBlank() -> phoneWifiSsid
+            savedSsid.isNotBlank() -> savedSsid
+            connectedSsid.isNotBlank() -> connectedSsid
+            else -> null
+        }
+    }
+
+    var detectedWifiName by remember { mutableStateOf(initialDetectedName) }
+    var wifiName by remember { mutableStateOf(initialDetectedName ?: "") }
+    var userHasManuallyEdited by remember { mutableStateOf(false) }
+
+    // Update Wi-Fi name when phone detects it or when coordinator StateFlow updates
+    LaunchedEffect(phoneWifiSsid) {
+        val newSsid = phoneWifiSsid
+        if (!newSsid.isNullOrBlank()) {
+            detectedWifiName = newSsid
+            if (!userHasManuallyEdited || wifiName.isBlank()) {
+                wifiName = newSsid
             }
-        )
+        }
+    }
+
+    // Refresh detection whenever app resumes (e.g. returning from enabling Location)
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isLocationServiceOn = isLocationServiceEnabled(context)
+                val direct = getConnectedWifiName(context) ?: phoneWifiSsid
+                if (!direct.isNullOrBlank()) {
+                    detectedWifiName = direct
+                    if (!userHasManuallyEdited || wifiName.isBlank()) {
+                        wifiName = direct
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     var password by remember(savedPass) { mutableStateOf(savedPass) }
@@ -137,6 +182,7 @@ fun FluxQuickWifiSheet(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.55f))
+                .imePadding()
                 .clickable {
                     if (provisionState != WifiProvisionState.CONNECTING) onDismiss()
                 },
@@ -146,7 +192,7 @@ fun FluxQuickWifiSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable(enabled = false) {} // Prevent click-through
-                    .shadow(16.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), spotColor = Color(0x30000000))
+                    .shadow(20.dp, RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp), spotColor = Color(0x35000000))
                     .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
                     .background(colors.cardBg)
                     .border(
@@ -154,10 +200,14 @@ fun FluxQuickWifiSheet(
                         colors.cardBorder,
                         RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
                     )
+                    .navigationBarsPadding()
                     .padding(horizontal = 22.dp, vertical = 20.dp)
+                    .padding(bottom = 12.dp)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Top Drag Indicator Capsule
@@ -299,7 +349,10 @@ fun FluxQuickWifiSheet(
                                 // Wi-Fi Name field with Detect/Refresh action
                                 OutlinedTextField(
                                     value = wifiName,
-                                    onValueChange = { wifiName = it },
+                                    onValueChange = {
+                                        wifiName = it
+                                        userHasManuallyEdited = true
+                                    },
                                     label = { Text("Wi-Fi name") },
                                     placeholder = { Text("Enter Wi-Fi name") },
                                     leadingIcon = {
@@ -313,11 +366,15 @@ fun FluxQuickWifiSheet(
                                     trailingIcon = {
                                         IconButton(
                                             onClick = {
-                                                val detected = getConnectedWifiName(context)
+                                                isLocationServiceOn = isLocationServiceEnabled(context)
+                                                val detected = getConnectedWifiName(context) ?: phoneWifiSsid
                                                 if (!detected.isNullOrBlank()) {
                                                     wifiName = detected
                                                     detectedWifiName = detected
+                                                    userHasManuallyEdited = false
                                                     Toast.makeText(context, "Detected '$detected'", Toast.LENGTH_SHORT).show()
+                                                } else if (!isLocationServiceOn) {
+                                                    Toast.makeText(context, "Turn on Location to detect Wi-Fi name", Toast.LENGTH_LONG).show()
                                                 } else {
                                                     Toast.makeText(context, "Could not detect phone Wi-Fi. Enter manually.", Toast.LENGTH_SHORT).show()
                                                 }
@@ -344,6 +401,68 @@ fun FluxQuickWifiSheet(
                                         imeAction = ImeAction.Next
                                     )
                                 )
+
+                                Spacer(modifier = Modifier.height(4.dp))
+
+                                // Active network verification badge / Location guidance
+                                if (wifiName.isNotBlank() && (wifiName == detectedWifiName || wifiName == phoneWifiSsid)) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = FluxGreenOnline,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(5.dp))
+                                        Text(
+                                            text = "Active phone Wi-Fi: $wifiName",
+                                            color = FluxGreenOnline,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                } else if (!isLocationServiceOn && wifiName.isBlank()) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (darkTheme) Color(0xFF2E2214) else Color(0xFFFEF3C7))
+                                            .border(0.5.dp, if (darkTheme) Color(0xFF78350F) else Color(0xFFF59E0B), RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                try {
+                                                    context.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                                                } catch (_: Exception) {}
+                                            }
+                                            .padding(horizontal = 10.dp, vertical = 7.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.LocationOff,
+                                            contentDescription = null,
+                                            tint = if (darkTheme) Color(0xFFFBBF24) else Color(0xFFB45309),
+                                            modifier = Modifier.size(14.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = "Location is off • Tap to turn on for auto-detection",
+                                            color = if (darkTheme) Color(0xFFFBBF24) else Color(0xFF92400E),
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                } else if (wifiName.isNotBlank() && userHasManuallyEdited) {
+                                    Text(
+                                        text = "Manual Wi-Fi network",
+                                        color = colors.textSecondary,
+                                        fontSize = 11.5.sp,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
 
                                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -526,8 +645,8 @@ fun FluxQuickWifiSheet(
                                     Text(
                                         text = when {
                                             setupMode == WifiProvisionMode.BLE && !isBleConnected -> "Connect Bluetooth First"
-                                            wifiName.isNotBlank() -> "Connect"
-                                            else -> "Enter Wi-Fi name"
+                                            setupMode == WifiProvisionMode.ACCESS_POINT -> "Connect via AP"
+                                            else -> "Connect"
                                         },
                                         fontSize = 14.5.sp,
                                         fontWeight = FontWeight.Bold
@@ -734,10 +853,24 @@ fun FluxQuickWifiSheet(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
+    }
+}
+
+/**
+ * Check if Android system location services (GPS/Network) are active.
+ */
+private fun isLocationServiceEnabled(context: Context): Boolean {
+    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return false
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        lm.isLocationEnabled
+    } else {
+        try {
+            Settings.Secure.getInt(context.contentResolver, Settings.Secure.LOCATION_MODE) != Settings.Secure.LOCATION_MODE_OFF
+        } catch (_: Exception) { false }
     }
 }
 
@@ -746,23 +879,39 @@ fun FluxQuickWifiSheet(
  */
 private fun getConnectedWifiName(context: Context): String? {
     try {
-        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && cm != null) {
-            val activeNetwork = cm.activeNetwork
-            val capabilities = cm.getNetworkCapabilities(activeNetwork)
-            if (capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
-                val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
-                val name = wifiInfo?.ssid
-                if (!name.isNullOrBlank() && name != "<unknown ssid>" && name != "0x") {
-                    return name.removeSurrounding("\"")
-                }
+        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager
+        if (wifiManager != null) {
+            val info = wifiManager.connectionInfo
+            val rawName = info?.ssid
+            if (!rawName.isNullOrBlank() && rawName != "<unknown ssid>" && rawName != "0x" && rawName != "\"\"") {
+                return rawName.removeSurrounding("\"")
             }
         }
-        val wifiManager = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as? WifiManager ?: return null
-        val info = wifiManager.connectionInfo ?: return null
-        val rawName = info.ssid
-        if (!rawName.isNullOrBlank() && rawName != "<unknown ssid>" && rawName != "0x") {
-            return rawName.removeSurrounding("\"")
+
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        if (cm != null) {
+            val activeNetwork = cm.activeNetwork
+            if (activeNetwork != null) {
+                val capabilities = cm.getNetworkCapabilities(activeNetwork)
+                if (capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    val wifiInfo = capabilities.transportInfo as? android.net.wifi.WifiInfo
+                    val name = wifiInfo?.ssid
+                    if (!name.isNullOrBlank() && name != "<unknown ssid>" && name != "0x" && name != "\"\"") {
+                        return name.removeSurrounding("\"")
+                    }
+                }
+            }
+
+            for (network in cm.allNetworks) {
+                val caps = cm.getNetworkCapabilities(network) ?: continue
+                if (caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                    val wifiInfo = caps.transportInfo as? android.net.wifi.WifiInfo
+                    val name = wifiInfo?.ssid
+                    if (!name.isNullOrBlank() && name != "<unknown ssid>" && name != "0x" && name != "\"\"") {
+                        return name.removeSurrounding("\"")
+                    }
+                }
+            }
         }
     } catch (_: Exception) {}
     return null
