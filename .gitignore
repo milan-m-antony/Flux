@@ -31,3 +31,7 @@ Thumbs.db
 **/node_modules/
 **/dist/
 **/coverage/
+
+# Supabase
+supabase/.temp/
+
