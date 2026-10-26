@@ -8,142 +8,97 @@ BuzzerManager::BuzzerManager(uint8_t pin) noexcept
 void BuzzerManager::begin(DeviceState* state) noexcept {
     state_ = state;
     isSounding_ = false;
-    currentPattern_ = BuzzerPattern::Startup;
+    currentPattern_ = BuzzerPattern::Off;
     patternStep_ = 0;
     stepStartMs_ = millis();
-    lastAlertCycleMs_ = millis();
+    lastAlertCycleMs_ = 0UL;
 
     pinMode(pin_, OUTPUT);
     digitalWrite(pin_, LOW);
 
-    Serial.printf("BuzzerManager initialized on GPIO %u\n", pin_);
+    Serial.printf("BuzzerManager initialized on GPIO %u (Temperature Alert Only)\n", pin_);
 }
 
 void BuzzerManager::soundOn(uint16_t freq) noexcept {
-    if (!isSounding_) {
-        isSounding_ = true;
-        #if defined(ESP32)
-        tone(pin_, freq);
-        #else
-        digitalWrite(pin_, HIGH);
-        #endif
-    }
+    #if defined(ESP32)
+    tone(pin_, freq);
+    #else
+    digitalWrite(pin_, HIGH);
+    #endif
+    isSounding_ = true;
 }
 
 void BuzzerManager::soundOff() noexcept {
-    if (isSounding_) {
-        isSounding_ = false;
-        #if defined(ESP32)
-        noTone(pin_);
-        #endif
-        pinMode(pin_, OUTPUT);
-        digitalWrite(pin_, LOW);
-    }
+    #if defined(ESP32)
+    noTone(pin_);
+    ledcDetach(pin_);
+    #endif
+    pinMode(pin_, OUTPUT);
+    digitalWrite(pin_, LOW);
+    isSounding_ = false;
 }
 
 void BuzzerManager::silence() noexcept {
     soundOff();
     currentPattern_ = BuzzerPattern::Off;
     patternStep_ = 0;
+    lastAlertCycleMs_ = 0UL;
 }
 
-void BuzzerManager::playChirp(uint16_t durationMs, uint16_t freq) noexcept {
-    if (state_ != nullptr && !state_->buzzerEnabled) {
-        return;
-    }
-    currentPattern_ = BuzzerPattern::ConfirmationChirp;
-    patternStep_ = 0;
-    stepStartMs_ = millis();
+void BuzzerManager::playChirp(uint16_t /*durationMs*/, uint16_t /*freq*/) noexcept {
+    // Sound is strictly reserved for temperature alerts only
 }
 
 void BuzzerManager::update() noexcept {
     const unsigned long nowMs = millis();
 
-    // 1. Mute guard: If buzzer is disabled in Settings, force silence immediately
-    if (state_ != nullptr && !state_->buzzerEnabled) {
+    // 1. Mute guard: If buzzer is disabled in Settings or state is missing, force silence
+    if (state_ == nullptr || !state_->buzzerEnabled) {
         if (isSounding_) {
-            silence();
-        }
-        currentPattern_ = BuzzerPattern::Off;
-        return;
-    }
-
-    // 2. Process asynchronous chirp request from UI or BLE
-    if (state_ != nullptr && state_->requestBuzzerChirp) {
-        state_->requestBuzzerChirp = false;
-        if (state_->buzzerEnabled) {
-            playChirp();
-        }
-    }
-
-    // 3. One-shot startup chime (crisp ascending two-tone)
-    if (currentPattern_ == BuzzerPattern::Startup) {
-        unsigned long elapsed = nowMs - stepStartMs_;
-        if (patternStep_ == 0) {
-            soundOn(2700);
-            if (elapsed >= 80) {
-                soundOff();
-                patternStep_ = 1;
-                stepStartMs_ = nowMs;
-            }
-        } else if (patternStep_ == 1) {
             soundOff();
-            if (elapsed >= 50) {
-                patternStep_ = 2;
-                stepStartMs_ = nowMs;
-            }
-        } else if (patternStep_ == 2) {
-            soundOn(3300);
-            if (elapsed >= 90) {
-                soundOff();
-                currentPattern_ = BuzzerPattern::Off;
-                patternStep_ = 0;
-                lastAlertCycleMs_ = nowMs;
-            }
         }
+        lastAlertCycleMs_ = 0UL;
         return;
     }
 
-    // 4. One-shot confirmation chirp (single high-frequency pip)
-    if (currentPattern_ == BuzzerPattern::ConfirmationChirp) {
-        unsigned long elapsed = nowMs - stepStartMs_;
-        if (patternStep_ == 0) {
-            soundOn(3000);
-            if (elapsed >= 60) {
-                soundOff();
-                currentPattern_ = BuzzerPattern::Off;
-                patternStep_ = 0;
-            }
-        }
-        return;
-    }
-
-    // 5. Continuous Alert handling when threshold is breached
-    bool alertActive = (state_ != nullptr && state_->isThresholdAlert && state_->buzzerEnabled);
+    // 2. Temperature Alert: ONLY sound when sensor is connected AND temperature breached threshold
+    bool alertActive = (state_->sensorConnected && state_->isThresholdAlert);
 
     if (alertActive) {
-        // Double-beep alarm burst:
-        // [0-140ms: Beep 2400Hz] -> [140-220ms: Rest] -> [220-360ms: Beep 2600Hz] -> [360-1600ms: Rest]
+        if (lastAlertCycleMs_ == 0UL) {
+            lastAlertCycleMs_ = nowMs;
+        }
+
+        // Periodic non-continuous alarm burst:
+        // 3 crisp distinct alert pips (~550ms total), followed by a quiet 10-second rest:
+        // [0-120ms: Pip 1 (2400Hz)] -> [120-200ms: Rest]
+        // [200-320ms: Pip 2 (2400Hz)] -> [320-400ms: Rest]
+        // [400-550ms: Pip 3 (2600Hz)] -> [550-10000ms: Silence / Rest]
         unsigned long cycleElapsed = nowMs - lastAlertCycleMs_;
 
-        if (cycleElapsed < 140) {
+        if (cycleElapsed < 120) {
             soundOn(2400);
-        } else if (cycleElapsed < 220) {
+        } else if (cycleElapsed < 200) {
             soundOff();
-        } else if (cycleElapsed < 360) {
+        } else if (cycleElapsed < 320) {
+            soundOn(2400);
+        } else if (cycleElapsed < 400) {
+            soundOff();
+        } else if (cycleElapsed < 550) {
             soundOn(2600);
-        } else if (cycleElapsed < 1600) {
+        } else if (cycleElapsed < 10000UL) {
             soundOff();
         } else {
-            // Cycle restarts
+            // Restart the 10-second alert cycle
             lastAlertCycleMs_ = nowMs;
             soundOn(2400);
         }
     } else {
+        // Temperature normalized or sensor disconnected: immediately turn off sound
         if (isSounding_) {
             soundOff();
         }
-        lastAlertCycleMs_ = nowMs;
+        lastAlertCycleMs_ = 0UL;
     }
 }
 

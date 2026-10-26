@@ -21,6 +21,7 @@ void SensorManager::begin(DeviceState* state) noexcept {
         state_->sessionStartMs = millis();
         state_->sodiumValue = -1;
         state_->sodiumStatus = "Normal";
+        state_->isThresholdAlert = false;
     }
 }
 
@@ -74,16 +75,19 @@ void SensorManager::update() noexcept {
                 } else {
                     tempSensorConnected_ = false;
                     state_->sensorConnected = false;
+                    state_->isThresholdAlert = false;
                     state_->sensorStatus = "Read Fault";
                 }
             } else {
                 tempSensorConnected_ = false;
                 state_->sensorConnected = false;
+                state_->isThresholdAlert = false;
                 state_->sensorStatus = "Disconnected";
             }
             tempSensor_.requestTemperature();
         } else {
             state_->sensorConnected = false;
+            state_->isThresholdAlert = false;
             state_->sensorStatus = "Disconnected";
         }
     }
