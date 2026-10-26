@@ -15,7 +15,8 @@
 
 - **Autonomous Edge Monitoring:** Operates 100% offline if network connectivity is lost. An ESP32 reads a Dallas DS18B20 1-Wire probe and renders real-time metrics, animations, and session statistics on an SSD1306 OLED display with physical 3-button tactile navigation.
 - **BLE Telemetry Streaming:** Bluetooth Low Energy GATT server streams single-packet JSON telemetry payloads (512-byte MTU) at 1.0 Hz with comprehensive Flux session metrics and alarms.
-- **Native Android Companion App:** Jetpack Compose mobile dashboard featuring modern dark-mode ergonomics (`#020617` background, lime green and sky blue accents), Celsius/Fahrenheit conversion, profile switching, real-time Bézier curve trend graphs, and a 500-record bounded offline synchronization buffer.
+- **Native Android Companion App:** Jetpack Compose mobile dashboard featuring modern dark-mode ergonomics (`#020617` background, lime green and sky blue accents), Celsius/Fahrenheit conversion, profile switching, real-time Bézier curve trend graphs, and a durable Room-backed offline synchronization queue with bounded exponential backoff.
+- **Dockerized Node.js/TypeScript Backend on Render:** Production-ready Express API running in a multi-stage Docker container on Render, providing authenticated endpoints (`/health`, `/ready`, `/api/v1/telemetry`, `/api/v1/devices/:deviceId/...`) with cryptographic Firebase ID token verification, device ownership authorization, rate limiting, and idempotency protection.
 - **Dedicated Supabase Cloud Backend:** PostgreSQL database with Row Level Security (RLS) policies and Logical Replication Realtime streaming for historical charting and latest state synchronization, completely replacing Firebase telemetry writes.
 - **Zero-Leak Server-Side Push Alerts:** High/low threshold breaches trigger a PostgreSQL database trigger and a Supabase Edge Function (`flux-alert-evaluator`) which dispatches push notifications via OneSignal's REST API using secure server-side secrets with 15-minute anti-flap hysteresis.
 
@@ -105,9 +106,16 @@ Flux/
 │   │   └── MainViewModel.kt             # Central reactive state & cloud coordinator
 │   └── gradle.properties                # Configured for JDK 17
 │
-├── supabase/                            # Cloud Backend & Edge Functions
-│   ├── migrations/
-│   │   └── 20261023_flux_telemetry_schema.sql # 5-table schema, RLS & triggers
+├── backend/                             # Dockerized Node.js + TypeScript Backend (Render)
+│   ├── Dockerfile                       # Multi-stage production container
+│   ├── render.yaml                      # Render Blueprint deployment spec
+│   ├── src/                             # Express app, routes, middleware, services
+│   └── tests/                           # Automated Jest test suite (20 tests passed)
+│
+├── supabase/                            # Cloud Database & Edge Functions
+│   ├── migrations/                      # PostgreSQL schema & RLS migrations
+│   │   ├── 20261023_flux_telemetry_schema.sql
+│   │   └── 20261026_flux_backend_rls_hardening.sql
 │   └── functions/
 │       └── flux-alert-evaluator/index.ts       # Secure OneSignal push dispatch
 │

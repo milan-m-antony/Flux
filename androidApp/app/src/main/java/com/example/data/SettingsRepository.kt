@@ -27,10 +27,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val SUPABASE_URL = stringPreferencesKey("supabase_url")
         val SUPABASE_ANON_KEY = stringPreferencesKey("supabase_anon_key")
         val ONESIGNAL_APP_ID = stringPreferencesKey("onesignal_app_id")
+        val BACKEND_URL = stringPreferencesKey("backend_url")
 
         const val DEFAULT_SUPABASE_URL = "https://pivtrxrhxdqxzactcrrb.supabase.co"
         const val DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpdnRyeHJoeGRxeHphY3RjcnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjAxMjEsImV4cCI6MjEwODMzNjEyMX0.LGOfzD6MVDQQ725kJEC8JEcfwKUQyxpt3V8RBB7HNxg"
         const val DEFAULT_ONESIGNAL_APP_ID = "50847ad7-fc7f-4c89-85a9-c5d7f91cc2c8"
+        const val DEFAULT_BACKEND_URL = "https://flux-backend.onrender.com"
         
         val PUSH_ALERTS = booleanPreferencesKey("push_alerts")
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
@@ -58,6 +60,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val supabaseUrl: Flow<String> = dataStore.data.map { it[SUPABASE_URL] ?: DEFAULT_SUPABASE_URL }
     val supabaseAnonKey: Flow<String> = dataStore.data.map { it[SUPABASE_ANON_KEY] ?: DEFAULT_SUPABASE_ANON_KEY }
     val onesignalAppId: Flow<String> = dataStore.data.map { it[ONESIGNAL_APP_ID] ?: DEFAULT_ONESIGNAL_APP_ID }
+    val backendUrl: Flow<String> = dataStore.data.map { it[BACKEND_URL] ?: DEFAULT_BACKEND_URL }
 
     val savedWifiSsid: Flow<String> = dataStore.data.map { it[SAVED_WIFI_SSID] ?: "" }
     val savedWifiPass: Flow<String> = dataStore.data.map { it[SAVED_WIFI_PASS] ?: "" }
@@ -120,6 +123,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[SUPABASE_URL] = url
             prefs[SUPABASE_ANON_KEY] = key
             prefs[ONESIGNAL_APP_ID] = onesignalId
+        }
+    }
+
+    suspend fun saveBackendUrl(url: String) {
+        dataStore.edit { prefs ->
+            prefs[BACKEND_URL] = url
         }
     }
 

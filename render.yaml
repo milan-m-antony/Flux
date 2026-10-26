@@ -1,0 +1,34 @@
+# ==============================================================================
+# Flux — Smart Telemetry System: Render Infrastructure Blueprint
+# Use with Render Blueprints ("New" -> "Blueprint" -> Connect repo)
+# ==============================================================================
+
+services:
+  - type: web
+    name: flux-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 120
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false

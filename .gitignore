@@ -23,5 +23,14 @@ esp32/.vscode/
 
 # Local configuration and OS files
 local.properties
+.env
 .DS_Store
 Thumbs.db
+
+# Node.js / Backend
+node_modules/
+dist/
+coverage/
+backend/node_modules/
+backend/dist/
+backend/coverage/

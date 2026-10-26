@@ -43,7 +43,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val calibrationRepository = CalibrationRepository(database.calibrationDao())
     private val settingsRepository = SettingsRepository(application.dataStore)
     private val notificationRepository = NotificationRepository(database.notificationDao())
-    private val supabaseRepository = com.example.data.SupabaseRepository(viewModelScope)
+
+    private val firebaseAuth = try {
+        FirebaseAuth.getInstance()
+    } catch (e: Exception) {
+        null
+    }
+
+    private val supabaseRepository = com.example.data.SupabaseRepository(
+        scope = viewModelScope,
+        queuedTelemetryDao = database.queuedTelemetryDao(),
+        firebaseAuth = firebaseAuth
+    )
 
     private val firebaseAnalytics = try {
         FirebaseAnalytics.getInstance(application)
@@ -57,12 +68,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 .setPersistenceEnabled(true)
                 .build()
         }
-    } catch (e: Exception) {
-        null
-    }
-
-    private val firebaseAuth = try {
-        FirebaseAuth.getInstance()
     } catch (e: Exception) {
         null
     }
@@ -145,6 +150,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val supabaseUrl = settingsRepository.supabaseUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_SUPABASE_URL)
     val supabaseAnonKey = settingsRepository.supabaseAnonKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_SUPABASE_ANON_KEY)
     val onesignalAppId = settingsRepository.onesignalAppId.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_ONESIGNAL_APP_ID)
+    val backendUrl = settingsRepository.backendUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_BACKEND_URL)
 
     val supabaseSyncStatus = supabaseRepository.syncStatus
     val pendingOfflineRecords = supabaseRepository.pendingQueueCount
@@ -324,7 +330,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         batteryVolts = reading.batteryVoltage,
                         charging = false,
                         sensorConnected = reading.status != "Disconnected",
-                        uploadIntervalSec = cloudUploadIntervalSec.value
+                        uploadIntervalSec = cloudUploadIntervalSec.value,
+                        backendUrl = backendUrl.value
                     )
                 }
             }
@@ -443,7 +450,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun fetchCloudHistory() {
         viewModelScope.launch {
             val addr = settingsRepository.lastDeviceAddress.first() ?: "Flux1"
-            supabaseRepository.fetchHistoricalTelemetry(supabaseUrl.value, supabaseAnonKey.value, addr)
+            supabaseRepository.fetchHistoricalTelemetry(supabaseUrl.value, supabaseAnonKey.value, addr, backendUrl.value)
         }
     }
     
@@ -741,7 +748,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun flushOfflineQueue() {
         viewModelScope.launch {
-            supabaseRepository.flushOfflineQueueNow(supabaseUrl.value, supabaseAnonKey.value)
+            supabaseRepository.flushOfflineQueueNow(supabaseUrl.value, supabaseAnonKey.value, backendUrl.value)
+        }
+    }
+
+    fun saveBackendUrl(url: String) {
+        viewModelScope.launch {
+            settingsRepository.saveBackendUrl(url)
         }
     }
 

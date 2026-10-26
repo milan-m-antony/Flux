@@ -5,11 +5,16 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [Reading::class, CalibrationHistory::class, NotificationEntity::class], version = 2, exportSchema = false)
+@Database(
+    entities = [Reading::class, CalibrationHistory::class, NotificationEntity::class, QueuedTelemetryEntity::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun readingDao(): ReadingDao
     abstract fun calibrationDao(): CalibrationDao
     abstract fun notificationDao(): NotificationDao
+    abstract fun queuedTelemetryDao(): QueuedTelemetryDao
 
     companion object {
         @Volatile
