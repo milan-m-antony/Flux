@@ -17,39 +17,11 @@ or in PowerShell:
 ### Automation Modes
 | Command | Functionality |
 |:---|:---|
-| `automate.bat` | Builds Android APK, installs onto connected phone via ADB, starts `MainActivity`, and launches `scrcpy` live mirroring. |
+| `automate.bat` | Builds Android APK, installs onto connected phone via ADB, and starts `MainActivity`. |
 | `automate.bat -Esp32` | Builds and flashes PlatformIO firmware to the ESP32 on `COM10`. |
-| `automate.bat -All` | Flashes ESP32 AND builds/deploys Android companion app with live desktop mirroring in one step. |
-| `automate.bat -Mirror` | Launches `scrcpy` screen mirroring immediately. |
+| `automate.bat -All` | Flashes ESP32 AND builds/deploys Android companion app in one step. |
+| `automate.bat -DeviceId <id>` | Installs APK and launches onto a specific connected Android device ID. |
 | `automate.bat -Test` | Runs Kotlin compilation check and unit tests (`compileDebugKotlin testDebugUnitTest`). |
-
----
-
-## 1. Real-Time Screen Mirroring (`scrcpy`)
-
-View and control your connected Android phone on your Windows laptop with zero latency.
-
-- **Desktop Shortcut:** Double-click **`Flux Screen Mirror`** on your Desktop.
-- **Terminal:** Run `scrcpy` from any terminal or command prompt.
-- **Wireless Mirroring (Wire-Free):**
-  1. With phone connected via USB:
-     ```powershell
-     adb tcpip 5555
-     ```
-  2. Unplug the USB cable and mirror over local Wi-Fi:
-     ```powershell
-     scrcpy --tcpip=<phone-ip-address>:5555
-     ```
-
-### Key Shortcuts in Mirror Window
-| Action | Shortcut / Click |
-|:---|:---|
-| **Tap / Select** | Left Click |
-| **Back Button** | Right Click |
-| **Home Button** | Middle Click / `Ctrl` + `H` |
-| **Turn Phone Display Off (Save Battery)** | `Ctrl` + `O` |
-| **Paste from PC to Phone** | `Ctrl` + `Shift` + `V` |
-| **Toggle Fullscreen** | `Ctrl` + `F` |
 
 ---
 

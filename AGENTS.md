@@ -45,10 +45,10 @@ This repository houses **Flux**, a high-precision smart telemetry and thermal mo
 
 ---
 
-## 5. Universal Automation & Device Mirroring
-- **Single-Command Pipeline**: Use `.\automate.ps1` (or `automate.bat`) from the workspace root to compile, package, install to connected phone, launch `MainActivity`, and open `scrcpy` live mirroring in 1 step.
+## 5. Universal Automation & Device Deployment
+- **Single-Command Pipeline**: Use `.\automate.ps1` (or `automate.bat`) from the workspace root to compile, package, install to connected phone, launch `MainActivity`, and flash ESP32 in 1 step.
 - **CLI-Only Operations**: Android Studio is not required. All builds, tests, device pushes, and logs operate through Gradle, ADB, and PlatformIO.
-- **Screen Mirroring**: `scrcpy` is configured with `--window-title "Flux Mobile Screen"` and `--stay-awake`. Wire-free debugging operates via `adb tcpip 5555`.
+- **Multi-Device Target**: Support deploying to specific devices via `.\automate.ps1 -DeviceId <id>`. Wire-free ADB operations via `adb tcpip 5555`.
 
 ---
 

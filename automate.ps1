@@ -2,18 +2,17 @@
 .SYNOPSIS
     Flux Universal Single-Command Automation Script
 .DESCRIPTION
-    Automates building, flashing, deploying, testing, and screen mirroring for the Flux platform:
+    Automates building, flashing, deploying, and testing for the Flux platform:
     - Android APK build & deployment without Android Studio
     - Physical Android device installation & launch via ADB
-    - Real-time screen mirroring on Windows desktop via scrcpy
     - ESP32 firmware compilation and flashing via PlatformIO
     - Compilation verification and unit testing
 .EXAMPLE
-    .\automate.ps1              # Builds, deploys Android app, launches it, and opens scrcpy mirror
+    .\automate.ps1              # Builds, deploys Android app, and launches it
     .\automate.ps1 -Esp32       # Builds & flashes ESP32 firmware
-    .\automate.ps1 -All         # Flashes ESP32 AND builds/deploys Android app with mirror
-    .\automate.ps1 -Mirror      # Instantly opens scrcpy screen mirror
+    .\automate.ps1 -All         # Flashes ESP32 AND builds/deploys Android app
     .\automate.ps1 -Test        # Runs Kotlin compilation checks and unit tests
+    .\automate.ps1 -DeviceId "DEVICE_ID"  # Deploys to a specific Android device
 #>
 
 [CmdletBinding()]
@@ -21,11 +20,7 @@ param (
     [switch]$Android,
     [switch]$Esp32,
     [switch]$All,
-    [switch]$Mirror,
     [switch]$Test,
-    [switch]$Snap,
-    [switch]$Screenshot,
-    [switch]$NoMirror,
     [switch]$Monitor,
     [string]$Port = "COM10",
     [string]$DeviceId
@@ -58,19 +53,8 @@ if (-not $env:ANDROID_HOME) {
     }
 }
 
-# Handle Snap / Screenshot modes immediately
-if ($Snap -or $Screenshot) {
-    $ssScript = "$fluxRoot\scripts\screenshot_tool.ps1"
-    if ($Snap) {
-        & $ssScript -Snap -DeviceId $DeviceId
-    } else {
-        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ssScript`"" -WindowStyle Hidden
-    }
-    exit 0
-}
-
 # Default to Android build & run if no specific target is provided
-if (-not ($Android -or $Esp32 -or $All -or $Mirror -or $Test -or $Snap -or $Screenshot)) {
+if (-not ($Android -or $Esp32 -or $All -or $Test)) {
     $Android = $true
 }
 
@@ -105,17 +89,6 @@ function Find-Adb {
         if ($cand -and (Test-Path $cand)) { return $cand }
     }
     return "adb.exe"
-}
-
-function Find-Scrcpy {
-    $candidates = @(
-        "C:\Users\minua\AppData\Local\Microsoft\WinGet\Packages\Genymobile.scrcpy_Microsoft.Winget.Source_8wekyb3d8bbwe\scrcpy-win64-v5.0.1\scrcpy.exe",
-        (Get-Command scrcpy -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -ErrorAction SilentlyContinue)
-    )
-    foreach ($cand in $candidates) {
-        if ($cand -and (Test-Path $cand)) { return $cand }
-    }
-    return "scrcpy.exe"
 }
 
 function Find-Pio {
@@ -171,22 +144,6 @@ if ($Esp32 -or $All) {
     if (-not $All) { exit 0 }
 }
 
-# --- SCRCPY MIRROR ONLY ---
-if ($Mirror) {
-    $scrcpy = Find-Scrcpy
-    Write-FluxStep "Launching scrcpy screen mirror..."
-    $scrcpyDir = [System.IO.Path]::GetDirectoryName($scrcpy)
-    Start-Process -FilePath $scrcpy -WorkingDirectory $scrcpyDir -ArgumentList "--window-title `"Flux Mobile Screen`" --stay-awake"
-    Write-FluxStep "scrcpy window active."
-    
-    $ssScript = "$fluxRoot\scripts\screenshot_tool.ps1"
-    if (Test-Path $ssScript) {
-        Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ssScript`"" -WindowStyle Hidden
-        Write-FluxStep "Floating screenshot button attached!"
-    }
-    exit 0
-}
-
 # --- ANDROID BUILD, DEPLOY & LAUNCH ---
 if ($Android -or $All) {
     $adb = Find-Adb
@@ -233,24 +190,6 @@ if ($Android -or $All) {
 
     Write-FluxStep "Launching Flux application on device..."
     & $adb -s $targetDevice shell am start -n com.flux.app/com.example.MainActivity
-
-    if (-not $NoMirror) {
-        Write-FluxStep "Launching scrcpy screen mirror on laptop..."
-        $scrcpy = Find-Scrcpy
-        if (Test-Path $scrcpy) {
-            $scrcpyDir = [System.IO.Path]::GetDirectoryName($scrcpy)
-            Start-Process -FilePath $scrcpy -WorkingDirectory $scrcpyDir -ArgumentList "-s $targetDevice --window-title `"Flux Mobile Screen`" --stay-awake"
-            Write-FluxStep "Live screen mirror running!"
-
-            $ssScript = "$fluxRoot\scripts\screenshot_tool.ps1"
-            if (Test-Path $ssScript) {
-                Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ssScript`"" -WindowStyle Hidden
-                Write-FluxStep "Floating screenshot button attached!"
-            }
-        } else {
-            Write-FluxWarn "scrcpy executable not found. Screen mirroring skipped."
-        }
-    }
 
     Write-Host ""
     Write-FluxStep "SUCCESS! Flux application is deployed and running on $targetDevice."

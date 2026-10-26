@@ -1,6 +1,5 @@
 # Logs and temporary files
 *.log
-scrcpy_*.txt
 *.tmp
 screenshots/
 

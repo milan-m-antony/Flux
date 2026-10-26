@@ -189,18 +189,20 @@ This 1-click command automatically:
 2. Compiles and packages the Android debug APK.
 3. Installs the APK onto your phone.
 4. Launches the Flux application.
-5. Opens `scrcpy` live hardware-accelerated desktop mirroring.
 
 ### 5.2 Automation Modes & Targets
 ```powershell
+# Build and install Android app onto connected phone
+.\automate.bat
+
+# Deploy to a specific target device
+.\automate.bat -DeviceId <device-id>
+
 # Flash ESP32 firmware & open serial monitor (COM10)
 .\automate.bat -Esp32 -Monitor
 
-# Full system deploy (flash ESP32 + build/install Android app + mirror)
+# Full system deploy (flash ESP32 + build/install Android app)
 .\automate.bat -All
-
-# Real-time phone screen mirror only
-.\automate.bat -Mirror
 
 # Compilation verification & unit testing
 .\automate.bat -Test
@@ -235,8 +237,7 @@ Operating at the default **5-second cloud upload rate** ($17,280\text{ readings/
 
 | Component | Status | Details |
 | :--- | :---: | :--- |
-| **Universal 1-Command Automation** | **Verified & Active** | Root `automate.bat` / `automate.ps1` builds, installs to phone, launches app, and mirrors via `scrcpy`. |
-| **Desktop Screen Mirroring** | **Verified & Active** | Hardware-accelerated `scrcpy` live mirroring with USB and wireless ADB support. |
+| **Universal 1-Command Automation** | **Verified & Active** | Root `automate.bat` / `automate.ps1` builds, installs to phone, launches app, and flashes ESP32. |
 | **Automated Wi-Fi Quick Sheet** | **Verified on Hardware** | 1-step bottom sheet with auto phone SSID detection, saved password autofill, and `SET_WIFI` BLE command. |
 | **Alert Engine & FCM** | **Verified & Active** | Real FCM push ingestion into Room DB (`NotificationEntity`), anti-flap hysteresis ($0.3^\circ\text{C}$), and 5-min cooldown. |
 | **Zero Mock Data** | **Verified & Clean** | Removed all simulated cards and fake dates; alerts screen reads purely from live Room DB. |
