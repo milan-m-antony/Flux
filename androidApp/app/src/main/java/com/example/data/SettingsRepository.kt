@@ -32,7 +32,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         const val DEFAULT_SUPABASE_URL = "https://pivtrxrhxdqxzactcrrb.supabase.co"
         const val DEFAULT_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBpdnRyeHJoeGRxeHphY3RjcnJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI3NjAxMjEsImV4cCI6MjEwODMzNjEyMX0.LGOfzD6MVDQQ725kJEC8JEcfwKUQyxpt3V8RBB7HNxg"
         const val DEFAULT_ONESIGNAL_APP_ID = "50847ad7-fc7f-4c89-85a9-c5d7f91cc2c8"
-        const val DEFAULT_BACKEND_URL = "https://flux-telemetry-backend.onrender.com"
+        const val DEFAULT_BACKEND_URL = "https://flux-telemetry-backend-glwn.onrender.com"
         
         val PUSH_ALERTS = booleanPreferencesKey("push_alerts")
         val SOUND_ALERTS = booleanPreferencesKey("sound_alerts")
