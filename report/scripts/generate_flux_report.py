@@ -17,7 +17,7 @@ SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 REPORT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
 ASSETS_DIR = os.path.join(REPORT_DIR, 'assets')
 DIAGRAMS_DIR = os.path.join(ASSETS_DIR, 'diagrams')
-SCREENSHOTS_DIR = os.path.join(ASSETS_DIR, 'screenshots')
+SCREENSHOTS_DIR = os.path.join(ASSETS_DIR, 'ui_screens')
 
 def set_cell_background(cell, fill_hex):
     tcPr = cell._tc.get_or_add_tcPr()
