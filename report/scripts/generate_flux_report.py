@@ -13,7 +13,11 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 import win32com.client
 
-REPORT_DIR = os.path.abspath(os.path.dirname(__file__))
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+REPORT_DIR = os.path.abspath(os.path.join(SCRIPT_DIR, '..'))
+ASSETS_DIR = os.path.join(REPORT_DIR, 'assets')
+DIAGRAMS_DIR = os.path.join(ASSETS_DIR, 'diagrams')
+SCREENSHOTS_DIR = os.path.join(ASSETS_DIR, 'screenshots')
 
 def set_cell_background(cell, fill_hex):
     tcPr = cell._tc.get_or_add_tcPr()
@@ -57,7 +61,7 @@ def generate_hardware_diagram():
 
     plt.title('FLUX EMBEDDED HARDWARE SUBSYSTEM COMPONENTS', fontsize=12, weight='bold', pad=15)
     plt.tight_layout()
-    out_path = os.path.join(REPORT_DIR, 'img_hardware_components.png')
+    out_path = os.path.join(DIAGRAMS_DIR, 'img_hardware_components.png')
     plt.savefig(out_path, bbox_inches='tight')
     plt.close()
 
@@ -106,7 +110,7 @@ def generate_block_diagram():
 
     plt.title('FLUX — SMART TELEMETRY & THERMAL MONITORING ARCHITECTURE', fontsize=12, weight='bold', pad=15)
     plt.tight_layout()
-    out_path = os.path.join(REPORT_DIR, 'img_block_diagram.png')
+    out_path = os.path.join(DIAGRAMS_DIR, 'img_block_diagram.png')
     plt.savefig(out_path, bbox_inches='tight')
     plt.close()
 
@@ -137,7 +141,7 @@ def generate_dataflow_diagram():
 
     plt.title('FLUX TELEMETRY, PERSISTENCE & ALERT DATA PIPELINE', fontsize=12, weight='bold', pad=12)
     plt.tight_layout()
-    out_path = os.path.join(REPORT_DIR, 'img_data_flow.png')
+    out_path = os.path.join(DIAGRAMS_DIR, 'img_data_flow.png')
     plt.savefig(out_path, bbox_inches='tight')
     plt.close()
 
@@ -405,7 +409,7 @@ def build_docx_report():
     add_numbered(4, "Database Ingestion & Webhook", "Supabase stores readings; database trigger invokes pg_net HTTP POST.")
     add_numbered(5, "OneSignal Alert Dispatch", "flux-alert-evaluator calls OneSignal REST API to deliver instant mobile notifications.")
 
-    dataflow_img = os.path.join(REPORT_DIR, "img_data_flow.png")
+    dataflow_img = os.path.join(DIAGRAMS_DIR, "img_data_flow.png")
     if os.path.exists(dataflow_img):
         p_img = doc.add_paragraph()
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -420,7 +424,7 @@ def build_docx_report():
     add_heading_1("16. HARDWARE COMPONENTS")
     add_body("The complete embedded hardware assembly consists of carefully selected industrial-grade components designed for continuous 24/7 operation:")
 
-    hw_img = os.path.join(REPORT_DIR, "img_hardware_components.png")
+    hw_img = os.path.join(DIAGRAMS_DIR, "img_hardware_components.png")
     if os.path.exists(hw_img):
         p_img = doc.add_paragraph()
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -435,7 +439,7 @@ def build_docx_report():
     add_heading_1("17. BLOCK DIAGRAM")
     add_body("The block diagram illustrates the four decoupled architectural layers of the Flux telemetry ecosystem:")
 
-    block_img = os.path.join(REPORT_DIR, "img_block_diagram.png")
+    block_img = os.path.join(DIAGRAMS_DIR, "img_block_diagram.png")
     if os.path.exists(block_img):
         p_img = doc.add_paragraph()
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -457,10 +461,10 @@ def build_docx_report():
     add_heading_1("19. DASHBOARD AND USER INTERFACE")
     add_body("The Android companion app provides a sleek, single-page Jetpack Compose dashboard with circular thermal gauges, real-time telemetry, and automated Wi-Fi provisioning:")
 
-    img_1 = os.path.join(REPORT_DIR, "ui_device_details.png")
-    img_2 = os.path.join(REPORT_DIR, "ui_wifi_sheet.png")
-    img_3 = os.path.join(REPORT_DIR, "ui_alerts_center.png")
-    img_4 = os.path.join(REPORT_DIR, "ui_settings.png")
+    img_1 = os.path.join(SCREENSHOTS_DIR, "ui_device_details.png")
+    img_2 = os.path.join(SCREENSHOTS_DIR, "ui_wifi_sheet.png")
+    img_3 = os.path.join(SCREENSHOTS_DIR, "ui_alerts_center.png")
+    img_4 = os.path.join(SCREENSHOTS_DIR, "ui_settings.png")
 
     img_table = doc.add_table(rows=1, cols=4)
     img_table.alignment = WD_TABLE_ALIGNMENT.CENTER
