@@ -270,6 +270,11 @@ fun FluxFermentationScreen(
                                 }
                             }
 
+                            val elapsedSec = reading?.elapsedSec ?: 0L
+                            val h = elapsedSec / 3600
+                            val m = (elapsedSec % 3600) / 60
+                            val batchDurationStr = if (elapsedSec > 0) String.format(Locale.US, "%02dh %02dm", h, m) else if (isConnected) "00h 00m" else "--h --m"
+
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
@@ -280,7 +285,7 @@ fun FluxFermentationScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "04h 28m",
+                                    text = batchDurationStr,
                                     color = FluxOrange,
                                     fontWeight = FontWeight.Black,
                                     fontSize = 15.sp

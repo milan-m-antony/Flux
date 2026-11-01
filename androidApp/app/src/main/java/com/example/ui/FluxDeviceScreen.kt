@@ -96,15 +96,30 @@ fun FluxDeviceScreen(
         label = "GlowPulse"
     )
 
+    val statusPulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "StatusPulse"
+    )
+
     FluxBackground(darkTheme = isDarkTheme) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
         ) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = 640.dp)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             Spacer(modifier = Modifier.height(10.dp))
 
             // 1. Navigation Top Bar
@@ -247,6 +262,7 @@ fun FluxDeviceScreen(
                             Box(
                                 modifier = Modifier
                                     .size(7.dp)
+                                    .scale(if (isOnline) statusPulseScale else 1.0f)
                                     .clip(CircleShape)
                                     .background(statusColor)
                             )
@@ -604,6 +620,7 @@ fun FluxDeviceScreen(
             }
 
             Spacer(modifier = Modifier.height(40.dp))
+            }
         }
     }
 }

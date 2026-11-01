@@ -1,9 +1,6 @@
 package com.example.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -804,6 +801,25 @@ private fun InteractiveTrendChart(
 
     // Animated progress to draw in line and fill when filter changes or on load
     val animProgress = remember { Animatable(0f) }
+    val infiniteTransition = rememberInfiniteTransition(label = "homeBeacon")
+    val beaconPulseScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 2.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "beaconPulseScale"
+    )
+    val beaconPulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.75f,
+        targetValue = 0.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "beaconPulseAlpha"
+    )
     LaunchedEffect(filter, readings.size) {
         animProgress.snapTo(0f)
         animProgress.animateTo(
@@ -984,6 +1000,15 @@ private fun InteractiveTrendChart(
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f), 0f)
                 )
 
+                // Outer glowing pulse ring
+                if (chartAnimProgress > 0.8f) {
+                    drawCircle(
+                        color = FluxOrange.copy(alpha = beaconPulseAlpha),
+                        radius = 5.5.dp.toPx() * beaconPulseScale,
+                        center = pointPos
+                    )
+                }
+
                 drawCircle(color = Color.White, radius = 5.5.dp.toPx(), center = pointPos)
                 drawCircle(
                     color = FluxOrange,
@@ -998,7 +1023,7 @@ private fun InteractiveTrendChart(
                 val badgeY = activeY - badgeH - 6.dp.toPx()
 
                 drawRoundRect(
-                    color = Color(0xFF1E232A),
+                    color = FluxOrange,
                     topLeft = Offset(badgeLeft, badgeY),
                     size = Size(badgeW, badgeH),
                     cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx())
@@ -1010,7 +1035,7 @@ private fun InteractiveTrendChart(
                     lineTo(pointPos.x, badgeY + badgeH + 3.5.dp.toPx())
                     close()
                 }
-                drawPath(path = trianglePath, color = Color(0xFF1E232A))
+                drawPath(path = trianglePath, color = FluxOrange)
             }
         }
 

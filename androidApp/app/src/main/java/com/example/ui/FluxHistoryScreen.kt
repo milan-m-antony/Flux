@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -37,6 +38,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -65,10 +67,14 @@ fun FluxHistoryScreen(
     val pendingRecords by viewModel.pendingOfflineRecords.collectAsState()
     val supabaseSyncStatus by viewModel.supabaseSyncStatus.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .widthIn(max = 640.dp)
+                .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
@@ -244,7 +250,7 @@ fun FluxHistoryScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (selectedRange == "Day") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                                    .background(if (selectedRange == "Day") FluxOrange else Color.Transparent)
                                     .clickable { selectedRange = "Day" }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -259,7 +265,7 @@ fun FluxHistoryScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (selectedRange == "Week") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                                    .background(if (selectedRange == "Week") FluxOrange else Color.Transparent)
                                     .clickable { selectedRange = "Week" }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -274,7 +280,7 @@ fun FluxHistoryScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (selectedRange == "Month") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                                    .background(if (selectedRange == "Month") FluxOrange else Color.Transparent)
                                     .clickable { selectedRange = "Month" }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -824,6 +830,41 @@ private fun HistoryChartCanvas(
     darkTheme: Boolean = false,
     readings: List<com.example.data.Reading> = emptyList()
 ) {
+    // 1. Smooth animated line sweep progress
+    val animProgress = remember { Animatable(0f) }
+    LaunchedEffect(readings.size) {
+        animProgress.snapTo(0f)
+        animProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 750,
+                easing = FastOutSlowInEasing
+            )
+        )
+    }
+    val chartAnimProgress = animProgress.value
+
+    // 2. Continuous Live Pulse Beacon on latest telemetry point
+    val infiniteTransition = rememberInfiniteTransition(label = "historyBeacon")
+    val beaconPulseScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 2.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "beaconPulseScale"
+    )
+    val beaconPulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.75f,
+        targetValue = 0.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "beaconPulseAlpha"
+    )
+
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
@@ -836,7 +877,7 @@ private fun HistoryChartCanvas(
         val chartWidth = chartRight - chartLeft
         val chartHeight = chartBottom - chartTop
 
-        val gridLineColor = if (darkTheme) Color(0xFF262635) else Color(0xFFF1F5F9)
+        val gridLineColor = Color(0xFFF1F5F9)
 
         // Draw 4 horizontal dashed grid lines
         val ySteps = 4
@@ -853,7 +894,7 @@ private fun HistoryChartCanvas(
 
         if (readings.size >= 2) {
             // Plot real data points
-            val displayList = readings.takeLast(24) // up to 24 points
+            val displayList = readings.takeLast(24) // up to 24 real telemetry records
             val minTemp = (displayList.minOfOrNull { it.temperature } ?: 10.0).coerceAtMost(10.0)
             val maxTemp = (displayList.maxOfOrNull { it.temperature } ?: 40.0).coerceAtLeast(40.0)
             val tempRange = (maxTemp - minTemp).coerceAtLeast(1.0)
@@ -879,38 +920,68 @@ private fun HistoryChartCanvas(
 
             val fillPath = Path().apply {
                 addPath(path)
-                lineTo(points.last().x, chartHeight)
-                lineTo(points.first().x, chartHeight)
+                lineTo(points.last().x, chartBottom)
+                lineTo(points.first().x, chartBottom)
                 close()
             }
 
-            drawPath(
-                path = fillPath,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        FluxOrange.copy(alpha = 0.35f),
-                        FluxOrange.copy(alpha = 0.03f)
-                    ),
-                    startY = 0f,
-                    endY = chartHeight
-                )
-            )
+            val clipRight = chartLeft + (chartWidth * chartAnimProgress)
 
-            drawPath(
-                path = path,
-                color = FluxOrange,
-                style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-            )
+            clipRect(
+                left = 0f,
+                top = 0f,
+                right = clipRight,
+                bottom = h
+            ) {
+                drawPath(
+                    path = fillPath,
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            FluxOrange.copy(alpha = 0.32f),
+                            FluxOrange.copy(alpha = 0.02f)
+                        ),
+                        startY = chartTop,
+                        endY = chartBottom
+                    )
+                )
+
+                drawPath(
+                    path = path,
+                    color = FluxOrange,
+                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                )
+
+                // Live Glowing Beacon Ring on newest reading
+                if (chartAnimProgress > 0.85f) {
+                    val lastP = points.last()
+                    drawCircle(
+                        color = FluxOrange.copy(alpha = beaconPulseAlpha),
+                        radius = 5.dp.toPx() * beaconPulseScale,
+                        center = lastP
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 4.5.dp.toPx(),
+                        center = lastP
+                    )
+                    drawCircle(
+                        color = FluxOrange,
+                        radius = 4.5.dp.toPx(),
+                        center = lastP,
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
+            }
         }
     }
 
-    // Overlay: axis labels or empty-state message
+    // Dynamic Axis Labels Overlay (Computed from genuine Room DB timestamps)
     Box(modifier = modifier) {
         if (readings.isEmpty()) {
             androidx.compose.material3.Text(
                 text = "Awaiting Telemetry Readings",
                 color = FluxTextLight,
-                fontSize = 11.sp,
+                fontSize = 11.5.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.align(Alignment.Center)
             )
@@ -922,25 +993,41 @@ private fun HistoryChartCanvas(
                     .padding(bottom = 20.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("40", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("30", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("20", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("10", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("40°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("30°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("20°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                Text("10°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+            }
+
+            // Real dynamic timestamps from actual data records
+            val displayList = remember(readings) { readings.takeLast(24) }
+            val timeLabels = remember(displayList) {
+                val timeFmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                val startT = displayList.first().timestamp
+                val endT = displayList.last().timestamp
+                if (displayList.size < 4 || (endT - startT) < 120_000L) {
+                    displayList.map { timeFmt.format(java.util.Date(it.timestamp)) }.distinct().takeLast(4)
+                } else {
+                    val step = (endT - startT) / 3
+                    listOf(
+                        timeFmt.format(java.util.Date(startT)),
+                        timeFmt.format(java.util.Date(startT + step)),
+                        timeFmt.format(java.util.Date(startT + step * 2)),
+                        timeFmt.format(java.util.Date(endT))
+                    )
+                }
             }
 
             Row(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .fillMaxWidth()
-                    .padding(start = 24f.dp),
+                    .padding(start = 28.dp, end = 6.dp),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("00:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("04:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("08:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("12:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("16:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("20:00", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                timeLabels.forEach { label ->
+                    Text(label, color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
+                }
             }
         }
     }

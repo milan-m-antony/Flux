@@ -147,6 +147,17 @@ fun FluxQuickWifiSheet(
     }
     var showChangeNetworkForm by remember { mutableStateOf(false) }
 
+    val wifiPulseTransition = rememberInfiniteTransition(label = "wifiPulse")
+    val wifiOnlineDotPulse by wifiPulseTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1100, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "wifiOnlineDotPulse"
+    )
+
     // If phone detects a valid Wi-Fi name, remember it in persistence
     LaunchedEffect(detectedWifiName) {
         val detected = detectedWifiName
@@ -292,6 +303,7 @@ fun FluxQuickWifiSheet(
                                             Box(
                                                 modifier = Modifier
                                                     .size(10.dp)
+                                                    .scale(wifiOnlineDotPulse)
                                                     .clip(CircleShape)
                                                     .background(FluxGreenOnline)
                                             )
