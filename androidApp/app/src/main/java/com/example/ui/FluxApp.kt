@@ -165,6 +165,9 @@ fun FluxApp(viewModel: MainViewModel) {
                             },
                             onNavigateToDeviceSetup = {
                                 navController.navigate(DeviceSetupRoute)
+                            },
+                            onNavigateToStatsTimer = {
+                                navController.navigate(FluxStatsTimerRoute)
                             }
                         )
                     }
@@ -194,7 +197,11 @@ fun FluxApp(viewModel: MainViewModel) {
                                     launchSingleTop = true
                                     restoreState = true
                                 }
-                            }
+                            },
+                            onNavigateToLiveMonitor = { navController.navigate(FluxLiveMonitorRoute) },
+                            onNavigateToEnvironment = { navController.navigate(FluxEnvironmentRoute) },
+                            onNavigateToLiquid = { navController.navigate(FluxLiquidRoute) },
+                            onNavigateToFermentation = { navController.navigate(FluxFermentationRoute) }
                         )
                     }
 
@@ -215,6 +222,9 @@ fun FluxApp(viewModel: MainViewModel) {
                             viewModel = viewModel,
                             onNotificationClick = {
                                 navController.navigate(AlertsRoute)
+                            },
+                            onNavigateToAlertSettings = {
+                                navController.navigate(FluxAlertSettingsRoute)
                             }
                         )
                     }
@@ -241,6 +251,21 @@ fun FluxApp(viewModel: MainViewModel) {
                             },
                             onNavigateToWifiSetup = {
                                 showWifiSetupSheet = true
+                            },
+                            onNavigateToPrivacySecurity = {
+                                navController.navigate(PrivacySecurityRoute)
+                            },
+                            onNavigateToHelpSupport = {
+                                navController.navigate(HelpSupportRoute)
+                            },
+                            onNavigateToVersionDetails = {
+                                navController.navigate(VersionDetailsRoute)
+                            },
+                            onNavigateToFcmToken = {
+                                navController.navigate(FcmTokenRoute)
+                            },
+                            onNavigateToLogin = {
+                                navController.navigate(LoginRoute)
                             }
                         )
                     }
@@ -313,7 +338,7 @@ fun FluxApp(viewModel: MainViewModel) {
                         FluxStatsTimerScreen(viewModel, onBack = { navController.navigateUp() })
                     }
                     composable<FluxAlertSettingsRoute> {
-                        FluxAlertsScreen(viewModel)
+                        FluxAlertSettingsScreen(viewModel = viewModel, onBack = { navController.navigateUp() })
                     }
                     composable<FluxDiagnosticsRoute> {
                         FluxDiagnosticsScreen(viewModel, onBack = { navController.navigateUp() })

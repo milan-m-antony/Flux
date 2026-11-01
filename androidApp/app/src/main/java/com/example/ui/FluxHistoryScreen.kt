@@ -12,9 +12,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Bluetooth
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.Thermostat
-import androidx.compose.material.icons.outlined.CalendarToday
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.CalendarToday
 import androidx.compose.material.icons.outlined.Thermostat
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material3.Icon
@@ -31,6 +37,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -51,6 +58,12 @@ fun FluxHistoryScreen(
 
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)
+
+    val allNotifications by viewModel.allNotifications.collectAsState()
+    val connectivityState by viewModel.connectivityState.collectAsState()
+    val lastCalibration by viewModel.lastCalibration.collectAsState()
+    val pendingRecords by viewModel.pendingOfflineRecords.collectAsState()
+    val supabaseSyncStatus by viewModel.supabaseSyncStatus.collectAsState()
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -74,7 +87,11 @@ fun FluxHistoryScreen(
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
-                text = "View past data and device activity",
+                text = when (selectedTab) {
+                    "Alerts" -> "Historical alarm breaches and system notices"
+                    "Device Activity" -> "Hardware telemetry pipeline and sync logs"
+                    else -> "View past data and device activity"
+                },
                 color = colors.textSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
@@ -92,7 +109,7 @@ fun FluxHistoryScreen(
                     .padding(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Temperature Tab (Active in Screenshot)
+                // Temperature Tab
                 Row(
                     modifier = Modifier
                         .weight(1.3f)
@@ -173,345 +190,551 @@ fun FluxHistoryScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // 4. Date Picker & Day/Week/Month Range Selector Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Date Selector Pill
-                Row(
-                    modifier = Modifier
-                        .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
-                        .background(colors.pillBg, RoundedCornerShape(20.dp))
-                        .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
-                        .padding(horizontal = 14.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CalendarToday,
-                        contentDescription = null,
-                        tint = colors.textPrimary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    val formattedCurrentDate = remember {
-                        java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                    }
-                    Text(
-                        text = formattedCurrentDate,
-                        color = colors.textPrimary,
-                        fontSize = 12.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Icon(
-                        imageVector = Icons.Filled.ArrowDropDown,
-                        contentDescription = null,
-                        tint = colors.textPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                // Day / Week / Month Segmented Pill
-                Row(
-                    modifier = Modifier
-                        .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
-                        .background(colors.pillBg, RoundedCornerShape(20.dp))
-                        .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
-                        .padding(3.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Day (Selected Orange Circle)
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (selectedRange == "Day") FluxOrange else Color.Transparent)
-                            .clickable { selectedRange = "Day" }
-                            .padding(horizontal = 14.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Day",
-                            color = if (selectedRange == "Day") Color.White else colors.textSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // Week
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (selectedRange == "Week") FluxOrange else Color.Transparent)
-                            .clickable { selectedRange = "Week" }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Week",
-                            color = if (selectedRange == "Week") Color.White else colors.textSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    // Month
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(if (selectedRange == "Month") FluxOrange else Color.Transparent)
-                            .clickable { selectedRange = "Month" }
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Month",
-                            color = if (selectedRange == "Month") Color.White else colors.textSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 5. Temperature Trend Card (With 30.8°C Max and 20.1°C Min Badges)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                    .background(colors.cardBg, RoundedCornerShape(24.dp))
-                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
-                    .padding(18.dp)
-            ) {
-                Column {
+            when (selectedTab) {
+                "Temperature" -> {
+                    // Date Picker & Day/Week/Month Range Selector Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Date Selector Pill
+                        Row(
+                            modifier = Modifier
+                                .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
+                                .background(colors.pillBg, RoundedCornerShape(20.dp))
+                                .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
+                                .padding(horizontal = 14.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CalendarToday,
+                                contentDescription = null,
+                                tint = colors.textPrimary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            val formattedCurrentDate = remember {
+                                java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                            }
+                            Text(
+                                text = formattedCurrentDate,
+                                color = colors.textPrimary,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Filled.ArrowDropDown,
+                                contentDescription = null,
+                                tint = colors.textPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        // Day / Week / Month Segmented Pill
+                        Row(
+                            modifier = Modifier
+                                .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
+                                .background(colors.pillBg, RoundedCornerShape(20.dp))
+                                .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
+                                .padding(3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (selectedRange == "Day") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                                    .clickable { selectedRange = "Day" }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Thermostat,
-                                    contentDescription = null,
-                                    tint = FluxOrange,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
                                 Text(
-                                    text = "Temperature Trend",
-                                    color = colors.textPrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                val formattedCurrentDate = remember {
-                                    java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                                }
-                                Text(
-                                    text = "$formattedCurrentDate • $selectedRange",
-                                    color = colors.textSecondary,
-                                    fontSize = 11.5.sp,
+                                    text = "Day",
+                                    color = if (selectedRange == "Day") Color.White else colors.textSecondary,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
-                        }
-
-                        // Max & Min Badges — computed from real readings
-                        val isFahrBadge = preferredUnit.equals("F", ignoreCase = true)
-                        val maxTemp = remember(allReadings) { allReadings.maxOfOrNull { it.temperature } }
-                        val minTemp = remember(allReadings) { allReadings.minOfOrNull { it.temperature } }
-                        fun fmtBadge(t: Double?) = if (t == null) "--" else {
-                            val v = if (isFahrBadge) (t * 9 / 5) + 32 else t
-                            String.format("%.1f°%s", v, if (isFahrBadge) "F" else "C")
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Max badge
-                            Column(
+                            Box(
                                 modifier = Modifier
-                                    .background(if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2), RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (selectedRange == "Week") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                                    .clickable { selectedRange = "Week" }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = fmtBadge(maxTemp),
-                                    color = Color(0xFFDC2626),
+                                    text = "Week",
+                                    color = if (selectedRange == "Week") Color.White else colors.textSecondary,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Max",
-                                    color = Color(0xFFEF4444),
-                                    fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
-
-                            // Min badge
-                            Column(
+                            Box(
                                 modifier = Modifier
-                                    .background(if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE), RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(if (selectedRange == "Month") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                                    .clickable { selectedRange = "Month" }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = fmtBadge(minTemp),
-                                    color = Color(0xFF2563EB),
+                                    text = "Month",
+                                    color = if (selectedRange == "Month") Color.White else colors.textSecondary,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Min",
-                                    color = Color(0xFF3B82F6),
-                                    fontSize = 9.sp,
                                     fontWeight = FontWeight.Medium
                                 )
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(18.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Hourly Area Chart — real data
+                    // Temperature Trend Card
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(140.dp)
+                            .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                            .background(colors.cardBg, RoundedCornerShape(24.dp))
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                            .padding(18.dp)
                     ) {
-                        HistoryChartCanvas(
-                            modifier = Modifier.fillMaxSize(),
-                            darkTheme = darkTheme,
-                            readings = allReadings
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .clip(CircleShape)
+                                            .background(if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Thermostat,
+                                            contentDescription = null,
+                                            tint = FluxOrange,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = "Temperature Trend",
+                                            color = colors.textPrimary,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        val formattedCurrentDate = remember {
+                                            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                                        }
+                                        Text(
+                                            text = "$formattedCurrentDate • $selectedRange",
+                                            color = colors.textSecondary,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+
+                                val isFahrBadge = preferredUnit.equals("F", ignoreCase = true)
+                                val maxTemp = remember(allReadings) { allReadings.maxOfOrNull { it.temperature } }
+                                val minTemp = remember(allReadings) { allReadings.minOfOrNull { it.temperature } }
+                                fun fmtBadge(t: Double?) = if (t == null) "--" else {
+                                    val v = if (isFahrBadge) (t * 9 / 5) + 32 else t
+                                    String.format("%.1f°%s", v, if (isFahrBadge) "F" else "C")
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(
+                                        modifier = Modifier
+                                            .background(if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2), RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = fmtBadge(maxTemp),
+                                            color = Color(0xFFDC2626),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Max",
+                                            color = Color(0xFFEF4444),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+
+                                    Column(
+                                        modifier = Modifier
+                                            .background(if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE), RoundedCornerShape(12.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text(
+                                            text = fmtBadge(minTemp),
+                                            color = Color(0xFF2563EB),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Min",
+                                            color = Color(0xFF3B82F6),
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(140.dp)
+                            ) {
+                                HistoryChartCanvas(
+                                    modifier = Modifier.fillMaxSize(),
+                                    darkTheme = darkTheme,
+                                    readings = allReadings
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // Data Log Section
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column {
+                            Text(
+                                text = "Data Log",
+                                color = colors.textPrimary,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Recorded temperature readings",
+                                color = colors.textSecondary,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        val todayFormatted = remember {
+                            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+                        }
+                        Text(
+                            text = todayFormatted,
+                            color = colors.textSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    val lowThresh by viewModel.lowTempThreshold.collectAsState()
+                    val highThresh by viewModel.highTempThreshold.collectAsState()
+
+                    if (allReadings.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(colors.cardBg, RoundedCornerShape(18.dp))
+                                .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+                                .padding(horizontal = 20.dp, vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No recorded readings yet.\nTelemetry will log here in real-time when connected.",
+                                color = colors.textSecondary,
+                                fontSize = 13.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 18.sp
+                            )
+                        }
+                    } else {
+                        val timeFormatter = remember {
+                            java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
+                        }
+                        val recentReadings = remember(allReadings) {
+                            allReadings.takeLast(10).reversed()
+                        }
+
+                        recentReadings.forEach { reading ->
+                            val readingTime = timeFormatter.format(java.util.Date(reading.timestamp))
+                            val isFahr = preferredUnit.equals("F", ignoreCase = true)
+                            val dispTemp = if (isFahr) (reading.temperature * 9 / 5) + 32 else reading.temperature
+                            val valStr = String.format("%.1f°%s", dispTemp, if (isFahr) "F" else "C")
+
+                            val isHigh = reading.temperature > highThresh
+                            val isLow = reading.temperature < lowThresh
+
+                            val statusLabel = when {
+                                isHigh -> "High"
+                                isLow -> "Low"
+                                else -> "Normal"
+                            }
+
+                            val iconTint = when {
+                                isHigh -> Color(0xFFEF4444)
+                                isLow -> Color(0xFF3B82F6)
+                                else -> FluxOrange
+                            }
+
+                            val iconBg = when {
+                                isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
+                                isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
+                                else -> if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)
+                            }
+
+                            val statusBg = when {
+                                isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
+                                isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
+                                else -> if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7)
+                            }
+
+                            val statusColor = when {
+                                isHigh -> Color(0xFFDC2626)
+                                isLow -> Color(0xFF2563EB)
+                                else -> if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A)
+                            }
+
+                            DataLogCard(
+                                iconTint = iconTint,
+                                iconBg = iconBg,
+                                time = readingTime,
+                                value = valStr,
+                                statusLabel = statusLabel,
+                                statusBg = statusBg,
+                                statusColor = statusColor,
+                                colors = colors
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(22.dp))
+                "Alerts" -> {
+                    // Alerts Tab Content
+                    val alertCount = allNotifications.size
+                    val unreadCount = allNotifications.count { !it.isRead }
 
-            // 6. Data Log Section
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column {
+                    // Alerts Summary Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color(0x10000000))
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                            .padding(18.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Alert Archive Summary",
+                                    color = colors.textPrimary,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "$alertCount logged event${if (alertCount != 1) "s" else ""} • $unreadCount unacknowledged",
+                                    color = colors.textSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (unreadCount > 0) Color(0xFFEF4444).copy(alpha = 0.15f) else Color(0xFF10B981).copy(alpha = 0.15f))
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = if (unreadCount > 0) "BREACH" else "CLEAR",
+                                    color = if (unreadCount > 0) Color(0xFFEF4444) else Color(0xFF10B981),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (allNotifications.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(colors.cardBg, RoundedCornerShape(18.dp))
+                                .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+                                .padding(horizontal = 20.dp, vertical = 28.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "No historical alerts recorded in database.",
+                                color = colors.textSecondary,
+                                fontSize = 13.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    } else {
+                        allNotifications.sortedByDescending { it.id }.forEach { notif ->
+                            val isBreach = notif.type.equals("ALERT", ignoreCase = true)
+                            val isWarning = notif.type.equals("WARNING", ignoreCase = true)
+                            val badgeColor = when {
+                                isBreach -> Color(0xFFEF4444)
+                                isWarning -> FluxOrange
+                                else -> Color(0xFF10B981)
+                            }
+                            val badgeBg = badgeColor.copy(alpha = 0.14f)
+
+                            DataLogCard(
+                                iconTint = badgeColor,
+                                iconBg = badgeBg,
+                                time = notif.time,
+                                value = notif.title,
+                                statusLabel = if (isBreach) "Critical" else if (isWarning) "Warning" else "Info",
+                                statusBg = badgeBg,
+                                statusColor = badgeColor,
+                                colors = colors
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                    }
+                }
+
+                "Device Activity" -> {
+                    // Device Activity Tab Content
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color(0x10000000))
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                            .padding(18.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                text = "Telemetry & Hardware Pipeline",
+                                color = colors.textPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Peripheral Bluetooth Link", color = colors.textSecondary, fontSize = 12.5.sp)
+                                Text(
+                                    text = if (isOnline) "ONLINE (BLE CONNECTED)" else connectionState.name,
+                                    color = if (isOnline) Color(0xFF10B981) else Color(0xFFEF4444),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Transport Mode", color = colors.textSecondary, fontSize = 12.5.sp)
+                                Text(
+                                    text = connectivityState.type.name,
+                                    color = colors.textPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Local Room Ingestion", color = colors.textSecondary, fontSize = 12.5.sp)
+                                Text(
+                                    text = "${allReadings.size} records saved",
+                                    color = colors.textPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Cloud Synchronizer", color = colors.textSecondary, fontSize = 12.5.sp)
+                                Text(
+                                    text = if (pendingRecords > 0) "$pendingRecords pending" else supabaseSyncStatus,
+                                    color = if (pendingRecords > 0) FluxOrange else Color(0xFF10B981),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Text(
-                        text = "Data Log",
+                        text = "Recent Connection & Sync Events",
                         color = colors.textPrimary,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Recorded temperature readings",
-                        color = colors.textSecondary,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                val todayFormatted = remember {
-                    java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                }
-                Text(
-                    text = todayFormatted,
-                    color = colors.textSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val lowThresh by viewModel.lowTempThreshold.collectAsState()
-            val highThresh by viewModel.highTempThreshold.collectAsState()
-
-            if (allReadings.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(colors.cardBg, RoundedCornerShape(18.dp))
-                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
-                        .padding(horizontal = 20.dp, vertical = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No recorded readings yet.\nTelemetry will log here in real-time when connected.",
-                        color = colors.textSecondary,
-                        fontSize = 13.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        lineHeight = 18.sp
-                    )
-                }
-            } else {
-                val timeFormatter = remember {
-                    java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault())
-                }
-                val recentReadings = remember(allReadings) {
-                    allReadings.takeLast(10).reversed()
-                }
-
-                recentReadings.forEach { reading ->
-                    val readingTime = timeFormatter.format(java.util.Date(reading.timestamp))
-                    val isFahr = preferredUnit.equals("F", ignoreCase = true)
-                    val dispTemp = if (isFahr) (reading.temperature * 9 / 5) + 32 else reading.temperature
-                    val valStr = String.format("%.1f°%s", dispTemp, if (isFahr) "F" else "C")
-
-                    val isHigh = reading.temperature > highThresh
-                    val isLow = reading.temperature < lowThresh
-
-                    val statusLabel = when {
-                        isHigh -> "High"
-                        isLow -> "Low"
-                        else -> "Normal"
-                    }
-
-                    val iconTint = when {
-                        isHigh -> Color(0xFFEF4444)
-                        isLow -> Color(0xFF3B82F6)
-                        else -> FluxOrange
-                    }
-
-                    val iconBg = when {
-                        isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
-                        isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
-                        else -> if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)
-                    }
-
-                    val statusBg = when {
-                        isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
-                        isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
-                        else -> if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7)
-                    }
-
-                    val statusColor = when {
-                        isHigh -> Color(0xFFDC2626)
-                        isLow -> Color(0xFF2563EB)
-                        else -> if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A)
-                    }
-
-                    DataLogCard(
-                        iconTint = iconTint,
-                        iconBg = iconBg,
-                        time = readingTime,
-                        value = valStr,
-                        statusLabel = statusLabel,
-                        statusBg = statusBg,
-                        statusColor = statusColor,
-                        colors = colors
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(10.dp))
+
+                    // Real Hardware Event 1: Calibration
+                    DataLogCard(
+                        iconTint = Color(0xFF3B82F6),
+                        iconBg = Color(0xFF3B82F6).copy(alpha = 0.15f),
+                        time = lastCalibration?.let {
+                            java.text.SimpleDateFormat("hh:mm a", java.util.Locale.getDefault()).format(java.util.Date(it.timestamp))
+                        } ?: "Recent",
+                        value = lastCalibration?.let { "Sensor Calibrated (E0=%.2f)".format(it.e0) } ?: "Factory Calibration DS18B20",
+                        statusLabel = "Calibrated",
+                        statusBg = Color(0xFF3B82F6).copy(alpha = 0.15f),
+                        statusColor = Color(0xFF3B82F6),
+                        colors = colors
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Real Hardware Event 2: Cloud Sync Queue
+                    DataLogCard(
+                        iconTint = FluxOrange,
+                        iconBg = FluxOrange.copy(alpha = 0.15f),
+                        time = "Active",
+                        value = "Cloud Sync Pipeline: $supabaseSyncStatus",
+                        statusLabel = if (pendingRecords == 0) "Synced" else "Queued",
+                        statusBg = if (pendingRecords == 0) Color(0xFF10B981).copy(alpha = 0.15f) else FluxOrange.copy(alpha = 0.15f),
+                        statusColor = if (pendingRecords == 0) Color(0xFF10B981) else FluxOrange,
+                        colors = colors
+                    )
                 }
             }
 
@@ -556,52 +779,42 @@ private fun DataLogCard(
             )
         }
 
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        // Time
-        Text(
-            text = time,
-            color = colors.textSecondary,
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.Medium
-        )
+        // Time and Value Column
+        Column {
+            Text(
+                text = time,
+                color = colors.textSecondary,
+                fontSize = 11.5.sp,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = value,
+                color = colors.textPrimary,
+                fontSize = 14.5.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Value in bold
-        Text(
-            text = value,
-            color = colors.textPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        // Status pill
+        // Status Badge (High / Low / Normal)
         Box(
             modifier = Modifier
-                .background(statusBg, RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 5.dp),
+                .clip(RoundedCornerShape(12.dp))
+                .background(statusBg)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = statusLabel,
                 color = statusColor,
-                fontSize = 11.5.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
         }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        // Right chevron
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = colors.textSecondary,
-            modifier = Modifier.size(18.dp)
-        )
     }
 }
 
@@ -612,37 +825,46 @@ private fun HistoryChartCanvas(
     readings: List<com.example.data.Reading> = emptyList()
 ) {
     Canvas(modifier = modifier) {
-        val width = size.width
-        val height = size.height
+        val w = size.width
+        val h = size.height
 
-        val leftPadding = 30f
-        val bottomPadding = 24f
-        val chartWidth = width - leftPadding
-        val chartHeight = height - bottomPadding
+        val chartLeft = 28f.dp.toPx()
+        val chartRight = w - 8f.dp.toPx()
+        val chartTop = 10f.dp.toPx()
+        val chartBottom = h - 22f.dp.toPx()
 
-        // 1. Horizontal dashed grid lines (40, 30, 20, 10)
-        val ySteps = listOf(40f, 30f, 20f, 10f)
-        for (i in ySteps.indices) {
-            val y = (chartHeight * i / (ySteps.size - 1))
+        val chartWidth = chartRight - chartLeft
+        val chartHeight = chartBottom - chartTop
+
+        val gridLineColor = if (darkTheme) Color(0xFF262635) else Color(0xFFF1F5F9)
+
+        // Draw 4 horizontal dashed grid lines
+        val ySteps = 4
+        for (i in 0..ySteps) {
+            val y = chartTop + (chartHeight / ySteps) * i
             drawLine(
-                color = if (darkTheme) Color(0xFF334155) else Color(0xFFEDF2F7),
-                start = Offset(leftPadding, y),
-                end = Offset(width, y),
-                strokeWidth = 1f,
+                color = gridLineColor,
+                start = Offset(chartLeft, y),
+                end = Offset(chartRight, y),
+                strokeWidth = 1.dp.toPx(),
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
             )
         }
 
-        // 2. Data points from real readings (last 24 readings max)
-        if (readings.isNotEmpty()) {
-            val slice = readings.takeLast(24)
-            val minT = slice.minOf { it.temperature }.toFloat()
-            val maxT = slice.maxOf { it.temperature }.toFloat()
-            val range = (maxT - minT).coerceAtLeast(1f)
-            val points = slice.mapIndexed { i, r ->
-                val x = leftPadding + chartWidth * (i.toFloat() / (slice.size - 1).coerceAtLeast(1))
-                val y = chartHeight * (1f - (r.temperature.toFloat() - minT) / range)
-                Offset(x, y)
+        if (readings.size >= 2) {
+            // Plot real data points
+            val displayList = readings.takeLast(24) // up to 24 points
+            val minTemp = (displayList.minOfOrNull { it.temperature } ?: 10.0).coerceAtMost(10.0)
+            val maxTemp = (displayList.maxOfOrNull { it.temperature } ?: 40.0).coerceAtLeast(40.0)
+            val tempRange = (maxTemp - minTemp).coerceAtLeast(1.0)
+
+            val xStep = chartWidth / (displayList.size - 1).coerceAtLeast(1)
+
+            val points = displayList.mapIndexed { idx, r ->
+                val x = chartLeft + idx * xStep
+                val normalizedY = ((r.temperature - minTemp) / tempRange).toFloat()
+                val y = chartBottom - (normalizedY * chartHeight)
+                Offset(x, y.coerceIn(chartTop, chartBottom))
             }
 
             val path = Path().apply {
@@ -680,13 +902,11 @@ private fun HistoryChartCanvas(
                 style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
             )
         }
-        // If readings is empty, just show the grid lines — label overlay handles empty state text
     }
 
     // Overlay: axis labels or empty-state message
     Box(modifier = modifier) {
         if (readings.isEmpty()) {
-            // Empty state — centred message
             androidx.compose.material3.Text(
                 text = "Awaiting Telemetry Readings",
                 color = FluxTextLight,

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.North
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Thermostat
+import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -67,7 +68,8 @@ fun FluxHomeScreen(
     viewModel: MainViewModel,
     onNavigateToHistory: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onNavigateToDeviceSetup: () -> Unit = {}
+    onNavigateToDeviceSetup: () -> Unit = {},
+    onNavigateToStatsTimer: () -> Unit = {}
 ) {
     val latestReading by viewModel.latestReading.collectAsState()
     val allReadings by viewModel.allReadings.collectAsState()
@@ -237,23 +239,48 @@ fun FluxHomeScreen(
                     }
                 }
 
-                // Trend/Chart Action Button (Circular button with vertical bar chart icon)
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .shadow(3.dp, CircleShape, spotColor = Color(0x10000000))
-                        .clip(CircleShape)
-                        .background(colors.cardBg)
-                        .border(0.5.dp, colors.cardBorder, CircleShape)
-                        .clickable { onNavigateToHistory() },
-                    contentAlignment = Alignment.Center
+                // Action Buttons Row: Session Stats/Timer + History/Trend
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.BarChart,
-                        contentDescription = "View Trend",
-                        tint = colors.textPrimary,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    // Session Timer & Stats Shortcut
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .shadow(3.dp, CircleShape, spotColor = Color(0x10000000))
+                            .clip(CircleShape)
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, CircleShape)
+                            .clickable { onNavigateToStatsTimer() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Timer,
+                            contentDescription = "Session Stats & Timer",
+                            tint = FluxOrange,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+
+                    // Trend/Chart Action Button (Circular button with vertical bar chart icon)
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .shadow(3.dp, CircleShape, spotColor = Color(0x10000000))
+                            .clip(CircleShape)
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, CircleShape)
+                            .clickable { onNavigateToHistory() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.BarChart,
+                            contentDescription = "View Trend",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 

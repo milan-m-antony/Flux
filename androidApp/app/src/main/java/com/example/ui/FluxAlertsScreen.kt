@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.WifiOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,7 +42,8 @@ fun FluxAlertsScreen(
     onNavigateToHistory: () -> Unit = {},
     onNavigateToProfiles: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    onNavigateToAlertSettings: () -> Unit = {}
 ) {
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)
@@ -83,8 +85,34 @@ fun FluxAlertsScreen(
                     )
                 }
 
-                if (notifications.isNotEmpty()) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // Alert Configuration shortcut
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (darkTheme) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                            .clickable { onNavigateToAlertSettings() }
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Outlined.Tune,
+                                contentDescription = "Alert Config",
+                                tint = FluxOrange,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Config",
+                                color = colors.textPrimary,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    if (notifications.isNotEmpty()) {
                         if (unreadCount > 0) {
                             Box(
                                 modifier = Modifier

@@ -26,7 +26,13 @@ import androidx.compose.material.icons.filled.Check
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.outlined.Security
+import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
@@ -61,7 +67,12 @@ fun FluxSettingsScreen(
     viewModel: MainViewModel,
     onNotificationClick: () -> Unit = {},
     onNavigateToDevice: () -> Unit = {},
-    onNavigateToWifiSetup: () -> Unit = {}
+    onNavigateToWifiSetup: () -> Unit = {},
+    onNavigateToPrivacySecurity: () -> Unit = {},
+    onNavigateToHelpSupport: () -> Unit = {},
+    onNavigateToVersionDetails: () -> Unit = {},
+    onNavigateToFcmToken: () -> Unit = {},
+    onNavigateToLogin: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val lowThreshold by viewModel.lowTempThreshold.collectAsState()
@@ -1107,8 +1118,197 @@ fun FluxSettingsScreen(
                 )
             }
 
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 8. Account & Authentication Card
+            val currentUser by viewModel.currentUser.collectAsState()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                    .background(colors.cardBg, RoundedCornerShape(24.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                    .padding(18.dp)
+            ) {
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.Person,
+                                contentDescription = null,
+                                tint = FluxOrange,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currentUser?.displayName?.takeIf { it.isNotBlank() } ?: (if (currentUser != null) "Flux Operator" else "Guest Account"),
+                                color = colors.textPrimary,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = currentUser?.email ?: "Offline mode • Local Room DB active",
+                                color = colors.textSecondary,
+                                fontSize = 11.5.sp
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    if (currentUser != null) {
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.logout()
+                                Toast.makeText(context, "Signed out of Flux account", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))
+                        ) {
+                            Text("Sign Out", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Button(
+                            onClick = onNavigateToLogin,
+                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = FluxOrange,
+                                contentColor = Color.White
+                            )
+                        ) {
+                            Text("Sign In or Create Account", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 9. System, Privacy & Support Navigation Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                    .background(colors.cardBg, RoundedCornerShape(24.dp))
+                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                    .padding(18.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Text(
+                        text = "System & Support",
+                        color = colors.textPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Security,
+                        title = "Privacy & Security",
+                        subtitle = "Biometrics, encrypted logs & telemetry purge",
+                        colors = colors,
+                        onClick = onNavigateToPrivacySecurity
+                    )
+
+                    Divider(color = colors.cardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    SettingsNavRow(
+                        icon = Icons.Outlined.HelpOutline,
+                        title = "Help & Support",
+                        subtitle = "Hardware setup guide, FAQs & troubleshooting",
+                        colors = colors,
+                        onClick = onNavigateToHelpSupport
+                    )
+
+                    Divider(color = colors.cardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Info,
+                        title = "App & Firmware Details",
+                        subtitle = "v1.0.4 • ESP32 firmware release & licenses",
+                        colors = colors,
+                        onClick = onNavigateToVersionDetails
+                    )
+
+                    Divider(color = colors.cardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
+
+                    SettingsNavRow(
+                        icon = Icons.Outlined.Key,
+                        title = "FCM Push Token",
+                        subtitle = "Firebase Cloud Messaging diagnostic registration",
+                        colors = colors,
+                        onClick = onNavigateToFcmToken
+                    )
+                }
+            }
+
             Spacer(modifier = Modifier.height(110.dp))
         }
+    }
+}
+
+@Composable
+private fun SettingsNavRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    colors: FluxColors,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(colors.pillBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = FluxOrange,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = colors.textPrimary,
+                fontSize = 13.5.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = subtitle,
+                color = colors.textSecondary,
+                fontSize = 11.sp
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = colors.textSecondary,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 

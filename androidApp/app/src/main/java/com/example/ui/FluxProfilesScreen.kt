@@ -35,7 +35,11 @@ import com.example.ui.theme.*
 fun FluxProfilesScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit = {},
-    onNotificationClick: () -> Unit = {}
+    onNotificationClick: () -> Unit = {},
+    onNavigateToLiveMonitor: () -> Unit = {},
+    onNavigateToEnvironment: () -> Unit = {},
+    onNavigateToLiquid: () -> Unit = {},
+    onNavigateToFermentation: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val activeProfile by viewModel.activeProfile.collectAsState()
@@ -94,6 +98,7 @@ fun FluxProfilesScreen(
                 onClick = {
                     viewModel.saveActiveProfile("Live Monitor")
                     Toast.makeText(context, "Monitoring mode: Live Monitor", Toast.LENGTH_SHORT).show()
+                    onNavigateToLiveMonitor()
                 }
             )
 
@@ -108,7 +113,9 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Environment",
                 onClick = {
                     viewModel.saveActiveProfile("Environment")
-                    Toast.makeText(context, "Monitoring mode: Environment", Toast.LENGTH_SHORT).show()
+                    viewModel.updateThresholds(18.0, 26.0)
+                    Toast.makeText(context, "Environment Preset Active (18°C - 26°C)", Toast.LENGTH_SHORT).show()
+                    onNavigateToEnvironment()
                 }
             )
 
@@ -123,7 +130,9 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Liquid",
                 onClick = {
                     viewModel.saveActiveProfile("Liquid")
-                    Toast.makeText(context, "Monitoring mode: Liquid", Toast.LENGTH_SHORT).show()
+                    viewModel.updateThresholds(10.0, 35.0)
+                    Toast.makeText(context, "Liquid Preset Active (10°C - 35°C)", Toast.LENGTH_SHORT).show()
+                    onNavigateToLiquid()
                 }
             )
 
@@ -138,7 +147,9 @@ fun FluxProfilesScreen(
                 isActive = activeProfile == "Fermentation",
                 onClick = {
                     viewModel.saveActiveProfile("Fermentation")
-                    Toast.makeText(context, "Monitoring mode: Fermentation", Toast.LENGTH_SHORT).show()
+                    viewModel.updateThresholds(18.0, 24.0)
+                    Toast.makeText(context, "Fermentation Preset Active (18°C - 24°C)", Toast.LENGTH_SHORT).show()
+                    onNavigateToFermentation()
                 }
             )
 
