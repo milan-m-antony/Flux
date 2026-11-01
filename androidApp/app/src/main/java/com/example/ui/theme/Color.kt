@@ -34,28 +34,28 @@ val FluxBlueAlert = Color(0xFF3B82F6)       // Alert Low Blue
 val FluxBlueSoft = Color(0xFFDBEAFE)
 val FluxBlueText = Color(0xFF2563EB)
 
-// Existing Theme Tokens for Component Compatibility
-val FluxBackground = Color(0xFF020617)
-val FluxSurface = Color(0xFF0F172A)
-val FluxSurfaceElevated = Color(0xFF1E293B)
+// Existing Theme Tokens for Component Compatibility (Strictly Light-Theme Aligned)
+val FluxBackground = FluxBgLight
+val FluxSurface = Color(0xFFFFFFFF)
+val FluxSurfaceElevated = Color(0xFFF8FAFC)
 val FluxPrimary = FluxOrange
 val FluxSecondary = Color(0xFF38BDF8)
-val FluxTextPrimary = Color(0xFFF8FAFC)
-val FluxTextSecondary = Color(0xFF94A3B8)
-val FluxBorder = Color(0xFF334155)
+val FluxTextPrimary = FluxTextDark
+val FluxTextSecondary = FluxTextMuted
+val FluxBorder = Color(0xFFEEF2F6)
 
-val DarkBackground = Color(0xFF020617)
-val DarkSurface = Color(0xFF0F172A)
-val DarkSurfaceLight = Color(0xFF1E293B)
+val DarkBackground = FluxBgLight
+val DarkSurface = Color(0xFFFFFFFF)
+val DarkSurfaceLight = Color(0xFFF1F5F9)
 val AccentCyan = FluxOrange
-val TextWhite = Color(0xFFF8FAFC)
-val TextGrey = Color(0xFF94A3B8)
+val TextWhite = FluxTextDark
+val TextGrey = FluxTextMuted
 val DangerRed = Color(0xFFEF4444)
-val CardBorder = Color(0xFF334155)
+val CardBorder = Color(0xFFEEF2F6)
 
-val DarkButtonBg = Color(0xFF1E293B)
-val TopHighlight = Color(0x33FFFFFF)
-val BottomShadow = Color(0x80000000)
+val DarkButtonBg = Color(0xFFFFFFFF)
+val TopHighlight = Color(0xFFFFFFFF)
+val BottomShadow = Color(0x0C000000)
 
 val StatusNormal = Color(0xFF10B981)
 val StatusLow = Color(0xFFF59E0B)

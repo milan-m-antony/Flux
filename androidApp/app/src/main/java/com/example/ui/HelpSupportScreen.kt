@@ -12,7 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -24,161 +25,204 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.NeoButton
-import com.example.ui.theme.NeoTopBar
-import com.example.ui.theme.TextGrey
-import com.example.ui.theme.neoCard
+import com.example.ui.theme.*
 
 @Composable
 fun HelpSupportScreen(onBack: () -> Unit) {
-    val darkTheme = MaterialTheme.colorScheme.background == Color(0xFF000000)
-    val activeAccent = if (darkTheme) AccentCyan else Color(0xFF059669)
-
+    val colors = rememberFluxColors(false)
     var expandedFaqIndex by remember { mutableStateOf<Int?>(null) }
 
     val faqs = listOf(
         FAQItem(
             question = "How do I pair my Flux ESP32 device over Bluetooth?",
-            answer = "Switch on Bluetooth in your system settings, then make sure the Flux device is powered on and within range. Navigate to the 'Device' tab in this app and click 'Search Device' to pair instantly."
+            answer = "Switch on Bluetooth in your phone settings, then ensure your Flux device is powered on and within range. Open the 'Device' screen in the top header and click 'Scan' to pair instantly."
         ),
         FAQItem(
             question = "What should I do if my telemetry reading seems inaccurate?",
-            answer = "Ensure the temperature probe contact face is clean and properly submerged or placed. Navigate to the 'Device' screen to verify sensor calibration."
+            answer = "Ensure the stainless steel DS18B20 probe is clean and firmly connected to GPIO 4. Navigate to the 'Device' screen to verify sensor calibration and bus health."
         ),
         FAQItem(
-            question = "How is battery life optimized on the Flux device?",
-            answer = "The hardware will automatically power down BLE advertising channels when not streaming readings. Battery provides long continuous background state tracking."
+            question = "How is battery life optimized on the Flux hardware?",
+            answer = "The ESP32 firmware dynamically throttles BLE advertising and OLED frame updates during periods of thermal stability to maximize operational battery runtime."
         ),
         FAQItem(
-            question = "How do I secure my historical health journals?",
-            answer = "Go to Profile -> Privacy & Security to activate military-grade AES-256 database encryption. You can also enforce fingerprint biometric unlock challenges before the database journal opens."
+            question = "How does offline buffering work when Wi-Fi is lost?",
+            answer = "When network is unavailable, telemetry points queue securely in the local SQLite Room database (up to 500 records). They flush automatically to the cloud as soon as link connectivity restores."
         )
     )
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            NeoTopBar(
-                title = "Help & Support",
-                onBackClick = onBack
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp)
-        ) {
-            // FAQs Title
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.QuestionAnswer, contentDescription = null, tint = activeAccent, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "Frequently Asked Questions",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (darkTheme) activeAccent else Color(0xFF111827)
-                )
-            }
-            Spacer(modifier = Modifier.height(16.dp))
+    FluxBackground(darkTheme = false) {
+        Scaffold(
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // FAQs List
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                faqs.forEachIndexed { index, faq ->
-                    val isExpanded = expandedFaqIndex == index
+                // Top Navigation Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .neoCard()
-                            .clickable { expandedFaqIndex = if (isExpanded) null else index }
-                            .padding(16.dp)
+                            .size(38.dp)
+                            .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
+                            .clip(CircleShape)
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, CircleShape)
+                            .clickable { onBack() },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = faq.question,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(
-                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = null,
-                                    tint = activeAccent
-                                )
-                            }
-                            
-                            AnimatedVisibility(
-                                visible = isExpanded,
-                                enter = expandVertically(),
-                                exit = shrinkVertically()
-                            ) {
-                                Column {
-                                    Spacer(modifier = Modifier.height(12.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Text(
+                        text = "Help & Support",
+                        color = colors.textPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.3).sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Section Title: FAQs
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.QuestionAnswer, contentDescription = null, tint = FluxOrange, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Frequently Asked Questions",
+                        color = colors.textPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // FAQs List
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    faqs.forEachIndexed { index, faq ->
+                        val isExpanded = expandedFaqIndex == index
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0C000000))
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(colors.cardBg)
+                                .border(0.5.dp, colors.cardBorder, RoundedCornerShape(20.dp))
+                                .clickable { expandedFaqIndex = if (isExpanded) null else index }
+                                .padding(16.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
-                                        text = faq.answer,
-                                        fontSize = 13.sp,
-                                        color = TextGrey,
-                                        lineHeight = 18.sp
+                                        text = faq.question,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 13.5.sp,
+                                        color = colors.textPrimary,
+                                        modifier = Modifier.weight(1f)
                                     )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Icon(
+                                        imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = null,
+                                        tint = FluxOrange
+                                    )
+                                }
+
+                                AnimatedVisibility(
+                                    visible = isExpanded,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(10.dp))
+                                        Text(
+                                            text = faq.answer,
+                                            fontSize = 12.5.sp,
+                                            color = colors.textSecondary,
+                                            lineHeight = 17.sp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(36.dp))
+                Spacer(modifier = Modifier.height(28.dp))
 
-            // Contact support title
-            Text(
-                text = "Contact Support",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (darkTheme) activeAccent else Color(0xFF111827)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+                // Contact Support Section
+                Text(
+                    text = "Contact Support Channels",
+                    color = colors.textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            // Support rows
-            Box(modifier = Modifier.fillMaxWidth().neoCard().padding(16.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    SupportRow(
-                        icon = Icons.Default.Email,
-                        title = "Email Support",
-                        value = "support@fluxtelemetry.io",
-                        activeAccent = activeAccent
-                    )
-                    Divider(color = if (darkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f))
-                    SupportRow(
-                        icon = Icons.Default.Forum,
-                        title = "Live Customer Chat",
-                        value = "Open instant ticket",
-                        activeAccent = activeAccent
-                    )
-                    Divider(color = if (darkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f))
-                    SupportRow(
-                        icon = Icons.Default.MenuBook,
-                        title = "Online Knowledge Base",
-                        value = "Read documentation",
-                        activeAccent = activeAccent
-                    )
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(2.dp, RoundedCornerShape(22.dp), spotColor = Color(0x0C000000))
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(colors.cardBg)
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                        .padding(18.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        SupportRowItem(
+                            icon = Icons.Default.Email,
+                            title = "Email Technical Support",
+                            value = "support@fluxtelemetry.io",
+                            colors = colors
+                        )
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                        SupportRowItem(
+                            icon = Icons.Default.Forum,
+                            title = "Live Community Discussions",
+                            value = "GitHub Discussions & Discord",
+                            colors = colors
+                        )
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                        SupportRowItem(
+                            icon = Icons.Default.MenuBook,
+                            title = "Hardware Documentation",
+                            value = "docs.fluxtelemetry.io",
+                            colors = colors
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(80.dp))
+                Spacer(modifier = Modifier.height(40.dp))
+            }
         }
     }
 }
@@ -186,25 +230,32 @@ fun HelpSupportScreen(onBack: () -> Unit) {
 data class FAQItem(val question: String, val answer: String)
 
 @Composable
-fun SupportRow(
+private fun SupportRowItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     value: String,
-    activeAccent: Color
+    colors: FluxColors
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { /* Handle support action */ }
-            .padding(vertical = 4.dp),
+            .padding(vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = activeAccent, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
-            Text(value, fontSize = 12.sp, color = TextGrey)
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(FluxOrange.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = FluxOrange, modifier = Modifier.size(18.dp))
         }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextGrey)
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, color = colors.textPrimary)
+            Text(value, fontSize = 11.5.sp, color = colors.textSecondary)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = colors.textSecondary, modifier = Modifier.size(18.dp))
     }
 }

@@ -262,7 +262,7 @@ fun Modifier.neoCard(shape: Shape = RoundedCornerShape(32.dp)): Modifier = compo
 
 @Composable
 fun MyApplicationTheme(
-  darkTheme: Boolean = true, 
+  darkTheme: Boolean = false, 
   dynamicColor: Boolean = false, 
   content: @Composable () -> Unit,
 ) {

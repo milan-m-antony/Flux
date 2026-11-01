@@ -2,17 +2,25 @@ package com.example.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Thermostat
+import androidx.compose.material.icons.outlined.BatteryChargingFull
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Bluetooth
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,12 +30,13 @@ import com.example.ble.ConnectionState
 import com.example.ui.theme.*
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FluxLiveMonitorScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit
 ) {
+    val darkTheme by viewModel.isDarkTheme.collectAsState()
+    val colors = rememberFluxColors(darkTheme)
     val connectionState by viewModel.connectionState.collectAsState()
     val reading by viewModel.latestReading.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
@@ -41,119 +50,216 @@ fun FluxLiveMonitorScreen(
     }
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
 
-    Scaffold(
-        containerColor = FluxBackground,
-        topBar = {
-            TopAppBar(
-                title = { Text("Live Telemetry Monitor", color = FluxTextPrimary, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = FluxTextPrimary)
+    FluxBackground(darkTheme = darkTheme) {
+        Scaffold(
+            containerColor = Color.Transparent
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Top Navigation Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
+                            .clip(CircleShape)
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, CircleShape)
+                            .clickable { onBack() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = FluxBackground)
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Text(
+                        text = "Live Telemetry Monitor",
+                        color = colors.textPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.3).sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Hero Circular Gauge
+                Box(
+                    modifier = Modifier
+                        .size(240.dp)
+                        .shadow(8.dp, CircleShape, spotColor = Color(0x18000000))
+                        .clip(CircleShape)
+                        .background(colors.cardBg)
+                        .border(3.dp, FluxOrange.copy(alpha = 0.85f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(FluxOrange.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Thermostat,
+                                contentDescription = null,
+                                tint = FluxOrange,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = if (isConnected) displayTemp else "--.-",
+                            fontSize = 46.sp,
+                            fontWeight = FontWeight.Black,
+                            color = colors.textPrimary
+                        )
+
+                        Text(
+                            text = unitSymbol,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = FluxOrange
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isConnected) Color(0xFF10B981).copy(alpha = 0.14f) else Color(0xFFEF4444).copy(alpha = 0.14f))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = if (isConnected) "DS18B20 Live Stream" else "Sensor Disconnected",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Live Sensor Metrics Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(colors.cardBg)
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                        .padding(18.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Text(
+                            text = "Telemetry Metrics",
+                            color = colors.textPrimary,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        MetricRow(
+                            icon = Icons.Outlined.CheckCircle,
+                            label = "Hardware Status",
+                            value = reading?.status ?: if (isConnected) "Active" else "Offline",
+                            valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                            colors = colors
+                        )
+
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
+                        MetricRow(
+                            icon = Icons.Outlined.BatteryChargingFull,
+                            label = "Battery Voltage",
+                            value = String.format(Locale.US, "%.2f V (%d%%)", reading?.batteryVoltage ?: 0.0, reading?.battery ?: 0),
+                            valueColor = colors.textPrimary,
+                            colors = colors
+                        )
+
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
+                        MetricRow(
+                            icon = Icons.Outlined.Speed,
+                            label = "Sampling Interval",
+                            value = "1000 ms (Real-time)",
+                            valueColor = FluxOrange,
+                            colors = colors
+                        )
+
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
+                        MetricRow(
+                            icon = Icons.Outlined.Bluetooth,
+                            label = "BLE Telemetry Link",
+                            value = if (isConnected) "Connected (GATT)" else "Disconnected",
+                            valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                            colors = colors
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(40.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    valueColor: Color,
+    colors: FluxColors
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = colors.textSecondary,
+                modifier = Modifier.size(17.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = label,
+                color = colors.textSecondary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium
             )
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Hero Gauge Display
-            Box(
-                modifier = Modifier
-                    .size(220.dp)
-                    .clip(CircleShape)
-                    .background(FluxSurface)
-                    .border(3.dp, FluxPrimary.copy(alpha = 0.8f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Thermostat,
-                        contentDescription = null,
-                        tint = FluxPrimary,
-                        modifier = Modifier.size(36.dp)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = if (isConnected) displayTemp else "--.-",
-                        fontSize = 48.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = FluxTextPrimary
-                    )
-                    Text(
-                        text = unitSymbol,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = FluxPrimary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = if (isConnected) "DS18B20 Live" else "Offline",
-                        fontSize = 11.sp,
-                        color = if (isConnected) StatusNormal else DangerRed
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Telemetry Specs Grid
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = FluxSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, FluxBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Sensor Status", color = FluxTextSecondary, fontSize = 13.sp)
-                        Text(
-                            text = reading?.status ?: "Unknown",
-                            color = FluxTextPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-                    Divider(color = FluxBorder.copy(alpha = 0.5f))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Battery Voltage", color = FluxTextSecondary, fontSize = 13.sp)
-                        Text(
-                            text = String.format(Locale.US, "%.2f V (%d%%)", reading?.batteryVoltage ?: 0.0, reading?.battery ?: 0),
-                            color = FluxSecondary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-                    Divider(color = FluxBorder.copy(alpha = 0.5f))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Sampling Cadence", color = FluxTextSecondary, fontSize = 13.sp)
-                        Text("1000 ms (Non-blocking)", color = FluxPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                    Divider(color = FluxBorder.copy(alpha = 0.5f))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("Protocol", color = FluxTextSecondary, fontSize = 13.sp)
-                        Text("BLE GATT (6E400009)", color = FluxTextPrimary, fontSize = 12.sp)
-                    }
-                }
-            }
-        }
+        Text(
+            text = value,
+            color = valueColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp
+        )
     }
 }

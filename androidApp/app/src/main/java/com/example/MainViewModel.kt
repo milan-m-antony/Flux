@@ -158,7 +158,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val lowAlertThreshold = lowTempThreshold
     val highAlertThreshold = highTempThreshold
-    val isDarkTheme = settingsRepository.isDarkTheme.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val isDarkTheme = settingsRepository.isDarkTheme.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
     
     val userName = settingsRepository.userName.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val userAge = settingsRepository.userAge.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")

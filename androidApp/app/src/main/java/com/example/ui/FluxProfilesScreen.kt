@@ -167,20 +167,12 @@ private fun ProfileCardItem(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val gradientColors = if (darkTheme) {
-        when (title) {
-            "Live Monitor" -> listOf(Color(0xFF2A201A), Color(0xFF1E1E28))
-            "Environment" -> listOf(Color(0xFF132B1C), Color(0xFF131D24))
-            "Liquid" -> listOf(Color(0xFF14243A), Color(0xFF131B28))
-            else -> listOf(Color(0xFF2B2014), Color(0xFF1E1B24))
-        }
-    } else {
-        when (title) {
-            "Live Monitor" -> listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC))
-            "Environment" -> listOf(Color(0xFFF7FDF9), Color(0xFFDCFCE7))
-            "Liquid" -> listOf(Color(0xFFF8FAFC), Color(0xFFDBEAFE))
-            else -> listOf(Color(0xFFFFFDF8), Color(0xFFFFEDD5))
-        }
+    // Strictly follow Flux signature light palette for all profiles
+    val gradientColors = when (title) {
+        "Live Monitor" -> listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC))
+        "Environment" -> listOf(Color(0xFFF7FDF9), Color(0xFFDCFCE7))
+        "Liquid" -> listOf(Color(0xFFF8FAFC), Color(0xFFDBEAFE))
+        else -> listOf(Color(0xFFFFFDF8), Color(0xFFFFEDD5))
     }
 
     Box(
@@ -198,7 +190,7 @@ private fun ProfileCardItem(
             )
             .border(
                 width = if (isActive) 1.5.dp else 0.5.dp,
-                color = if (isActive) FluxOrange else (if (darkTheme) Color(0xFF334155) else Color(0xFFF1F5F9)),
+                color = if (isActive) FluxOrange else Color(0xFFEEF2F6),
                 shape = RoundedCornerShape(26.dp)
             )
             .clickable { onClick() }

@@ -25,8 +25,8 @@ fun FluxBackground(
             val width = size.width
             val height = size.height
 
-            // 1. Base background
-            val baseColor = if (darkTheme) Color(0xFF0F172A) else FluxBgLight
+            // 1. Base background: Clean cool light canvas
+            val baseColor = FluxBgLight
             drawRect(color = baseColor)
 
             // 2. Wave 1: Soft warm peach accent in top right corner
@@ -40,17 +40,10 @@ fun FluxBackground(
                 lineTo(width, 0f)
                 close()
             }
-            val wave1Colors = if (darkTheme) {
-                listOf(
-                    FluxOrange.copy(alpha = 0.12f),
-                    Color(0xFF1E293B).copy(alpha = 0.6f)
-                )
-            } else {
-                listOf(
-                    FluxWaveOrange.copy(alpha = 0.60f),
-                    FluxWavePeach.copy(alpha = 0.45f)
-                )
-            }
+            val wave1Colors = listOf(
+                FluxWaveOrange.copy(alpha = 0.60f),
+                FluxWavePeach.copy(alpha = 0.45f)
+            )
             drawPath(
                 path = wave1,
                 brush = Brush.linearGradient(
@@ -75,19 +68,11 @@ fun FluxBackground(
                 )
                 close()
             }
-            val wave2Colors = if (darkTheme) {
-                listOf(
-                    FluxOrange.copy(alpha = 0.08f),
-                    Color(0xFF1E293B).copy(alpha = 0.4f),
-                    Color.Transparent
-                )
-            } else {
-                listOf(
-                    FluxWavePeach.copy(alpha = 0.50f),
-                    FluxWaveOrange.copy(alpha = 0.30f),
-                    Color.Transparent
-                )
-            }
+            val wave2Colors = listOf(
+                FluxWavePeach.copy(alpha = 0.50f),
+                FluxWaveOrange.copy(alpha = 0.30f),
+                Color.Transparent
+            )
             drawPath(
                 path = wave2,
                 brush = Brush.linearGradient(
@@ -112,19 +97,11 @@ fun FluxBackground(
                 )
                 close()
             }
-            val wave3Colors = if (darkTheme) {
-                listOf(
-                    Color.Transparent,
-                    FluxOrange.copy(alpha = 0.07f),
-                    Color(0xFF1E293B).copy(alpha = 0.35f)
-                )
-            } else {
-                listOf(
-                    Color.Transparent,
-                    FluxWaveOrange.copy(alpha = 0.35f),
-                    FluxWavePeach.copy(alpha = 0.45f)
-                )
-            }
+            val wave3Colors = listOf(
+                Color.Transparent,
+                FluxWaveOrange.copy(alpha = 0.35f),
+                FluxWavePeach.copy(alpha = 0.45f)
+            )
             drawPath(
                 path = wave3,
                 brush = Brush.linearGradient(

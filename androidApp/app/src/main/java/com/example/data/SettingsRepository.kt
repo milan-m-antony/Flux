@@ -79,7 +79,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
     val userHeight: Flow<String> = dataStore.data.map { it[USER_HEIGHT] ?: "" }
     val userPhotoUrl: Flow<String> = dataStore.data.map { it[USER_PHOTO_URL] ?: "" }
     val userNotes: Flow<String> = dataStore.data.map { it[USER_NOTES] ?: "" }
-    val isDarkTheme: Flow<Boolean> = dataStore.data.map { it[IS_DARK_THEME] ?: true } // Flux defaults to sleek dark theme
+    val isDarkTheme: Flow<Boolean> = dataStore.data.map { false } // Never use black/dark theme; strictly follow Flux signature light theme
     val waterIntakeMl: Flow<Int> = dataStore.data.map { it[WATER_INTAKE_ML] ?: 1250 }
     val waterGoalMl: Flow<Int> = dataStore.data.map { it[WATER_GOAL_ML] ?: 2500 }
 
@@ -156,7 +156,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
 
     suspend fun saveTheme(isDark: Boolean) {
         dataStore.edit { prefs ->
-            prefs[IS_DARK_THEME] = isDark
+            prefs[IS_DARK_THEME] = false
         }
     }
 

@@ -9,249 +9,250 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ui.theme.AccentCyan
-import com.example.ui.theme.NeoButton
-import com.example.ui.theme.NeoTopBar
-import com.example.ui.theme.TextGrey
-import com.example.ui.theme.neoCard
+import com.example.ui.theme.*
 
 @Composable
 fun PrivacySecurityScreen(onBack: () -> Unit) {
-    val darkTheme = MaterialTheme.colorScheme.background == Color(0xFF000000)
-    val activeAccent = if (darkTheme) AccentCyan else Color(0xFF059669)
+    val colors = rememberFluxColors(false)
 
     var encrytedLogs by remember { mutableStateOf(true) }
     var biometricUnlock by remember { mutableStateOf(false) }
     var analyticsSharing by remember { mutableStateOf(true) }
-    var retentionPeriod by remember { mutableStateOf("90 Days") }
     var showPurgeConfirm by remember { mutableStateOf(false) }
 
     if (showPurgeConfirm) {
         AlertDialog(
             onDismissRequest = { showPurgeConfirm = false },
-            title = { Text("Confirm Purging Telemetry?") },
+            title = { Text("Confirm Purging Telemetry?", fontWeight = FontWeight.Bold) },
             text = { Text("This will completely delete all local measurement history, sensor values, and cached calibration scores from this device. This operation is irreversible.") },
             confirmButton = {
                 TextButton(
                     onClick = { showPurgeConfirm = false },
-                    colors = ButtonDefaults.textButtonColors(contentColor = com.example.ui.theme.DangerRed)
+                    colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFEF4444))
                 ) {
                     Text("Purge All", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showPurgeConfirm = false }) {
-                    Text("Cancel")
+                    Text("Cancel", color = colors.textPrimary)
                 }
             }
         )
     }
 
-    Scaffold(
-        containerColor = Color.Transparent,
-        topBar = {
-            NeoTopBar(
-                title = "Privacy & Security",
-                onBackClick = onBack
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(24.dp)
-        ) {
-            Text(
-                text = "Security Preferences",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (darkTheme) activeAccent else Color(0xFF111827)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+    FluxBackground(darkTheme = false) {
+        Scaffold(
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .statusBarsPadding()
+                    .padding(horizontal = 20.dp)
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // Encryption and Biometrics
-            Box(modifier = Modifier.fillMaxWidth().neoCard().padding(16.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    SecurityToggleRow(
-                        icon = Icons.Default.Lock,
-                        title = "Local Logs Encryption",
-                        subtitle = "Apply military-grade AES-256 local database encryption to all saved sensor files.",
-                        checked = encrytedLogs,
-                        onCheckedChange = { encrytedLogs = it },
-                        activeAccent = activeAccent,
-                        darkTheme = darkTheme
-                    )
-                    Divider(color = if (darkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f))
-                    SecurityToggleRow(
-                        icon = Icons.Default.Fingerprint,
-                        title = "Biometric Lock",
-                        subtitle = "Require fingerprint biometric or facial authentication before loading local health journals.",
-                        checked = biometricUnlock,
-                        onCheckedChange = { biometricUnlock = it },
-                        activeAccent = activeAccent,
-                        darkTheme = darkTheme
+                // Top Navigation Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
+                            .clip(CircleShape)
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, CircleShape)
+                            .clickable { onBack() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = colors.textPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Text(
+                        text = "Privacy & Security",
+                        color = colors.textPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = (-0.3).sp
                     )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "Data Retention & Telemetry",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = if (darkTheme) activeAccent else Color(0xFF111827)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Security Preferences",
+                    color = colors.textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
 
-            // Telemetry Sharing & Retention
-            Box(modifier = Modifier.fillMaxWidth().neoCard().padding(16.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    SecurityToggleRow(
-                        icon = Icons.Default.Share,
-                        title = "Anonymous Diagnostics",
-                        subtitle = "Permit Flux to share encrypted Bluetooth signal levels and calibration timeouts to help bug-fix.",
-                        checked = analyticsSharing,
-                        onCheckedChange = { analyticsSharing = it },
-                        activeAccent = activeAccent,
-                        darkTheme = darkTheme
-                    )
-                    Divider(color = if (darkTheme) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f))
-                    
-                    // Retention Selector
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Security, contentDescription = null, tint = activeAccent, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Automatic Log Eraser", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Choose how long telemetry points should survive on device storage.",
-                            fontSize = 11.sp,
-                            color = TextGrey
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Encryption and Biometrics Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(3.dp, RoundedCornerShape(22.dp), spotColor = Color(0x0C000000))
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(colors.cardBg)
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                        .padding(18.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SecurityRow(
+                            icon = Icons.Default.Lock,
+                            title = "Local Logs Encryption",
+                            subtitle = "Apply AES-256 local database encryption to all cached Room telemetry.",
+                            checked = encrytedLogs,
+                            onCheckedChange = { encrytedLogs = it },
+                            colors = colors
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        // Selectables
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                        SecurityRow(
+                            icon = Icons.Default.Fingerprint,
+                            title = "Biometric Lock",
+                            subtitle = "Require fingerprint biometric or face authentication before viewing journals.",
+                            checked = biometricUnlock,
+                            onCheckedChange = { biometricUnlock = it },
+                            colors = colors
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                Text(
+                    text = "Data Retention & Telemetry",
+                    color = colors.textPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Diagnostics & Purge Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(3.dp, RoundedCornerShape(22.dp), spotColor = Color(0x0C000000))
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(colors.cardBg)
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                        .padding(18.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SecurityRow(
+                            icon = Icons.Default.Share,
+                            title = "Anonymous Diagnostics",
+                            subtitle = "Share anonymized Bluetooth signal RSSI and packet loss to improve stability.",
+                            checked = analyticsSharing,
+                            onCheckedChange = { analyticsSharing = it },
+                            colors = colors
+                        )
+
+                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showPurgeConfirm = true }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf("30 Days", "90 Days", "Forever").forEach { option ->
-                                val selected = retentionPeriod == option
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(40.dp)
-                                        .neoCard(RoundedCornerShape(20.dp))
-                                        .clickable { retentionPeriod = option }
-                                        .background(if (selected) activeAccent.copy(alpha = 0.12f) else Color.Transparent),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = option,
-                                        color = if (selected) activeAccent else MaterialTheme.colorScheme.onSurface,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                    )
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFEF4444).copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.DeleteForever, contentDescription = null, tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Purge Local Telemetry Records", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color(0xFFEF4444))
+                                Text("Irreversibly delete all offline cached Room database logs", fontSize = 11.5.sp, color = colors.textSecondary)
                             }
                         }
                     }
                 }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
-
-            Spacer(modifier = Modifier.height(40.dp))
-
-            // Extreme Danger Actions
-            Text(
-                text = "Danger Zone",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = com.example.ui.theme.DangerRed
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Box(modifier = Modifier.fillMaxWidth().neoCard().padding(16.dp)) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().clickable { showPurgeConfirm = true }.padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.DeleteForever, contentDescription = null, tint = com.example.ui.theme.DangerRed, modifier = Modifier.size(24.dp))
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Purge Device Database", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)
-                            Text("Erase all local measurement journals, logs, and sensor configurations.", fontSize = 11.sp, color = TextGrey)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
 
 @Composable
-fun SecurityToggleRow(
+private fun SecurityRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    activeAccent: Color,
-    darkTheme: Boolean
+    colors: FluxColors
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = activeAccent,
-            modifier = Modifier.size(22.dp).padding(top = 2.dp)
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-                fontSize = 14.sp
-            )
-            Text(
-                text = subtitle,
-                fontSize = 11.sp,
-                color = TextGrey,
-                lineHeight = 15.sp
-            )
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(FluxOrange.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = FluxOrange, modifier = Modifier.size(18.dp))
+            }
+            Spacer(modifier = Modifier.width(14.dp))
+            Column {
+                Text(title, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, color = colors.textPrimary)
+                Text(subtitle, fontSize = 11.5.sp, color = colors.textSecondary)
+            }
         }
         Spacer(modifier = Modifier.width(8.dp))
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
-                checkedThumbColor = activeAccent,
-                checkedTrackColor = activeAccent.copy(alpha = 0.5f)
+                checkedThumbColor = Color.White,
+                checkedTrackColor = FluxOrange,
+                uncheckedThumbColor = colors.textSecondary,
+                uncheckedTrackColor = colors.pillBg
             )
         )
     }

@@ -167,7 +167,7 @@ fun FluxSettingsScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = if (isDarkTheme) "Dark mode enabled" else "Light mode enabled",
+                                text = "Flux signature light theme active",
                                 color = colors.textSecondary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Medium
@@ -186,20 +186,15 @@ fun FluxSettingsScreen(
                             .padding(4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Light Button
+                        // Light Signature Theme Pill
                         Box(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth()
                                 .height(40.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (!isDarkTheme) FluxOrange else Color.Transparent
-                                )
+                                .background(FluxOrange)
                                 .clickable {
-                                    if (isDarkTheme) {
-                                        viewModel.setDarkTheme(false)
-                                        Toast.makeText(context, "Switched to Light theme", Toast.LENGTH_SHORT).show()
-                                    }
+                                    Toast.makeText(context, "Flux Signature Light Theme Active", Toast.LENGTH_SHORT).show()
                                 },
                             contentAlignment = Alignment.Center
                         ) {
@@ -210,52 +205,13 @@ fun FluxSettingsScreen(
                                 Icon(
                                     imageVector = Icons.Outlined.LightMode,
                                     contentDescription = null,
-                                    tint = if (!isDarkTheme) Color.White else colors.textSecondary,
+                                    tint = Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Light",
-                                    color = if (!isDarkTheme) Color.White else colors.textSecondary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(6.dp))
-
-                        // Dark Button
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    if (isDarkTheme) FluxOrange else Color.Transparent
-                                )
-                                .clickable {
-                                    if (!isDarkTheme) {
-                                        viewModel.setDarkTheme(true)
-                                        Toast.makeText(context, "Switched to Dark theme", Toast.LENGTH_SHORT).show()
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.DarkMode,
-                                    contentDescription = null,
-                                    tint = if (isDarkTheme) Color.White else colors.textSecondary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "Dark",
-                                    color = if (isDarkTheme) Color.White else colors.textSecondary,
+                                    text = "Signature Light Theme",
+                                    color = Color.White,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
