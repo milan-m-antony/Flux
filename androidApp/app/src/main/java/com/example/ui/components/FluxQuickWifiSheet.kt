@@ -158,11 +158,17 @@ fun FluxQuickWifiSheet(
         label = "wifiOnlineDotPulse"
     )
 
-    // If phone detects a valid Wi-Fi name, remember it in persistence
-    LaunchedEffect(detectedWifiName) {
-        val detected = detectedWifiName
-        if (!detected.isNullOrBlank()) {
-            viewModel.sendWifiCredentials(detected, "")
+    // Synchronize setup mode when BLE connection state changes
+    LaunchedEffect(isBleConnected) {
+        if (isBleConnected) {
+            setupMode = WifiProvisionMode.BLE
+        }
+    }
+
+    // Pre-fill saved password if network matches remembered SSID
+    LaunchedEffect(savedPass, wifiName) {
+        if (password.isBlank() && savedPass.isNotBlank() && (wifiName.isBlank() || wifiName == savedSsid)) {
+            password = savedPass
         }
     }
 
@@ -608,30 +614,31 @@ fun FluxQuickWifiSheet(
                                             provisionState = WifiProvisionState.CONNECTING
                                             statusMessage = "Transmitting credentials to Flux node..."
 
-                                            if (setupMode == WifiProvisionMode.BLE) {
+                                            if (isBleConnected) {
                                                 viewModel.sendWifiCredentials(wifiName.trim(), password)
-                                            } else {
+                                            }
+                                            if (setupMode == WifiProvisionMode.ACCESS_POINT) {
                                                 coroutineScope.launch {
                                                     val result = viewModel.provisionWifiOverAp(wifiName.trim(), password)
-                                                    if (result.isFailure) {
+                                                    if (result.isFailure && !isBleConnected) {
                                                         statusMessage = "AP connection failed: Ensure phone is connected to 'Flux-Setup'"
                                                     }
                                                 }
                                             }
 
-                                            // 15-second verification countdown
+                                            // 25-second verification countdown
                                             coroutineScope.launch {
-                                                var secondsLeft = 15
+                                                var secondsLeft = 25
                                                 while (secondsLeft > 0 && provisionState == WifiProvisionState.CONNECTING) {
                                                     delay(1000)
                                                     secondsLeft--
-                                                    if (secondsLeft <= 10) {
+                                                    if (secondsLeft <= 20) {
                                                         statusMessage = "Connecting to '${wifiName.trim()}' ($secondsLeft s)..."
                                                     }
                                                 }
                                                 if (provisionState == WifiProvisionState.CONNECTING && !espWifiConnected) {
                                                     provisionState = WifiProvisionState.FAILED
-                                                    statusMessage = "Could not verify connection within 15 seconds."
+                                                    statusMessage = "Could not verify connection within 25 seconds. Please check password."
                                                 }
                                             }
                                         }

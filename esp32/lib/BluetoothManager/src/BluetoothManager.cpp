@@ -114,11 +114,14 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
         Serial.println("Flux BLE Initialized with explicit device name Flux1");
         Serial.println("Advertising Started");
 
-        // Load saved Wi-Fi credentials from NVS
-        loadSavedWifi();
+        // Initialize Wi-Fi in dual AP+Station mode
+        WiFi.mode(WIFI_AP_STA);
 
         // Start SoftAP setup server for fallback Wi-Fi configuration (port 80)
         startApProvisioningServer();
+
+        // Load saved Wi-Fi credentials from NVS and initiate station connection
+        loadSavedWifi();
     } catch (...) {
         Serial.println("BLE Init Failed");
     }
@@ -203,10 +206,29 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         size_t comma = param.find(',');
         std::string ssid = (comma != std::string::npos) ? param.substr(0, comma) : param;
         std::string pass = (comma != std::string::npos) ? param.substr(comma + 1) : "";
-        Serial.printf("Received Wi-Fi config over BLE: SSID=%s\n", ssid.c_str());
+
+        // Trim any trailing \r, \n, spaces
+        while (!ssid.empty() && (ssid.back() == '\r' || ssid.back() == '\n' || ssid.back() == ' ')) ssid.pop_back();
+        while (!pass.empty() && (pass.back() == '\r' || pass.back() == '\n')) pass.pop_back();
+
+        Serial.printf("Received Wi-Fi config over BLE: SSID='%s' pass_len=%d\n", ssid.c_str(), (int)pass.length());
+
+        if (pass.empty()) {
+            // Check if NVS already has a saved password for this SSID
+            Preferences prefs;
+            prefs.begin("flux_wifi", true);
+            String savedSSID = prefs.getString("ssid", "");
+            String savedPass = prefs.getString("pass", "");
+            prefs.end();
+            if (savedSSID == ssid.c_str() && savedPass.length() > 0) {
+                pass = savedPass.c_str();
+                Serial.printf("Preserving existing saved password for SSID='%s'\n", ssid.c_str());
+            }
+        }
+
         saveWifiCredentials(ssid.c_str(), pass.c_str());
         WiFi.disconnect();
-        WiFi.mode(WIFI_STA);
+        delay(100);
         if (pass.empty()) {
             WiFi.begin(ssid.c_str());
         } else {
@@ -246,9 +268,14 @@ void BluetoothManager::loadSavedWifi() noexcept {
             if (state_ != nullptr) {
                 state_->wifiSSID = currentWifiSsid_.c_str();
             }
-            Serial.printf("Auto-reconnecting to saved Wi-Fi: %s\n", savedSSID.c_str());
-            WiFi.mode(WIFI_STA);
-            WiFi.begin(savedSSID.c_str(), savedPass.c_str());
+            Serial.printf("Auto-reconnecting to saved Wi-Fi: '%s' (pass_len=%d)\n", savedSSID.c_str(), (int)savedPass.length());
+            WiFi.disconnect();
+            delay(50);
+            if (savedPass.length() > 0) {
+                WiFi.begin(savedSSID.c_str(), savedPass.c_str());
+            } else {
+                WiFi.begin(savedSSID.c_str());
+            }
         } else {
             Serial.println("No saved Wi-Fi credentials found in NVS.");
         }
@@ -402,16 +429,45 @@ void BluetoothManager::update() noexcept {
     }
 
     // Monitor Wi-Fi connection and trigger direct cloud telemetry upload
+    static unsigned long lastWifiRetryMs = 0;
     if (state_ != nullptr) {
-        if (WiFi.status() == WL_CONNECTED) {
+        wl_status_t currentStatus = WiFi.status();
+        if (currentStatus == WL_CONNECTED) {
+            if (!state_->wifiConnected) {
+                Serial.printf("Wi-Fi Connected! SSID: '%s', IP: %s, RSSI: %d dBm\n",
+                              WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
+            }
             state_->wifiConnected = true;
             state_->wifiRSSI = WiFi.RSSI();
             currentWifiSsid_ = WiFi.SSID();
             state_->wifiSSID = currentWifiSsid_.c_str();
             attemptCloudUpload();
         } else {
+            if (state_->wifiConnected) {
+                Serial.printf("Wi-Fi Disconnected (status=%d)\n", (int)currentStatus);
+            }
             state_->wifiConnected = false;
             state_->supabaseSyncState = "Offline";
+
+            // Periodic auto-reconnect retry every 15s if saved SSID exists
+            if (currentWifiSsid_.length() > 0 && (nowMs - lastWifiRetryMs) >= 15000UL) {
+                lastWifiRetryMs = nowMs;
+                Preferences prefs;
+                prefs.begin("flux_wifi", true);
+                String sSsid = prefs.getString("ssid", "");
+                String sPass = prefs.getString("pass", "");
+                prefs.end();
+                if (sSsid.length() > 0) {
+                    Serial.printf("Wi-Fi auto-reconnect retry to '%s' (status=%d)...\n", sSsid.c_str(), (int)currentStatus);
+                    WiFi.disconnect();
+                    delay(50);
+                    if (sPass.length() > 0) {
+                        WiFi.begin(sSsid.c_str(), sPass.c_str());
+                    } else {
+                        WiFi.begin(sSsid.c_str());
+                    }
+                }
+            }
         }
     }
 

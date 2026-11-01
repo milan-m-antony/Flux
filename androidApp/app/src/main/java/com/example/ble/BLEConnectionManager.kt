@@ -238,8 +238,11 @@ class BLEConnectionManager(
         val currentGatt = gatt ?: return false
         val service = currentGatt.getService(SERVICE_UUID) ?: return false
         val characteristic = service.getCharacteristic(JSON_CHAR_UUID) ?: return false
+        characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         characteristic.value = command.toByteArray(Charsets.UTF_8)
-        return currentGatt.writeCharacteristic(characteristic)
+        val success = currentGatt.writeCharacteristic(characteristic)
+        android.util.Log.d("BLEManager", "sendCommand('$command') -> $success")
+        return success
     }
 
     fun syncTimeWithDevice() {
