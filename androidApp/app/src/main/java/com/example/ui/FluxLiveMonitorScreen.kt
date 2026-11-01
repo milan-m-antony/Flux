@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,14 +13,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.outlined.BatteryChargingFull
-import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Bluetooth
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -50,178 +52,256 @@ fun FluxLiveMonitorScreen(
     }
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
 
+    // Live Telemetry Breathing & Radar Animations
+    val infiniteTransition = rememberInfiniteTransition(label = "liveMonitorPulse")
+    val radarScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = if (isConnected) 1.07f else 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "radarScale"
+    )
+
+    val radarAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = if (isConnected) 0.15f else 0.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "radarAlpha"
+    )
+
+    val ledAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ledAlpha"
+    )
+
     FluxBackground(darkTheme = darkTheme) {
         Scaffold(
             containerColor = Color.Transparent
         ) { padding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(padding),
+                contentAlignment = Alignment.TopCenter
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Top Navigation Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
-                            .clip(CircleShape)
-                            .background(colors.cardBg)
-                            .border(0.5.dp, colors.cardBorder, CircleShape)
-                            .clickable { onBack() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colors.textPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Text(
-                        text = "Live Telemetry Monitor",
-                        color = colors.textPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.3).sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // Hero Circular Gauge
-                Box(
+                Column(
                     modifier = Modifier
-                        .size(240.dp)
-                        .shadow(8.dp, CircleShape, spotColor = Color(0x18000000))
-                        .clip(CircleShape)
-                        .background(colors.cardBg)
-                        .border(3.dp, FluxOrange.copy(alpha = 0.85f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .widthIn(max = 640.dp)
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Top Navigation Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
+                                .size(38.dp)
+                                .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
                                 .clip(CircleShape)
-                                .background(FluxOrange.copy(alpha = 0.12f)),
+                                .background(colors.cardBg)
+                                .border(0.5.dp, colors.cardBorder, CircleShape)
+                                .clickable { onBack() },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Thermostat,
-                                contentDescription = null,
-                                tint = FluxOrange,
-                                modifier = Modifier.size(26.dp)
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = colors.textPrimary,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
 
-                        Text(
-                            text = if (isConnected) displayTemp else "--.-",
-                            fontSize = 46.sp,
-                            fontWeight = FontWeight.Black,
-                            color = colors.textPrimary
-                        )
+                        Column {
+                            Text(
+                                text = "Live Telemetry Monitor",
+                                color = colors.textPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.3).sp
+                            )
+                            Text(
+                                text = "Active probe continuous stream",
+                                color = colors.textSecondary,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
 
-                        Text(
-                            text = unitSymbol,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = FluxOrange
-                        )
+                    Spacer(modifier = Modifier.height(28.dp))
 
-                        Spacer(modifier = Modifier.height(6.dp))
+                    // Hero Circular Gauge with Animated Radar Ring
+                    BoxWithConstraints(contentAlignment = Alignment.Center) {
+                        val gaugeSize = minOf(maxWidth * 0.68f, 240.dp)
 
+                        // Outer Radar Pulse Halo
+                        if (isConnected) {
+                            Box(
+                                modifier = Modifier
+                                    .size(gaugeSize + 22.dp)
+                                    .scale(radarScale)
+                                    .clip(CircleShape)
+                                    .border(1.8.dp, FluxOrange.copy(alpha = radarAlpha), CircleShape)
+                            )
+                        }
+
+                        // Main Hero Gauge
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isConnected) Color(0xFF10B981).copy(alpha = 0.14f) else Color(0xFFEF4444).copy(alpha = 0.14f))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .size(gaugeSize)
+                                .shadow(8.dp, CircleShape, spotColor = Color(0x16000000))
+                                .clip(CircleShape)
+                                .background(colors.cardBg)
+                                .border(3.dp, FluxOrange.copy(alpha = 0.88f), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .clip(CircleShape)
+                                        .background(FluxOrange.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Thermostat,
+                                        contentDescription = null,
+                                        tint = FluxOrange,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = if (isConnected) displayTemp else "--.-",
+                                    fontSize = 44.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = colors.textPrimary
+                                )
+
+                                Text(
+                                    text = unitSymbol,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = FluxOrange
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isConnected) Color(0xFF10B981).copy(alpha = 0.14f)
+                                            else Color(0xFFEF4444).copy(alpha = 0.14f)
+                                        )
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (isConnected) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .scale(ledAlpha)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF10B981))
+                                            )
+                                            Spacer(modifier = Modifier.width(5.dp))
+                                        }
+                                        Text(
+                                            text = if (isConnected) "DS18B20 Live Stream" else "Sensor Disconnected",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    // Live Sensor Metrics Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                            .padding(18.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             Text(
-                                text = if (isConnected) "DS18B20 Live Stream" else "Sensor Disconnected",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444)
+                                text = "Telemetry Metrics",
+                                color = colors.textPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            MetricRow(
+                                icon = Icons.Outlined.CheckCircle,
+                                label = "Hardware Status",
+                                value = reading?.status ?: if (isConnected) "Active" else "Offline",
+                                valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                                colors = colors
+                            )
+
+                            HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
+                            MetricRow(
+                                icon = Icons.Outlined.BatteryChargingFull,
+                                label = "Battery Voltage",
+                                value = String.format(Locale.US, "%.2f V (%d%%)", reading?.batteryVoltage ?: 0.0, reading?.battery ?: 0),
+                                valueColor = colors.textPrimary,
+                                colors = colors
+                            )
+
+                            HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
+                            MetricRow(
+                                icon = Icons.Outlined.Speed,
+                                label = "Sampling Interval",
+                                value = "1000 ms (Real-time)",
+                                valueColor = FluxOrange,
+                                colors = colors
+                            )
+
+                            HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+
+                            MetricRow(
+                                icon = Icons.Outlined.Bluetooth,
+                                label = "BLE Telemetry Link",
+                                value = if (isConnected) "Connected (GATT)" else "Disconnected",
+                                valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
+                                colors = colors
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(40.dp))
                 }
-
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // Live Sensor Metrics Card
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(colors.cardBg)
-                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
-                        .padding(18.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Text(
-                            text = "Telemetry Metrics",
-                            color = colors.textPrimary,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        MetricRow(
-                            icon = Icons.Outlined.CheckCircle,
-                            label = "Hardware Status",
-                            value = reading?.status ?: if (isConnected) "Active" else "Offline",
-                            valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
-                            colors = colors
-                        )
-
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
-
-                        MetricRow(
-                            icon = Icons.Outlined.BatteryChargingFull,
-                            label = "Battery Voltage",
-                            value = String.format(Locale.US, "%.2f V (%d%%)", reading?.batteryVoltage ?: 0.0, reading?.battery ?: 0),
-                            valueColor = colors.textPrimary,
-                            colors = colors
-                        )
-
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
-
-                        MetricRow(
-                            icon = Icons.Outlined.Speed,
-                            label = "Sampling Interval",
-                            value = "1000 ms (Real-time)",
-                            valueColor = FluxOrange,
-                            colors = colors
-                        )
-
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
-
-                        MetricRow(
-                            icon = Icons.Outlined.Bluetooth,
-                            label = "BLE Telemetry Link",
-                            value = if (isConnected) "Connected (GATT)" else "Disconnected",
-                            valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
-                            colors = colors
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(40.dp))
             }
         }
     }

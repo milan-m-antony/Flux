@@ -41,15 +41,21 @@ fun FluxDiagnosticsScreen(
         Scaffold(
             containerColor = Color.Transparent
         ) { innerPadding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(innerPadding),
+                contentAlignment = Alignment.TopCenter
             ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 640.dp)
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Top Header Row
@@ -208,6 +214,7 @@ fun FluxDiagnosticsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(30.dp))
+                }
             }
         }
     }

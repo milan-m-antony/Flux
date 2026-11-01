@@ -51,15 +51,21 @@ fun FluxStatsTimerScreen(
         Scaffold(
             containerColor = Color.Transparent
         ) { padding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.Start
+                    .padding(padding),
+                contentAlignment = Alignment.TopCenter
             ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 640.dp)
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.Start
+                ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Top Header Row
@@ -210,6 +216,7 @@ fun FluxStatsTimerScreen(
                 }
 
                 Spacer(modifier = Modifier.height(40.dp))
+                }
             }
         }
     }

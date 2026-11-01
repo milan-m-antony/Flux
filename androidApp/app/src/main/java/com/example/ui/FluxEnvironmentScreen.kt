@@ -1,5 +1,6 @@
 package com.example.ui
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +18,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -42,216 +45,291 @@ fun FluxEnvironmentScreen(
     val isConnected = connectionState == ConnectionState.CONNECTED
 
     val rawTemp = reading?.temp ?: 0.0
+    val inRange = rawTemp in lowThreshold..highThreshold
     val displayTemp = if (preferredUnit == "F") {
         if (rawTemp > -50.0) String.format(Locale.US, "%.1f", (rawTemp * 9.0 / 5.0) + 32.0) else "--.-"
     } else {
         if (rawTemp > -50.0) String.format(Locale.US, "%.1f", rawTemp) else "--.-"
     }
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
-    val inRange = rawTemp in lowThreshold..highThreshold
+
+    // Animated Breathing Eco Pulse
+    val infiniteTransition = rememberInfiniteTransition(label = "ecoPulse")
+    val leafScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = if (inRange && isConnected) 1.10f else 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "leafScale"
+    )
+
+    // Animated progress indicator fraction (mapped from 10°C to 35°C)
+    val targetFraction = remember(rawTemp) {
+        if (rawTemp <= 10.0) 0.05f
+        else if (rawTemp >= 35.0) 0.95f
+        else ((rawTemp - 10.0) / (35.0 - 10.0)).toFloat().coerceIn(0.05f, 0.95f)
+    }
+    val animatedProgress by animateFloatAsState(
+        targetValue = if (isConnected) targetFraction else 0.5f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "ambientProgress"
+    )
 
     FluxBackground(darkTheme = darkTheme) {
         Scaffold(
             containerColor = Color.Transparent
         ) { padding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .statusBarsPadding()
-                    .padding(horizontal = 20.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.Start
+                    .padding(padding),
+                contentAlignment = Alignment.TopCenter
             ) {
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Top Header Row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 640.dp)
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Top Navigation Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
+                                .clip(CircleShape)
+                                .background(colors.cardBg)
+                                .border(0.5.dp, colors.cardBorder, CircleShape)
+                                .clickable { onBack() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = colors.textPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(14.dp))
+
+                        Column {
+                            Text(
+                                text = "Environment Profile",
+                                color = colors.textPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = (-0.3).sp
+                            )
+                            Text(
+                                text = "Ambient thermal tracking & grow rooms",
+                                color = colors.textSecondary,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Hero Ambient Temperature Card
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .shadow(2.dp, CircleShape, spotColor = Color(0x10000000))
-                            .clip(CircleShape)
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                            .clip(RoundedCornerShape(24.dp))
                             .background(colors.cardBg)
-                            .border(0.5.dp, colors.cardBorder, CircleShape)
-                            .clickable { onBack() },
-                        contentAlignment = Alignment.Center
+                            .border(
+                                width = if (inRange) 1.dp else 1.5.dp,
+                                color = if (inRange) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFFEF4444).copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(24.dp)
+                            )
+                            .padding(20.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = colors.textPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Text(
-                        text = "Environment Profile",
-                        color = colors.textPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.3).sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Hero Ambient Temperature Card
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(colors.cardBg)
-                        .border(
-                            width = if (inRange) 1.dp else 1.5.dp,
-                            color = if (inRange) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFFEF4444).copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(24.dp)
-                        )
-                        .padding(20.dp)
-                ) {
-                    Column {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFF10B981).copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Eco,
-                                        contentDescription = null,
-                                        tint = Color(0xFF10B981),
-                                        modifier = Modifier.size(20.dp)
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(38.dp)
+                                            .scale(leafScale)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF10B981).copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Eco,
+                                            contentDescription = null,
+                                            tint = Color(0xFF10B981),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = "Ambient Thermal Band",
+                                        color = colors.textPrimary,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = "Ambient Thermal Band",
-                                    color = colors.textPrimary,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (inRange) Color(0xFF10B981).copy(alpha = 0.14f) else Color(0xFFEF4444).copy(alpha = 0.14f))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = if (inRange) "IN RANGE" else "OUT OF BAND",
+                                        color = if (inRange) Color(0xFF10B981) else Color(0xFFEF4444),
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
 
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Text(
+                                text = if (isConnected) "$displayTemp $unitSymbol" else "--.-",
+                                fontSize = 44.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (inRange) colors.textPrimary else Color(0xFFEF4444)
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = if (!isConnected) "Sensor Disconnected"
+                                else if (inRange) "Ambient comfort range optimal (${lowThreshold.toInt()}°C – ${highThreshold.toInt()}°C)"
+                                else "Thermal limits breached! Regulate ventilation.",
+                                color = if (inRange) colors.textSecondary else Color(0xFFEF4444),
+                                fontSize = 12.5.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(18.dp))
+
+                            // Live Dynamic Ambient Range Bar
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (inRange) Color(0xFF10B981).copy(alpha = 0.14f) else Color(0xFFEF4444).copy(alpha = 0.14f))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    .fillMaxWidth()
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(Color(0xFFE2E8F0))
                             ) {
-                                Text(
-                                    text = if (inRange) "IN RANGE" else "OUT OF BAND",
-                                    color = if (inRange) Color(0xFF10B981) else Color(0xFFEF4444),
-                                    fontSize = 10.5.sp,
-                                    fontWeight = FontWeight.Bold
+                                // Optimal zone green band (18 to 26 out of 10 to 35 -> ~32% to 64%)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(0.32f)
+                                        .padding(start = 0.dp)
+                                        .offset(x = 80.dp)
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(Color(0xFF10B981).copy(alpha = 0.45f))
+                                )
+
+                                // Animated Live Temp Marker
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(animatedProgress)
+                                        .clip(RoundedCornerShape(5.dp))
+                                        .background(
+                                            brush = Brush.horizontalGradient(
+                                                colors = listOf(FluxOrange, Color(0xFF10B981))
+                                            )
+                                        )
                                 )
                             }
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = if (isConnected) "$displayTemp $unitSymbol" else "--.-",
-                            fontSize = 44.sp,
-                            fontWeight = FontWeight.Black,
-                            color = if (inRange) colors.textPrimary else Color(0xFFEF4444)
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = if (!isConnected) "Sensor Disconnected"
-                                   else if (inRange) "Ambient comfort range optimal (${lowThreshold.toInt()}°C - ${highThreshold.toInt()}°C)"
-                                   else "Thermal limits breached! Regulate ventilation.",
-                            color = if (inRange) colors.textSecondary else Color(0xFFEF4444),
-                            fontSize = 12.5.sp
-                        )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Target Band Configuration Card
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                        .clip(RoundedCornerShape(24.dp))
-                        .background(colors.cardBg)
-                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
-                        .padding(18.dp)
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(
-                            text = "Target Range Limits",
-                            color = colors.textPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
+                    // Target Band Configuration Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
+                            .clip(RoundedCornerShape(24.dp))
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                            .padding(18.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text(
+                                text = "Target Range Limits",
+                                color = colors.textPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Lower Threshold", color = colors.textSecondary, fontSize = 13.sp)
-                            Text("${lowThreshold.toInt()} °C", color = FluxOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                        }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Lower Threshold", color = colors.textSecondary, fontSize = 13.sp)
+                                Text("${lowThreshold.toInt()} °C", color = FluxOrange, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
 
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                            HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Upper Threshold", color = colors.textSecondary, fontSize = 13.sp)
-                            Text("${highThreshold.toInt()} °C", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Upper Threshold", color = colors.textSecondary, fontSize = 13.sp)
+                                Text("${highThreshold.toInt()} °C", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                // Scope Transparency Card
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(colors.pillBg)
-                        .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
-                        .padding(16.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.Top) {
-                        Icon(
-                            imageVector = Icons.Default.Info,
-                            contentDescription = null,
-                            tint = FluxOrange,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Hardware Notice: This profile monitors ambient thermal telemetry via the high-precision DS18B20 digital probe. It measures temperature only and does not measure relative humidity, barometric pressure, or air quality.",
-                            color = colors.textSecondary,
-                            fontSize = 11.5.sp,
-                            lineHeight = 16.sp
-                        )
+                    // Scope Transparency Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(colors.pillBg)
+                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
+                            .padding(16.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = FluxOrange,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "Environment profile targets ambient growth rooms, terrariums, and storage units using direct DS18B20 hardware telemetry.",
+                                color = colors.textSecondary,
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp
+                            )
+                        }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(40.dp))
+                }
             }
         }
     }
