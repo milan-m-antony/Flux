@@ -87,13 +87,13 @@ fun FluxProfilesScreen(
             horizontalAlignment = Alignment.Start
         ) {
             // Spacer to clear the fixed top header cleanly
-            Spacer(modifier = Modifier.height(72.dp))
+            Spacer(modifier = Modifier.height(68.dp))
 
             // 1. Responsive Header (No back button, modern status badge)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = 2.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -104,7 +104,7 @@ fun FluxProfilesScreen(
                         Text(
                             text = "Monitoring Profiles",
                             color = colors.textPrimary,
-                            fontSize = 24.sp,
+                            fontSize = 23.sp,
                             fontWeight = FontWeight.Black,
                             letterSpacing = (-0.5).sp
                         )
@@ -112,7 +112,7 @@ fun FluxProfilesScreen(
                         Text(
                             text = "Select a profile to transform app theme & presets",
                             color = colors.textSecondary,
-                            fontSize = 12.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -120,23 +120,23 @@ fun FluxProfilesScreen(
                     // Active Profile Badge Pill
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(colors.primary.copy(alpha = 0.12f))
-                            .border(0.8.dp, colors.primary.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 11.dp, vertical = 6.dp)
+                            .border(0.8.dp, colors.primary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(7.dp)
+                                    .size(6.dp)
                                     .clip(CircleShape)
                                     .background(colors.primary)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(5.dp))
                             Text(
                                 text = activeProfile.uppercase(),
                                 color = colors.primary,
-                                fontSize = 10.5.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 0.5.sp
                             )
@@ -145,7 +145,7 @@ fun FluxProfilesScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 2. Card 1 — Live Monitor (Signature Orange)
             AnimatedVisibility(
@@ -175,7 +175,7 @@ fun FluxProfilesScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 3. Card 2 — Environment (Nature Green with Falling Leaves Effect)
             AnimatedVisibility(
@@ -206,7 +206,7 @@ fun FluxProfilesScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 4. Card 3 — Liquid (Aquatic Blue with Water Wave Effect)
             AnimatedVisibility(
@@ -237,7 +237,7 @@ fun FluxProfilesScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 5. Card 4 — Fermentation (Golden Amber with Rising Effervescence)
             AnimatedVisibility(
@@ -268,7 +268,7 @@ fun FluxProfilesScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(96.dp))
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
@@ -410,16 +410,16 @@ private fun DynamicProfileThemeCard(
             .fillMaxWidth()
             .scale(cardScale)
             .shadow(
-                elevation = if (isActive) 6.dp else 2.dp,
-                shape = RoundedCornerShape(22.dp),
+                elevation = if (isActive) 5.dp else 2.dp,
+                shape = RoundedCornerShape(18.dp),
                 spotColor = if (isActive) accentColor.copy(alpha = 0.25f) else Color(0x10000000)
             )
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(18.dp))
             .background(Color.White)
             .border(
-                width = if (isActive) 1.8.dp else 0.5.dp,
+                width = if (isActive) 1.6.dp else 0.5.dp,
                 color = if (isActive) accentColor.copy(alpha = activeBorderAlpha) else Color(0xFFEEF2F6),
-                shape = RoundedCornerShape(22.dp)
+                shape = RoundedCornerShape(18.dp)
             )
             .clickable(interactionSource = interactionSource, indication = null) { onClick() }
     ) {
@@ -615,22 +615,22 @@ private fun DynamicProfileThemeCard(
             }
         }
 
-        // Foreground Card Content Layout
+        // Foreground Card Content Layout (Refined compact & responsive proportions)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+                .padding(horizontal = 14.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Floating High-Quality Transparent Image with Soft Glow
             Box(
-                modifier = Modifier.size(76.dp),
+                modifier = Modifier.size(56.dp),
                 contentAlignment = Alignment.Center
             ) {
                 // Ambient soft radial glow aura
                 Box(
                     modifier = Modifier
-                        .size(68.dp)
+                        .size(50.dp)
                         .clip(CircleShape)
                         .background(
                             Brush.radialGradient(
@@ -649,33 +649,33 @@ private fun DynamicProfileThemeCard(
                     contentDescription = title,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier
-                        .size(66.dp)
-                        .scale(if (isActive) 1.06f else 1.0f)
+                        .size(48.dp)
+                        .scale(if (isActive) 1.05f else 1.0f)
                 )
 
                 if (isActive) {
                     Box(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(2.dp)
-                            .size(20.dp)
-                            .shadow(3.dp, CircleShape, spotColor = accentColor)
+                            .padding(1.dp)
+                            .size(17.dp)
+                            .shadow(2.dp, CircleShape, spotColor = accentColor)
                             .clip(CircleShape)
                             .background(accentColor)
-                            .border(1.5.dp, Color.White, CircleShape),
+                            .border(1.2.dp, Color.White, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Check,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(11.dp)
+                            modifier = Modifier.size(10.dp)
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             // Information Column
             Column(modifier = Modifier.weight(1f)) {
@@ -683,22 +683,22 @@ private fun DynamicProfileThemeCard(
                     Text(
                         text = title,
                         color = FluxTextDark,
-                        fontSize = 16.5.sp,
+                        fontSize = 15.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                     if (isActive) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(6.dp))
                                 .background(accentColor.copy(alpha = 0.12f))
-                                .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                                .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 1.5.dp)
                         ) {
                             Text(
                                 text = "ACTIVE",
                                 color = accentColor,
-                                fontSize = 9.sp,
+                                fontSize = 8.5.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 0.5.sp
                             )
@@ -706,53 +706,43 @@ private fun DynamicProfileThemeCard(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(1.dp))
 
                 Text(
                     text = subtitle,
                     color = FluxTextMuted,
-                    fontSize = 11.5.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp
+                    lineHeight = 14.5.sp
                 )
 
-                Spacer(modifier = Modifier.height(7.dp))
+                Spacer(modifier = Modifier.height(5.dp))
 
                 // Target Range Tag with Theme Gradient Accent
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(accentSoft)
-                            .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 9.dp, vertical = 3.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = targetRange,
-                                color = accentColor,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentSoft)
+                        .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = targetRange,
+                            color = accentColor,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Tap to apply theme",
-                        color = FluxTextLight,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Normal
-                    )
                 }
             }
 
@@ -761,7 +751,7 @@ private fun DynamicProfileThemeCard(
             // Action Arrow Circle Button
             Box(
                 modifier = Modifier
-                    .size(34.dp)
+                    .size(30.dp)
                     .clip(CircleShape)
                     .background(if (isActive) accentColor else Color(0xFFF1F5F9)),
                 contentAlignment = Alignment.Center
@@ -770,7 +760,7 @@ private fun DynamicProfileThemeCard(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Apply Theme",
                     tint = if (isActive) Color.White else FluxTextMuted,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }

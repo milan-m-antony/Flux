@@ -860,13 +860,13 @@ private fun TemperatureTrendCard(
     Box(
         modifier = modifier
             .shadow(
-                elevation = 4.dp,
-                shape = RoundedCornerShape(20.dp),
+                elevation = 3.dp,
+                shape = RoundedCornerShape(18.dp),
                 spotColor = Color(0x10000000)
             )
-            .background(colors.cardBg, RoundedCornerShape(20.dp))
-            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(20.dp))
-            .padding(14.dp)
+            .background(colors.cardBg, RoundedCornerShape(18.dp))
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Column {
             // Header Row: Title + Dropdown Selector
@@ -879,14 +879,14 @@ private fun TemperatureTrendCard(
                     Text(
                         text = "Temperature Trend",
                         color = colors.textPrimary,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(1.dp))
                     Text(
                         text = selectedFilter.subtitle,
                         color = colors.textSecondary,
-                        fontSize = 10.5.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
@@ -895,25 +895,25 @@ private fun TemperatureTrendCard(
                 Box {
                     Row(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .background(colors.pillBg)
-                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(14.dp))
+                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(12.dp))
                             .clickable { dropdownExpanded = true }
-                            .padding(horizontal = 9.dp, vertical = 5.dp),
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = selectedFilter.label,
                             color = colors.textPrimary,
-                            fontSize = 11.5.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
+                        Spacer(modifier = Modifier.width(2.dp))
                         Icon(
                             imageVector = Icons.Filled.ArrowDropDown,
                             contentDescription = "Select Time Range",
                             tint = colors.textSecondary,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     }
 
@@ -942,13 +942,13 @@ private fun TemperatureTrendCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
-            // Smooth Wavy Spline Chart with Interactive Touch Scrubbing & Tooltip (Height ~ 125.dp)
+            // Smooth Wavy Spline Chart with Interactive Touch Scrubbing (Responsive height ~ 84.dp)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(125.dp)
+                    .height(84.dp)
             ) {
                 InteractiveTrendChart(
                     filter = selectedFilter,
@@ -961,42 +961,31 @@ private fun TemperatureTrendCard(
                 )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Summary row: Min, Max, Average pills (Equal width weight 1f)
+            // Responsive Summary Micro-Stat Pills Row (Min, Avg, Max)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                // Min Card: Light blue container + blue thermometer
-                SummaryStatCard(
-                    iconBgColor = if (darkTheme) Color(0xFF1E293B) else Color(0xFFEBF3FF),
-                    iconTint = Color(0xFF2563EB),
-                    icon = Icons.Outlined.Thermostat,
+                CompactStatPill(
                     label = "Min",
                     value = convertTemp(realMinTemp),
+                    dotColor = Color(0xFF2563EB),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
-
-                // Max Card: Light peach container + orange up arrow
-                SummaryStatCard(
-                    iconBgColor = if (darkTheme) Color(0xFF332014) else Color(0xFFFFEDE3),
-                    iconTint = Color(0xFFEA580C),
-                    icon = Icons.Default.North,
+                CompactStatPill(
+                    label = "Avg",
+                    value = convertTemp(realAvgTemp),
+                    dotColor = Color(0xFF64748B),
+                    colors = colors,
+                    modifier = Modifier.weight(1f)
+                )
+                CompactStatPill(
                     label = "Max",
                     value = convertTemp(realMaxTemp),
-                    colors = colors,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Average Card: Light slate container + slate bar chart
-                SummaryStatCard(
-                    iconBgColor = if (darkTheme) Color(0xFF262F3E) else Color(0xFFF0F3FA),
-                    iconTint = Color(0xFF64748B),
-                    icon = Icons.Outlined.BarChart,
-                    label = "Average",
-                    value = convertTemp(realAvgTemp),
+                    dotColor = Color(0xFFEA580C),
                     colors = colors,
                     modifier = Modifier.weight(1f)
                 )
@@ -1006,61 +995,53 @@ private fun TemperatureTrendCard(
 }
 
 @Composable
-private fun SummaryStatCard(
-    iconBgColor: Color,
-    iconTint: Color,
-    icon: ImageVector,
+private fun CompactStatPill(
     label: String,
     value: String,
+    dotColor: Color,
     colors: FluxColors,
     modifier: Modifier = Modifier
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val cardScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+    val pillScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
-        label = "statCardScale"
+        label = "pillScale"
     )
 
-    Row(
+    Box(
         modifier = modifier
-            .scale(cardScale)
+            .scale(pillScale)
             .clickable(interactionSource = interactionSource, indication = null) {}
-            .background(colors.pillBg, RoundedCornerShape(12.dp))
-            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clip(RoundedCornerShape(10.dp))
+            .background(colors.pillBg)
+            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(10.dp))
+            .padding(horizontal = 6.dp, vertical = 5.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(iconBgColor),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(16.dp)
+            Box(
+                modifier = Modifier
+                    .size(5.dp)
+                    .clip(CircleShape)
+                    .background(dotColor)
             )
-        }
-        Spacer(modifier = Modifier.width(6.dp))
-        Column(verticalArrangement = Arrangement.Center) {
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
-                text = label,
+                text = "$label ",
                 color = colors.textSecondary,
                 fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1
+                fontWeight = FontWeight.Medium
             )
             Text(
                 text = value,
                 color = colors.textPrimary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -1156,8 +1137,8 @@ private fun InteractiveTrendChart(
                             detectTapGestures(
                                 onPress = { offset ->
                                     isDragging = true
-                                    val leftPaddingPx = 28.dp.toPx()
-                                    val rightPaddingPx = 10.dp.toPx()
+                                    val leftPaddingPx = 22.dp.toPx()
+                                    val rightPaddingPx = 6.dp.toPx()
                                     val chartW = size.width - leftPaddingPx - rightPaddingPx
                                     if (chartW > 0) {
                                         touchFraction = ((offset.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
@@ -1171,8 +1152,8 @@ private fun InteractiveTrendChart(
                             detectDragGestures(
                                 onDragStart = { offset ->
                                     isDragging = true
-                                    val leftPaddingPx = 28.dp.toPx()
-                                    val rightPaddingPx = 10.dp.toPx()
+                                    val leftPaddingPx = 22.dp.toPx()
+                                    val rightPaddingPx = 6.dp.toPx()
                                     val chartW = size.width - leftPaddingPx - rightPaddingPx
                                     if (chartW > 0) {
                                         touchFraction = ((offset.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
@@ -1181,8 +1162,8 @@ private fun InteractiveTrendChart(
                                 onDragEnd = { isDragging = false },
                                 onDragCancel = { isDragging = false }
                             ) { change, _ ->
-                                val leftPaddingPx = 28.dp.toPx()
-                                val rightPaddingPx = 10.dp.toPx()
+                                val leftPaddingPx = 22.dp.toPx()
+                                val rightPaddingPx = 6.dp.toPx()
                                 val chartW = size.width - leftPaddingPx - rightPaddingPx
                                 if (chartW > 0) {
                                     touchFraction = ((change.position.x - leftPaddingPx) / chartW).coerceIn(0f, 1f)
@@ -1196,10 +1177,10 @@ private fun InteractiveTrendChart(
             val width = size.width
             val height = size.height
 
-            val leftPadding = 26.dp.toPx()
-            val rightPadding = 8.dp.toPx()
-            val bottomPadding = 18.dp.toPx()
-            val topPadding = 24.dp.toPx()
+            val leftPadding = 22.dp.toPx()
+            val rightPadding = 6.dp.toPx()
+            val bottomPadding = 10.dp.toPx()
+            val topPadding = 10.dp.toPx()
 
             val chartWidth = width - leftPadding - rightPadding
             val chartHeight = height - topPadding - bottomPadding
@@ -1356,21 +1337,21 @@ private fun InteractiveTrendChart(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .fillMaxHeight()
-                .padding(top = 22.dp, bottom = 18.dp),
+                .padding(top = 10.dp, bottom = 10.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             yLabels.forEach { label ->
-                Text(label, color = FluxTextLight, fontSize = 8.5.sp, fontWeight = FontWeight.Medium)
+                Text(label, color = FluxTextLight, fontSize = 7.5.sp, fontWeight = FontWeight.Medium)
             }
         }
 
         if (hasRealData) {
             // Tooltip text overlay aligned with the active marker
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                val leftPaddingPx = 26.dp
-                val rightPaddingPx = 8.dp
-                val topPaddingPx = 24.dp
-                val bottomPaddingPx = 18.dp
+                val leftPaddingPx = 22.dp
+                val rightPaddingPx = 6.dp
+                val topPaddingPx = 10.dp
+                val bottomPaddingPx = 10.dp
 
                 val chartW = maxWidth - leftPaddingPx - rightPaddingPx
                 val chartH = maxHeight - topPaddingPx - bottomPaddingPx
@@ -1379,10 +1360,10 @@ private fun InteractiveTrendChart(
                 val normalizedActiveY = 1f - ((rawTempC - 10f) / 30f).coerceIn(0f, 1f)
                 val activeYPx = topPaddingPx + (chartH * normalizedActiveY)
 
-                val badgeWPx = 46.dp
-                val badgeHPx = 20.dp
+                val badgeWPx = 42.dp
+                val badgeHPx = 18.dp
                 val badgeLeft = (activeXPx - badgeWPx / 2).coerceIn(leftPaddingPx, maxWidth - rightPaddingPx - badgeWPx)
-                val badgeTop = activeYPx - badgeHPx - 6.dp
+                val badgeTop = activeYPx - badgeHPx - 4.dp
 
                 Box(
                     modifier = Modifier
@@ -1393,7 +1374,7 @@ private fun InteractiveTrendChart(
                     Text(
                         text = displayTempStr,
                         color = Color.White,
-                        fontSize = 9.sp,
+                        fontSize = 8.5.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
