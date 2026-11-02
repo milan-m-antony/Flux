@@ -106,17 +106,20 @@ fun FluxDeviceScreen(
         label = "StatusPulse"
     )
 
-    FluxBackground(darkTheme = false) {
-        Box(
+    FluxBackground(darkTheme = false, activeProfile = activeProfile) {
+        BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter
         ) {
+            val screenWidth = maxWidth
+            val isNarrow = screenWidth < 380.dp
+
             Column(
                 modifier = Modifier
                     .widthIn(max = 640.dp)
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = if (isNarrow) 12.dp else 16.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -151,12 +154,12 @@ fun FluxDeviceScreen(
                     Text(
                         text = "Device Information",
                         color = colors.textPrimary,
-                        fontSize = 20.sp,
+                        fontSize = if (isNarrow) 18.sp else 20.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = (-0.4).sp
                     )
                     Text(
-                        text = "Flux ESP32 & Telemetry Hardware",
+                        text = "Flux Smart Telemetry Hardware",
                         color = colors.textSecondary,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium
@@ -164,7 +167,7 @@ fun FluxDeviceScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // 2. Hero Animated Device Showcase Card
             Box(
@@ -174,16 +177,16 @@ fun FluxDeviceScreen(
                     .clip(RoundedCornerShape(28.dp))
                     .background(colors.cardBg)
                     .border(0.5.dp, colors.cardBorder, RoundedCornerShape(28.dp))
-                    .padding(20.dp)
+                    .padding(if (isNarrow) 14.dp else 20.dp)
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Animated floating ESP32 Board with glowing aura
+                    // Animated floating Flux Smart Sensor with glowing aura
                     Box(
                         modifier = Modifier
-                            .size(170.dp)
+                            .size(if (isNarrow) 140.dp else 165.dp)
                             .offset(y = floatY.dp)
                             .scale(boardScale),
                         contentAlignment = Alignment.Center
@@ -191,38 +194,37 @@ fun FluxDeviceScreen(
                         // Ambient Radial Glow
                         Box(
                             modifier = Modifier
-                                .size(150.dp)
+                                .size(if (isNarrow) 125.dp else 150.dp)
                                 .scale(1.25f)
                                 .alpha(glowPulse)
                                 .clip(CircleShape)
                                 .background(
                                     Brush.radialGradient(
                                         colors = listOf(
-                                            colors.primary.copy(alpha = 0.40f),
-                                            colors.primary.copy(alpha = 0.08f),
+                                            FluxOrange.copy(alpha = 0.45f),
+                                            FluxOrangeSoft.copy(alpha = 0.15f),
                                             Color.Transparent
                                         )
                                     )
                                 )
                         )
 
-                        // Outer glassmorphism rounded frame
+                        // Outer modern rounded frame
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color(0x20000000))
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color(0xFFF8FAFC))
-                                .border(1.dp, colors.primaryBorder, RoundedCornerShape(24.dp))
-                                .padding(6.dp)
+                                .shadow(8.dp, RoundedCornerShape(26.dp), spotColor = Color(0x18000000))
+                                .clip(RoundedCornerShape(26.dp))
+                                .background(Color(0xFFFFF9F5))
+                                .border(1.2.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(26.dp))
+                                .padding(if (isNarrow) 8.dp else 12.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Image(
-                                painter = painterResource(id = R.drawable.esp32_board),
-                                contentDescription = "ESP32 Board",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(18.dp))
+                                painter = painterResource(id = R.drawable.ic_flux_device),
+                                contentDescription = "Flux Smart Telemetry Sensor",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
@@ -233,7 +235,7 @@ fun FluxDeviceScreen(
                     Text(
                         text = deviceName,
                         color = colors.textPrimary,
-                        fontSize = 22.sp,
+                        fontSize = if (isNarrow) 20.sp else 22.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = (-0.5).sp
                     )
@@ -544,39 +546,40 @@ fun FluxDeviceScreen(
                     )
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Ping Button
-                    OutlinedButton(
-                        onClick = {
-                            val pingSuccess = viewModel.bleManager.sendCommand("PING")
-                            if (pingSuccess) {
-                                Toast.makeText(context, "Ping packet sent to $deviceName via BLE", Toast.LENGTH_SHORT).show()
-                            } else {
-                                Toast.makeText(context, if (isOnline) "Ping sent to $deviceName" else "Device offline", Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        modifier = Modifier.weight(1f).height(46.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = colors.textPrimary
-                        ),
-                        border = BorderStroke(1.dp, colors.cardBorder)
+                if (isNarrow && isOnline) {
+                    // Responsive 2-row layout on narrower devices to prevent button squeeze
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = FluxOrange
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Ping", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
+                        // Ping Button
+                        OutlinedButton(
+                            onClick = {
+                                val pingSuccess = viewModel.bleManager.sendCommand("PING")
+                                if (pingSuccess) {
+                                    Toast.makeText(context, "Ping packet sent to $deviceName via BLE", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, if (isOnline) "Ping sent to $deviceName" else "Device offline", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = colors.textPrimary
+                            ),
+                            border = BorderStroke(1.dp, colors.cardBorder)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = FluxOrange
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Ping", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
 
-                    // Turn Off BLE Button
-                    if (isOnline) {
+                        // Turn Off BLE Button
                         OutlinedButton(
                             onClick = {
                                 viewModel.turnOffBle()
@@ -600,7 +603,7 @@ fun FluxDeviceScreen(
                     // Diagnostics Button
                     Button(
                         onClick = { onNavigateToDiagnostics() },
-                        modifier = Modifier.weight(1.2f).height(46.dp),
+                        modifier = Modifier.fillMaxWidth().height(46.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.pillBg,
@@ -613,8 +616,82 @@ fun FluxDeviceScreen(
                             modifier = Modifier.size(16.dp),
                             tint = FluxOrange
                         )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Diagnostics", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Open Hardware Diagnostics", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        // Ping Button
+                        OutlinedButton(
+                            onClick = {
+                                val pingSuccess = viewModel.bleManager.sendCommand("PING")
+                                if (pingSuccess) {
+                                    Toast.makeText(context, "Ping packet sent to $deviceName via BLE", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, if (isOnline) "Ping sent to $deviceName" else "Device offline", Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = colors.textPrimary
+                            ),
+                            border = BorderStroke(1.dp, colors.cardBorder)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = FluxOrange
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Ping", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        // Turn Off BLE Button
+                        if (isOnline) {
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.turnOffBle()
+                                    Toast.makeText(context, "Turned off BLE session", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.weight(1.3f).height(46.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.dp, colors.cardBorder)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.BluetoothDisabled,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = colors.textSecondary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Turn Off BLE", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                            }
+                        }
+
+                        // Diagnostics Button
+                        Button(
+                            onClick = { onNavigateToDiagnostics() },
+                            modifier = Modifier.weight(1.2f).height(46.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = colors.pillBg,
+                                contentColor = colors.textPrimary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Settings,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = FluxOrange
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Diagnostics", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
@@ -682,13 +759,17 @@ private fun TechDetailRow(
             text = label,
             color = colors.textSecondary,
             fontSize = 12.sp,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f, fill = false)
         )
+        Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = value,
             color = colors.textPrimary,
             fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.weight(1.3f, fill = false)
         )
     }
 }

@@ -89,42 +89,6 @@ fun FluxProfilesScreen(
             // Clearance below fixed header
             Spacer(modifier = Modifier.height(86.dp))
 
-            // Active Profile Badge Pill Row (No title / description)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(colors.primary.copy(alpha = 0.12f))
-                        .border(0.8.dp, colors.primary.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(colors.primary)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = activeProfile.uppercase(),
-                            color = colors.primary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
             // 2. Card 1 — Live Monitor (Signature Orange)
             AnimatedVisibility(
                 visible = isVisible,

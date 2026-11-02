@@ -132,7 +132,7 @@ fun FluxApp(viewModel: MainViewModel) {
 
     var showWifiSetupSheet by remember { mutableStateOf(false) }
 
-    FluxBackground(darkTheme = isDarkTheme) {
+    FluxBackground(darkTheme = isDarkTheme, activeProfile = activeProfile) {
         Scaffold(
             containerColor = Color.Transparent
         ) { innerPadding ->
