@@ -59,27 +59,6 @@ fun FluxAlertsScreen(
     val unreadCount = notifications.count { !it.isRead }
 
     val infiniteTransition = rememberInfiniteTransition(label = "alertsPulse")
-    val bellPulseScale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = if (unreadCount > 0) 1.08f else 1.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bellPulse"
-    )
-
-    // Animated ringing bell wobble when unread notifications exist
-    val bellWobbleAngle by infiniteTransition.animateFloat(
-        initialValue = if (unreadCount > 0) -8f else 0f,
-        targetValue = if (unreadCount > 0) 8f else 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(260, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "bellWobble"
-    )
-
     // Dynamic emergency breach pulse glow for unread alert cards
     val alertPulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
@@ -119,91 +98,6 @@ fun FluxAlertsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Active Alerts Summary Banner Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(
-                        elevation = 4.dp,
-                        shape = RoundedCornerShape(22.dp),
-                        spotColor = Color(0x14000000)
-                    )
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                colors.primary.copy(alpha = 0.08f),
-                                colors.primary.copy(alpha = 0.16f)
-                            )
-                        )
-                    )
-                    .border(
-                        width = 0.5.dp,
-                        color = colors.primary.copy(alpha = 0.30f),
-                        shape = RoundedCornerShape(22.dp)
-                    )
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Circular Bell Icon with live breathing scale & ringing wobble
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .scale(bellPulseScale)
-                            .shadow(4.dp, CircleShape, spotColor = colors.primary.copy(alpha = 0.35f))
-                            .clip(CircleShape)
-                            .background(
-                                brush = Brush.verticalGradient(
-                                    colors = listOf(colors.primaryGradientStart, colors.primaryGradientEnd)
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Notifications,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier
-                                .size(22.dp)
-                                .graphicsLayer(rotationZ = bellWobbleAngle)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        AnimatedContent(
-                            targetState = unreadCount,
-                            transitionSpec = {
-                                fadeIn(animationSpec = tween(220)) togetherWith
-                                fadeOut(animationSpec = tween(220))
-                            },
-                            label = "alertCount"
-                        ) { count ->
-                            Text(
-                                text = if (count > 0) "$count Active Alert${if (count > 1) "s" else ""}"
-                                else "All Systems Normal",
-                                color = colors.textPrimary,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (unreadCount > 0) "Hardware telemetry limits breached" else "No active warnings or threshold breaches",
-                            color = colors.textSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
             // Dynamic alerts from Room DB
             if (notifications.isEmpty()) {
                 // Clean empty-state
@@ -241,7 +135,7 @@ fun FluxAlertsScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "All systems normal • Alerts will appear here when telemetry breaches limits or hardware warnings occur.",
+                            text = "Alerts will appear here when telemetry breaches limits or hardware warnings occur.",
                             color = colors.textSecondary,
                             fontSize = 12.5.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
