@@ -331,6 +331,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             createNotification(title, message, "ALERT")
                             if (pushAlerts.value) {
                                 com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = true)
+                            } else if (soundAlerts.value) {
+                                com.example.util.FluxNotificationHelper.playAlertSound(getApplication())
                             }
                         }
                     } else if (wasSensorDisconnected) {
@@ -362,6 +364,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 createNotification(title, message, "ALERT")
                                 if (pushAlerts.value) {
                                     com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = true)
+                                } else if (soundAlerts.value) {
+                                    com.example.util.FluxNotificationHelper.playAlertSound(getApplication())
                                 }
                             }
                         } else if (wasInBreach && reading.temp >= lowTempThreshold.value && reading.temp <= highTempThreshold.value) {

@@ -6,6 +6,7 @@ import com.example.data.NotificationEntity
 import com.example.util.FluxNotificationHelper
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +35,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             ?: "New notification from your Flux thermal monitoring node."
 
         val type = remoteMessage.data["type"]
-            ?: if (title.contains("Alert", ignoreCase = true) || body.contains("Alert", ignoreCase = true) || body.contains("exceeded", ignoreCase = true)) "ALERT"
+            ?: if (title.contains("Alert", ignoreCase = true) || body.contains("Alert", ignoreCase = true) || body.contains("exceeded", ignoreCase = true) || body.contains("breach", ignoreCase = true)) "ALERT"
                else if (title.contains("Warning", ignoreCase = true)) "WARNING"
                else "INFO"
 
@@ -59,12 +60,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        // 3. Dispatch system heads-up notification in Android notification shade
+        // 3. Dispatch system heads-up notification with audible alert sound & vibration
         FluxNotificationHelper.showSystemNotification(
             context = this,
             title = title,
             message = body,
-            isAlert = type == "ALERT"
+            isAlert = type == "ALERT" || type == "WARNING"
         )
     }
 
@@ -72,6 +73,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         super.onNewToken(token)
         Log.d(TAG, "onNewToken called. New token generated: $token")
         sendRegistrationToServer(token)
+        subscribeToDefaultTopics()
+    }
+
+    private fun subscribeToDefaultTopics() {
+        FirebaseMessaging.getInstance().subscribeToTopic("alerts")
+            .addOnSuccessListener { Log.d(TAG, "Subscribed to FCM topic: alerts") }
+        FirebaseMessaging.getInstance().subscribeToTopic("flux_alerts")
+            .addOnSuccessListener { Log.d(TAG, "Subscribed to FCM topic: flux_alerts") }
+        FirebaseMessaging.getInstance().subscribeToTopic("all")
+            .addOnSuccessListener { Log.d(TAG, "Subscribed to FCM topic: all") }
     }
 
     private fun sendRegistrationToServer(token: String) {
@@ -83,7 +94,16 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 .addOnSuccessListener { Log.d(TAG, "Token successfully saved to Firestore") }
                 .addOnFailureListener { e -> Log.e(TAG, "Failed to save token to Firestore", e) }
         } else {
-            Log.d(TAG, "No authenticated user. Token will not be saved to Firestore.")
+            Log.d(TAG, "No authenticated user. Storing device token in Firestore device_tokens.")
+            val data = hashMapOf(
+                "token" to token,
+                "updatedAt" to com.google.firebase.Timestamp.now(),
+                "device" to (android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL)
+            )
+            FirebaseFirestore.getInstance().collection("device_tokens").document("flux_default_device")
+                .set(data)
+                .addOnSuccessListener { Log.d(TAG, "Device token successfully saved to Firestore device_tokens") }
+                .addOnFailureListener { e -> Log.w(TAG, "Could not save device token to Firestore: ${e.message}") }
         }
     }
 }
