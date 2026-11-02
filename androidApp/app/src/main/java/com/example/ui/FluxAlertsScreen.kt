@@ -1,5 +1,6 @@
 package com.example.ui
 
+import android.widget.Toast
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,8 +52,9 @@ fun FluxAlertsScreen(
     onNotificationClick: () -> Unit = {},
     onNavigateToAlertSettings: () -> Unit = {}
 ) {
-    val isDarkTheme by viewModel.isDarkTheme.collectAsState()
-    val colors = rememberFluxColors(isDarkTheme)
+    val context = LocalContext.current
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
     val notifications by viewModel.allNotifications.collectAsState()
     val unreadCount = notifications.count { !it.isRead }
 
@@ -104,23 +107,17 @@ fun FluxAlertsScreen(
             // Clearance below fixed header
             Spacer(modifier = Modifier.height(86.dp))
 
-            // Action Buttons Row (Mark Read, Clear All, Settings)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                AlertHeaderActions(
-                    unreadCount = unreadCount,
-                    hasNotifications = notifications.isNotEmpty(),
-                    colors = colors,
-                    onConfig = onNavigateToAlertSettings,
-                    onMarkAllRead = { viewModel.markAllNotificationsAsRead() },
-                    onClearAll = { viewModel.clearAllNotifications() }
-                )
-            }
+            // Top Segmented Curved Action Bar (Config / Read All / Delete)
+            AlertCurvedActionBar(
+                unreadCount = unreadCount,
+                notificationsCount = notifications.size,
+                colors = colors,
+                onConfig = onNavigateToAlertSettings,
+                onMarkAllRead = { viewModel.markAllNotificationsAsRead() },
+                onClearAll = { viewModel.clearAllNotifications() }
+            )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Active Alerts Summary Banner Card
             Box(
@@ -134,12 +131,15 @@ fun FluxAlertsScreen(
                     .clip(RoundedCornerShape(22.dp))
                     .background(
                         brush = Brush.horizontalGradient(
-                            colors = listOf(Color(0xFFFFF9F5), Color(0xFFFFE8DC))
+                            colors = listOf(
+                                colors.primary.copy(alpha = 0.08f),
+                                colors.primary.copy(alpha = 0.16f)
+                            )
                         )
                     )
                     .border(
                         width = 0.5.dp,
-                        color = Color(0xFFFFD9C7),
+                        color = colors.primary.copy(alpha = 0.30f),
                         shape = RoundedCornerShape(22.dp)
                     )
                     .padding(horizontal = 16.dp, vertical = 14.dp)
@@ -148,16 +148,16 @@ fun FluxAlertsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Circular Orange Bell Icon with live breathing scale & ringing wobble
+                    // Circular Bell Icon with live breathing scale & ringing wobble
                     Box(
                         modifier = Modifier
                             .size(46.dp)
                             .scale(bellPulseScale)
-                            .shadow(4.dp, CircleShape, spotColor = FluxOrange.copy(alpha = 0.4f))
+                            .shadow(4.dp, CircleShape, spotColor = colors.primary.copy(alpha = 0.35f))
                             .clip(CircleShape)
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(FluxOrangeGradientStart, FluxOrangeGradientEnd)
+                                    colors = listOf(colors.primaryGradientStart, colors.primaryGradientEnd)
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -202,7 +202,7 @@ fun FluxAlertsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Dynamic alerts from Room DB
             if (notifications.isEmpty()) {
@@ -210,9 +210,10 @@ fun FluxAlertsScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .shadow(3.dp, RoundedCornerShape(22.dp), spotColor = Color(0x0C000000))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(colors.cardBg)
-                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(20.dp))
+                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
                         .padding(horizontal = 20.dp, vertical = 34.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -221,7 +222,7 @@ fun FluxAlertsScreen(
                             modifier = Modifier
                                 .size(52.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFF1F5F9)),
+                                .background(colors.pillBg),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -293,6 +294,7 @@ fun FluxAlertsScreen(
                             isAlert = isAlert,
                             pulseAlpha = alertPulseAlpha,
                             colors = colors,
+                            onMarkRead = { viewModel.markNotificationAsRead(notif.id) },
                             onDelete = { viewModel.dismissNotification(notif.id) }
                         )
                     }
@@ -306,14 +308,18 @@ fun FluxAlertsScreen(
 }
 
 @Composable
-private fun AlertHeaderActions(
+private fun AlertCurvedActionBar(
     unreadCount: Int,
-    hasNotifications: Boolean,
+    notificationsCount: Int,
     colors: FluxColors,
     onConfig: () -> Unit,
     onMarkAllRead: () -> Unit,
     onClearAll: () -> Unit
 ) {
+    val context = LocalContext.current
+    val hasUnread = unreadCount > 0
+    val hasNotifications = notificationsCount > 0
+
     val configInteraction = remember { MutableInteractionSource() }
     val isConfigPressed by configInteraction.collectIsPressedAsState()
     val configScale by animateFloatAsState(
@@ -322,95 +328,136 @@ private fun AlertHeaderActions(
         label = "configScale"
     )
 
-    // Config Button
-    Box(
+    val readInteraction = remember { MutableInteractionSource() }
+    val isReadPressed by readInteraction.collectIsPressedAsState()
+    val readScale by animateFloatAsState(
+        targetValue = if (isReadPressed) 0.94f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "readScale"
+    )
+
+    val deleteInteraction = remember { MutableInteractionSource() }
+    val isDeletePressed by deleteInteraction.collectIsPressedAsState()
+    val deleteScale by animateFloatAsState(
+        targetValue = if (isDeletePressed) 0.94f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "deleteScale"
+    )
+
+    // Segmented Curved Container (matches FluxHistoryScreen curved top tabs)
+    Row(
         modifier = Modifier
-            .scale(configScale)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFF1F5F9))
-            .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-            .clickable(interactionSource = configInteraction, indication = null) { onConfig() }
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(26.dp), spotColor = Color(0x10000000))
+            .background(colors.cardBg, RoundedCornerShape(26.dp))
+            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(26.dp))
+            .padding(4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // 1. Config Action Segment
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .scale(configScale)
+                .clip(RoundedCornerShape(22.dp))
+                .background(colors.pillBg)
+                .clickable(interactionSource = configInteraction, indication = null) {
+                    onConfig()
+                }
+                .padding(vertical = 9.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = Icons.Outlined.Tune,
                 contentDescription = "Alert Config",
-                tint = FluxOrange,
-                modifier = Modifier.size(15.dp)
+                tint = colors.primary,
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "Config",
                 color = colors.textPrimary,
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.SemiBold
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold
             )
         }
-    }
 
-    if (hasNotifications) {
-        if (unreadCount > 0) {
-            val readInteraction = remember { MutableInteractionSource() }
-            val isReadPressed by readInteraction.collectIsPressedAsState()
-            val readScale by animateFloatAsState(
-                targetValue = if (isReadPressed) 0.94f else 1.0f,
-                animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
-                label = "readScale"
-            )
+        Spacer(modifier = Modifier.width(4.dp))
 
-            Box(
-                modifier = Modifier
-                    .scale(readScale)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF1F5F9))
-                    .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-                    .clickable(interactionSource = readInteraction, indication = null) { onMarkAllRead() }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.DoneAll,
-                        contentDescription = "Mark all read",
-                        tint = FluxOrange,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Read All",
-                        color = colors.textPrimary,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-        }
-
-        val clearInteraction = remember { MutableInteractionSource() }
-        val isClearPressed by clearInteraction.collectIsPressedAsState()
-        val clearScale by animateFloatAsState(
-            targetValue = if (isClearPressed) 0.94f else 1.0f,
-            animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
-            label = "clearScale"
-        )
-
-        Box(
+        // 2. Read All Action Segment
+        Row(
             modifier = Modifier
-                .scale(clearScale)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFFEE2E2))
-                .border(0.5.dp, Color(0xFFFECACA), RoundedCornerShape(12.dp))
-                .clickable(interactionSource = clearInteraction, indication = null) { onClearAll() }
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            contentAlignment = Alignment.Center
+                .weight(1.2f)
+                .scale(readScale)
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    if (hasUnread) colors.primary.copy(alpha = 0.12f)
+                    else Color.Transparent
+                )
+                .clickable(interactionSource = readInteraction, indication = null) {
+                    if (hasUnread) {
+                        onMarkAllRead()
+                        Toast.makeText(context, "All alerts marked as read", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "No unread alerts", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .padding(vertical = 9.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.DoneAll,
+                contentDescription = "Mark all read",
+                tint = if (hasUnread) colors.primary else colors.textSecondary.copy(alpha = 0.45f),
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = if (hasUnread) "Read All ($unreadCount)" else "Read All",
+                color = if (hasUnread) colors.primary else colors.textSecondary.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                fontWeight = if (hasUnread) FontWeight.Bold else FontWeight.SemiBold
+            )
+        }
+
+        Spacer(modifier = Modifier.width(4.dp))
+
+        // 3. Delete Action Segment
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .scale(deleteScale)
+                .clip(RoundedCornerShape(22.dp))
+                .background(
+                    if (hasNotifications) Color(0xFFFEE2E2).copy(alpha = 0.75f)
+                    else Color.Transparent
+                )
+                .clickable(interactionSource = deleteInteraction, indication = null) {
+                    if (hasNotifications) {
+                        onClearAll()
+                        Toast.makeText(context, "Alert history cleared", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "No alerts to delete", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                .padding(vertical = 9.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.Outlined.DeleteOutline,
                 contentDescription = "Clear all alerts",
-                tint = Color(0xFFEF4444),
-                modifier = Modifier.size(15.dp)
+                tint = if (hasNotifications) Color(0xFFEF4444) else colors.textSecondary.copy(alpha = 0.45f),
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(5.dp))
+            Text(
+                text = "Delete",
+                color = if (hasNotifications) Color(0xFFDC2626) else colors.textSecondary.copy(alpha = 0.5f),
+                fontSize = 12.sp,
+                fontWeight = if (hasNotifications) FontWeight.Bold else FontWeight.SemiBold
             )
         }
     }
@@ -431,11 +478,12 @@ private fun AlertRecordItem(
     isAlert: Boolean,
     pulseAlpha: Float,
     colors: FluxColors,
+    onMarkRead: () -> Unit,
     onDelete: () -> Unit
 ) {
     val borderColor = if (!isRead) {
         if (isAlert) Color(0xFFEF4444).copy(alpha = pulseAlpha)
-        else FluxOrange.copy(alpha = pulseAlpha)
+        else colors.primary.copy(alpha = pulseAlpha)
     } else {
         colors.cardBorder
     }
@@ -451,10 +499,15 @@ private fun AlertRecordItem(
             .clip(RoundedCornerShape(20.dp))
             .background(colors.cardBg)
             .border(
-                width = if (!isRead) 1.4.dp else 0.5.dp,
+                width = if (!isRead) 1.2.dp else 0.5.dp,
                 color = borderColor,
                 shape = RoundedCornerShape(20.dp)
             )
+            .clickable {
+                if (!isRead) {
+                    onMarkRead()
+                }
+            }
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
