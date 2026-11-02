@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.MainViewModel
 import com.example.ui.theme.*
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -97,6 +99,20 @@ fun FluxHomeScreen(
     )
 
     val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
+
+    // Energetic harmonic transition when switching profiles
+    val profileSwitchTransition = remember { Animatable(1f) }
+    var prevProfile by remember { mutableStateOf(activeProfile) }
+    LaunchedEffect(activeProfile) {
+        if (prevProfile != activeProfile) {
+            prevProfile = activeProfile
+            profileSwitchTransition.snapTo(0f)
+            profileSwitchTransition.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(750, easing = FastOutSlowInEasing)
+            )
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -187,6 +203,8 @@ fun FluxHomeScreen(
                 isLive = isDeviceOnline,
                 darkTheme = false,
                 colors = colors,
+                activeProfile = activeProfile,
+                profileSwitchProgress = profileSwitchTransition.value,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(265.dp)
@@ -305,6 +323,7 @@ fun FluxHomeScreen(
                 unitSymbol = unitSymbol,
                 isFahrenheit = selectedUnit == "F",
                 colors = colors,
+                profileSwitchProgress = profileSwitchTransition.value,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -337,7 +356,9 @@ private fun TemperatureGauge(
     isLive: Boolean = true,
     modifier: Modifier = Modifier,
     darkTheme: Boolean = false,
-    colors: FluxColors = rememberFluxColors(darkTheme)
+    colors: FluxColors = rememberFluxColors(darkTheme),
+    activeProfile: String = "Live Monitor",
+    profileSwitchProgress: Float = 1f
 ) {
     val progress = ((temperature - minTemp) / (maxTemp - minTemp)).coerceIn(0f, 1f)
     val animatedProgress by animateFloatAsState(
@@ -374,6 +395,35 @@ private fun TemperatureGauge(
             repeatMode = RepeatMode.Reverse
         ),
         label = "liveDotPulse"
+    )
+
+    // Kinetic particle animations inside central display
+    val displayParticleProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "displayParticleProgress"
+    )
+    val displayWavePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(2600, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "displayWavePhase"
+    )
+    val displayRadarAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "displayRadarAngle"
     )
 
     // Accurate min/max labels converting properly for Fahrenheit
@@ -517,6 +567,17 @@ private fun TemperatureGauge(
                 center = thumbPos,
                 style = Stroke(width = 3.dp.toPx())
             )
+            // Profile Switch Radiant Expanding Burst Ripple
+            if (profileSwitchProgress < 1f) {
+                val burstAlpha = ((1f - profileSwitchProgress) * 0.45f).coerceIn(0f, 1f)
+                val burstRadius = radius * (0.65f + profileSwitchProgress * 0.45f)
+                drawCircle(
+                    color = colors.primary.copy(alpha = burstAlpha),
+                    radius = burstRadius,
+                    center = center,
+                    style = Stroke(width = (4f * (1f - profileSwitchProgress)).dp.toPx())
+                )
+            }
         }
 
         // Ambient Thermal Aura Glow (Warm amber-red when hot, cool cyan when cold, profile-themed when optimal)
@@ -533,10 +594,15 @@ private fun TemperatureGauge(
                 .background(thermalAuraColor.copy(alpha = if (hasData) 0.12f else 0f))
         )
 
-        // 3. Inner Elevated White/Card Circle (Comfortably sized at 158.dp)
+        val displayScale = if (profileSwitchProgress < 1f) {
+            1f + sin(profileSwitchProgress * PI.toFloat()) * 0.05f
+        } else 1f
+
+        // 3. Inner Elevated White/Card Circle (Comfortably sized at 158.dp) with Dynamic Profile Animation
         Box(
             modifier = Modifier
                 .size(158.dp)
+                .scale(displayScale)
                 .offset(y = 5.dp)
                 .shadow(
                     elevation = 9.dp,
@@ -546,9 +612,139 @@ private fun TemperatureGauge(
                 )
                 .clip(CircleShape)
                 .background(colors.cardBg)
-                .border(1.dp, colors.cardBorder, CircleShape),
+                .border(
+                    width = if (profileSwitchProgress < 1f) 1.8.dp else 1.dp,
+                    color = if (profileSwitchProgress < 1f) colors.primary.copy(alpha = 0.8f) else colors.cardBorder,
+                    shape = CircleShape
+                ),
             contentAlignment = Alignment.Center
         ) {
+            // Profile-Themed Kinetic Ambient Effects directly inside the central display circle
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val w = size.width
+                val h = size.height
+                when {
+                    activeProfile.contains("Environment", ignoreCase = true) -> {
+                        // Miniature botanical leaves drifting down inside the circular display
+                        val leaves = listOf(
+                            Triple(0.24f, 0.85f, Color(0xFF10B981)),
+                            Triple(0.50f, 1.15f, Color(0xFF059669)),
+                            Triple(0.76f, 0.90f, Color(0xFF34D399)),
+                            Triple(0.38f, 1.05f, Color(0xFF10B981))
+                        )
+                        leaves.forEachIndexed { idx, (relX, speed, col) ->
+                            val phase = idx * 1.5f
+                            val cycle = ((displayParticleProgress * speed + phase / (2f * PI.toFloat())) % 1f)
+                            val ly = cycle * (h + 16.dp.toPx()) - 8.dp.toPx()
+                            val lx = relX * w + sin(cycle * 3f * PI.toFloat() + phase) * 7.dp.toPx()
+                            val alphaNorm = when {
+                                cycle < 0.2f -> cycle / 0.2f
+                                cycle > 0.8f -> (1f - cycle) / 0.2f
+                                else -> 1f
+                            }
+                            val leafAlpha = (alphaNorm * 0.40f).coerceIn(0f, 1f)
+                            val leafW = 5.5.dp.toPx()
+                            val leafH = 9.dp.toPx()
+                            val rot = (cycle * 220f + idx * 45f) % 360f
+
+                            rotate(degrees = rot, pivot = Offset(lx, ly)) {
+                                val path = Path().apply {
+                                    moveTo(lx, ly - leafH * 0.5f)
+                                    cubicTo(lx + leafW * 0.6f, ly - leafH * 0.25f, lx + leafW * 0.6f, ly + leafH * 0.25f, lx, ly + leafH * 0.5f)
+                                    cubicTo(lx - leafW * 0.6f, ly + leafH * 0.25f, lx - leafW * 0.6f, ly - leafH * 0.25f, lx, ly - leafH * 0.5f)
+                                    close()
+                                }
+                                drawPath(path = path, color = col.copy(alpha = leafAlpha))
+                            }
+                        }
+                    }
+
+                    activeProfile.contains("Liquid", ignoreCase = true) -> {
+                        // Translucent aquatic wave washing across lower portion of display
+                        val wavePath = Path()
+                        wavePath.moveTo(0f, h)
+                        wavePath.lineTo(0f, h * 0.76f)
+                        for (x in 0..w.toInt() step 6) {
+                            val y = h * 0.78f + sin((x / w * 2.8f * PI + displayWavePhase).toFloat()) * 4.5.dp.toPx()
+                            wavePath.lineTo(x.toFloat(), y)
+                        }
+                        wavePath.lineTo(w, h)
+                        wavePath.close()
+                        drawPath(
+                            path = wavePath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(Color(0xFF38BDF8).copy(alpha = 0.16f), Color(0xFF0284C7).copy(alpha = 0.24f))
+                            )
+                        )
+                        // Floating micro aqua droplets
+                        val drops = listOf(0.25f to 0.5f, 0.52f to 1.8f, 0.78f to 3.2f)
+                        drops.forEachIndexed { _, (rx, phase) ->
+                            val cycle = ((displayParticleProgress * 0.9f + phase / (2f * PI.toFloat())) % 1f)
+                            val dy = h * 0.85f - cycle * h * 0.45f
+                            val dx = rx * w + sin(cycle * 3f * PI.toFloat() + phase) * 4.dp.toPx()
+                            drawCircle(
+                                color = Color(0xFF38BDF8).copy(alpha = (1f - cycle) * 0.40f),
+                                radius = 2.dp.toPx(),
+                                center = Offset(dx, dy)
+                            )
+                        }
+                    }
+
+                    activeProfile.contains("Fermentation", ignoreCase = true) -> {
+                        // Effervescent micro-bubbles rising inside display
+                        val bubbles = listOf(
+                            Triple(0.24f, 1.0f, 2.8f),
+                            Triple(0.42f, 1.4f, 2.0f),
+                            Triple(0.58f, 0.85f, 3.2f),
+                            Triple(0.76f, 1.25f, 2.2f),
+                            Triple(0.86f, 1.1f, 2.6f)
+                        )
+                        bubbles.forEachIndexed { idx, (relX, speed, sizeDp) ->
+                            val phase = idx * 1.4f
+                            val cycle = ((displayParticleProgress * speed + phase / (2f * PI.toFloat())) % 1f)
+                            val by = (1f - cycle) * h
+                            val bx = relX * w + sin(cycle * 3f * PI.toFloat() + phase) * 5.dp.toPx()
+                            val bubbleAlpha = (sin(cycle * PI.toFloat()) * 0.45f).coerceIn(0f, 1f)
+                            drawCircle(
+                                color = Color(0xFFF59E0B).copy(alpha = bubbleAlpha),
+                                radius = sizeDp.dp.toPx(),
+                                center = Offset(bx, by),
+                                style = Stroke(width = 1.dp.toPx())
+                            )
+                            drawCircle(
+                                color = Color(0xFFFEF3C7).copy(alpha = bubbleAlpha * 0.25f),
+                                radius = sizeDp.dp.toPx() * 0.85f,
+                                center = Offset(bx, by)
+                            )
+                        }
+                    }
+
+                    else -> {
+                        // Live Monitor: subtle radar sweep and telemetry concentric ring inside display
+                        val c = Offset(w / 2f, h / 2f)
+                        val sweepProgress = displayParticleProgress
+                        drawCircle(
+                            color = FluxOrange.copy(alpha = ((1f - sweepProgress) * 0.16f).coerceIn(0f, 1f)),
+                            radius = sweepProgress * (w * 0.46f),
+                            center = c,
+                            style = Stroke(1.2.dp.toPx())
+                        )
+                        rotate(degrees = displayRadarAngle, pivot = c) {
+                            drawLine(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(FluxOrange.copy(alpha = 0.32f), Color.Transparent),
+                                    start = c,
+                                    end = Offset(c.x + (w * 0.44f), c.y)
+                                ),
+                                start = c,
+                                end = Offset(c.x + (w * 0.44f), c.y),
+                                strokeWidth = 1.5.dp.toPx()
+                            )
+                        }
+                    }
+                }
+            }
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
@@ -1214,6 +1410,7 @@ private fun ActiveProfileDisplayBanner(
     unitSymbol: String,
     isFahrenheit: Boolean,
     colors: FluxColors,
+    profileSwitchProgress: Float = 1f,
     modifier: Modifier = Modifier
 ) {
     val lowDisp = if (isFahrenheit) (lowThreshold * 9 / 5) + 32 else lowThreshold
@@ -1245,12 +1442,19 @@ private fun ActiveProfileDisplayBanner(
         label = "sporeFloat"
     )
 
+    val borderAlpha = if (profileSwitchProgress < 1f) 0.85f else 0.5f
+    val borderWidth = if (profileSwitchProgress < 1f) 1.5.dp else 0.5.dp
+
     Box(
         modifier = modifier
-            .shadow(3.dp, RoundedCornerShape(18.dp), spotColor = Color(0x10000000))
+            .shadow(
+                elevation = if (profileSwitchProgress < 1f) 6.dp else 3.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = if (profileSwitchProgress < 1f) colors.primary.copy(alpha = 0.35f) else Color(0x10000000)
+            )
             .clip(RoundedCornerShape(18.dp))
             .background(colors.cardBg)
-            .border(0.5.dp, colors.primaryBorder.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+            .border(borderWidth, colors.primary.copy(alpha = borderAlpha), RoundedCornerShape(18.dp))
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(
