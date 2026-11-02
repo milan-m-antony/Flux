@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,33 +46,57 @@ fun FluxLiveMonitorScreen(
     val isConnected = connectionState == ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
 
     val rawTemp = reading?.temp ?: 0.0
+
+    // Smooth rolling number spring interpolation
+    val animatedTemp by animateFloatAsState(
+        targetValue = if (rawTemp > -50.0) rawTemp.toFloat() else 0f,
+        animationSpec = spring(
+            stiffness = Spring.StiffnessLow,
+            dampingRatio = Spring.DampingRatioMediumBouncy
+        ),
+        label = "liveTempSpring"
+    )
+
     val displayTemp = if (preferredUnit == "F") {
-        if (rawTemp > -50.0) String.format(Locale.US, "%.1f", (rawTemp * 9.0 / 5.0) + 32.0) else "--.-"
+        if (rawTemp > -50.0) String.format(Locale.US, "%.1f", (animatedTemp * 9.0f / 5.0f) + 32.0f) else "--.-"
     } else {
-        if (rawTemp > -50.0) String.format(Locale.US, "%.1f", rawTemp) else "--.-"
+        if (rawTemp > -50.0) String.format(Locale.US, "%.1f", animatedTemp) else "--.-"
     }
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
 
-    // Live Telemetry Breathing & Radar Animations
+    // Live Telemetry Breathing & Multi-Tier Sonar Radar Animations
     val infiniteTransition = rememberInfiniteTransition(label = "liveMonitorPulse")
-    val radarScale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = if (isConnected) 1.07f else 1.0f,
+
+    // Concentric Sonar Wave 1 (Expands 1.0f -> 1.36f, fades alpha 0.45f -> 0.0f)
+    val sonar1Progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "radarScale"
+        label = "sonar1Progress"
     )
 
-    val radarAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = if (isConnected) 0.15f else 0.4f,
+    // Concentric Sonar Wave 2 (Phase offset by 1200ms)
+    val sonar2Progress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1400, easing = FastOutSlowInEasing),
+            animation = tween(2400, delayMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sonar2Progress"
+    )
+
+    val coreGlowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "radarAlpha"
+        label = "coreGlowAlpha"
     )
 
     val ledAlpha by infiniteTransition.animateFloat(
@@ -149,29 +174,51 @@ fun FluxLiveMonitorScreen(
 
                     Spacer(modifier = Modifier.height(28.dp))
 
-                    // Hero Circular Gauge with Animated Radar Ring
+                    // Hero Circular Gauge with Animated Multi-Tier Sonar Rings
                     BoxWithConstraints(contentAlignment = Alignment.Center) {
                         val gaugeSize = minOf(maxWidth * 0.68f, 240.dp)
 
-                        // Outer Radar Pulse Halo
+                        // Multi-tier Concentric Sonar Waves
                         if (isConnected) {
+                            val scale1 = 1.0f + (sonar1Progress * 0.36f)
+                            val alpha1 = (1.0f - sonar1Progress) * 0.45f
                             Box(
                                 modifier = Modifier
-                                    .size(gaugeSize + 22.dp)
-                                    .scale(radarScale)
+                                    .size(gaugeSize)
+                                    .scale(scale1)
                                     .clip(CircleShape)
-                                    .border(1.8.dp, FluxOrange.copy(alpha = radarAlpha), CircleShape)
+                                    .border(1.6.dp, FluxOrange.copy(alpha = alpha1), CircleShape)
+                            )
+
+                            val scale2 = 1.0f + (sonar2Progress * 0.36f)
+                            val alpha2 = (1.0f - sonar2Progress) * 0.45f
+                            Box(
+                                modifier = Modifier
+                                    .size(gaugeSize)
+                                    .scale(scale2)
+                                    .clip(CircleShape)
+                                    .border(1.6.dp, FluxOrange.copy(alpha = alpha2), CircleShape)
                             )
                         }
 
-                        // Main Hero Gauge
+                        // Main Hero Gauge with dynamic glowing sweep border
                         Box(
                             modifier = Modifier
                                 .size(gaugeSize)
-                                .shadow(8.dp, CircleShape, spotColor = Color(0x16000000))
+                                .shadow(8.dp, CircleShape, spotColor = FluxOrange.copy(alpha = if (isConnected) 0.20f else 0.08f))
                                 .clip(CircleShape)
                                 .background(colors.cardBg)
-                                .border(3.dp, FluxOrange.copy(alpha = 0.88f), CircleShape),
+                                .border(
+                                    width = 3.dp,
+                                    brush = Brush.sweepGradient(
+                                        listOf(
+                                            FluxOrange.copy(alpha = coreGlowAlpha),
+                                            FluxOrangeGradientEnd.copy(alpha = coreGlowAlpha * 0.7f),
+                                            FluxOrange.copy(alpha = coreGlowAlpha)
+                                        )
+                                    ),
+                                    shape = CircleShape
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -213,7 +260,7 @@ fun FluxLiveMonitorScreen(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(
                                             if (isConnected) Color(0xFF10B981).copy(alpha = 0.14f)
-                                            else Color(0xFFEF4444).copy(alpha = 0.14f)
+                                             else Color(0xFFEF4444).copy(alpha = 0.14f)
                                         )
                                         .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
@@ -265,7 +312,8 @@ fun FluxLiveMonitorScreen(
                                 label = "Hardware Status",
                                 value = reading?.status ?: if (isConnected) "Active" else "Offline",
                                 valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
-                                colors = colors
+                                colors = colors,
+                                showPulseDot = isConnected
                             )
 
                             HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
@@ -285,7 +333,9 @@ fun FluxLiveMonitorScreen(
                                 label = "Sampling Interval",
                                 value = "1000 ms (Real-time)",
                                 valueColor = FluxOrange,
-                                colors = colors
+                                colors = colors,
+                                showPulseDot = isConnected,
+                                dotColor = FluxOrange
                             )
 
                             HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
@@ -295,7 +345,8 @@ fun FluxLiveMonitorScreen(
                                 label = "BLE Telemetry Link",
                                 value = if (isConnected) "Connected (GATT)" else "Disconnected",
                                 valueColor = if (isConnected) Color(0xFF10B981) else Color(0xFFEF4444),
-                                colors = colors
+                                colors = colors,
+                                showPulseDot = isConnected
                             )
                         }
                     }
@@ -313,8 +364,21 @@ private fun MetricRow(
     label: String,
     value: String,
     valueColor: Color,
-    colors: FluxColors
+    colors: FluxColors,
+    showPulseDot: Boolean = false,
+    dotColor: Color = Color(0xFF10B981)
 ) {
+    val infiniteTransition = rememberInfiniteTransition(label = "metricPulse")
+    val dotAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "metricDotAlpha"
+    )
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -335,11 +399,23 @@ private fun MetricRow(
                 fontWeight = FontWeight.Medium
             )
         }
-        Text(
-            text = value,
-            color = valueColor,
-            fontWeight = FontWeight.Bold,
-            fontSize = 13.sp
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (showPulseDot) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .scale(dotAlpha)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+            }
+            Text(
+                text = value,
+                color = valueColor,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp
+            )
+        }
     }
 }

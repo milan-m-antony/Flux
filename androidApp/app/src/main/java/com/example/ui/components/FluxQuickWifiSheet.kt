@@ -323,7 +323,7 @@ fun FluxQuickWifiSheet(
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = if (espWifiRssi != null) "Signal: $espWifiRssi dBm â€¢ Telemetry upload active"
+                                            text = if (espWifiRssi != null) "Signal: $espWifiRssi dBm • Telemetry upload active"
                                                    else "Cloud telemetry upload active",
                                             color = if (darkTheme) Color(0xFFA7F3D0) else Color(0xFF065F46),
                                             fontSize = 12.sp
@@ -467,7 +467,7 @@ fun FluxQuickWifiSheet(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Location is off â€¢ Tap to turn on for auto-detection",
+                                            text = "Location is off • Tap to turn on for auto-detection",
                                             color = if (darkTheme) Color(0xFFFBBF24) else Color(0xFF92400E),
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.SemiBold

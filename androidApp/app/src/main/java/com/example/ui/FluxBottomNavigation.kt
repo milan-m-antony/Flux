@@ -81,7 +81,7 @@ fun FluxBottomNavigation(
             BottomNavItem(
                 label = "Home",
                 isSelected = currentScreen == FluxScreen.HOME,
-                activeColor = if (darkTheme) Color(0xFFF8FAFC) else FluxTextDark,
+                activeColor = FluxOrange,
                 inactiveColor = if (darkTheme) Color(0xFF94A3B8) else FluxTextLight,
                 onClick = { onScreenSelected(FluxScreen.HOME) },
                 icon = { tint ->

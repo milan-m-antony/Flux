@@ -5,6 +5,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -28,6 +30,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -80,6 +83,15 @@ fun FluxHomeScreen(
 
     val displayTemp = if (selectedUnit == "F") (currentTempC * 9 / 5) + 32 else currentTempC
     val unitSymbol = if (selectedUnit == "F") "°F" else "°C"
+
+    val animatedDisplayTemp by animateFloatAsState(
+        targetValue = displayTemp.toFloat(),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "animatedDisplayTemp"
+    )
 
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)
@@ -168,7 +180,7 @@ fun FluxHomeScreen(
                 minTemp = 16f,
                 maxTemp = 40f,
                 unitSymbol = unitSymbol,
-                displayTempStr = if (hasRealData && (isDeviceOnline || allReadings.isNotEmpty())) String.format("%.1f", displayTemp) else "--.-",
+                displayTempStr = if (hasRealData && (isDeviceOnline || allReadings.isNotEmpty())) String.format(java.util.Locale.US, "%.1f", animatedDisplayTemp) else "--.-",
                 hasData = hasRealData && (isDeviceOnline || allReadings.isNotEmpty()),
                 isLive = isDeviceOnline,
                 darkTheme = darkTheme,
@@ -319,6 +331,36 @@ private fun TemperatureGauge(
         label = "gauge_progress"
     )
 
+    // Animated breathing radio wave aura on thumb knob when live
+    val infiniteTransition = rememberInfiniteTransition(label = "gaugePulse")
+    val knobPulseProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "knobPulse"
+    )
+    val knobPulseProgress2 by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, delayMillis = 750, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "knobPulse2"
+    )
+    val liveDotPulse by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "liveDotPulse"
+    )
+
     // Accurate min/max labels converting properly for Fahrenheit
     val minDisplay = if (unitSymbol == "°F") "${((minTemp * 9 / 5) + 32).toInt()}°F" else "${minTemp.toInt()}°C"
     val maxDisplay = if (unitSymbol == "°F") "${((maxTemp * 9 / 5) + 32).toInt()}°F" else "${maxTemp.toInt()}°C"
@@ -435,6 +477,19 @@ private fun TemperatureGauge(
                 (center.x + radius * cos(thumbAngleRad)).toFloat(),
                 (center.y + radius * sin(thumbAngleRad)).toFloat()
             )
+            // Animated breathing radio aura rings when live
+            if (isLive) {
+                drawCircle(
+                    color = FluxOrange.copy(alpha = (1f - knobPulseProgress) * 0.40f),
+                    radius = (10.dp.toPx() + knobPulseProgress * 14.dp.toPx()),
+                    center = thumbPos
+                )
+                drawCircle(
+                    color = FluxOrange.copy(alpha = (1f - knobPulseProgress2) * 0.25f),
+                    radius = (10.dp.toPx() + knobPulseProgress2 * 22.dp.toPx()),
+                    center = thumbPos
+                )
+            }
             // Outer white thumb with crisp orange border
             drawCircle(
                 color = Color.White,
@@ -496,13 +551,14 @@ private fun TemperatureGauge(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(6.5.dp)
+                            .size(7.dp)
+                            .scale(if (isLive) liveDotPulse else 1f)
                             .clip(CircleShape)
                             .background(if (isLive) FluxGreenOnline else Color(0xFF94A3B8))
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isLive) "Live" else "Offline",
+                        text = if (isLive) "Live Stream" else "Offline",
                         color = FluxTextMuted,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.SemiBold
@@ -610,7 +666,7 @@ private fun TemperatureTrendCard(
                     )
                 }
 
-                // Interactive Dropdown capsule "Last 1 Hour ⌵"
+                // Interactive Dropdown capsule "Last 1 Hour"
                 Box {
                     Row(
                         modifier = Modifier
@@ -734,8 +790,18 @@ private fun SummaryStatCard(
     colors: FluxColors,
     modifier: Modifier = Modifier
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val cardScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "statCardScale"
+    )
+
     Row(
         modifier = modifier
+            .scale(cardScale)
+            .clickable(interactionSource = interactionSource, indication = null) {}
             .background(colors.pillBg, RoundedCornerShape(12.dp))
             .border(0.5.dp, colors.pillBorder, RoundedCornerShape(12.dp))
             .padding(horizontal = 8.dp, vertical = 8.dp),

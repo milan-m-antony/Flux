@@ -1,6 +1,7 @@
 package com.example.ui
 
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Grain
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,7 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +35,9 @@ import com.example.MainViewModel
 import com.example.ble.ConnectionState
 import com.example.ui.theme.*
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun FluxFermentationScreen(
@@ -40,8 +49,6 @@ fun FluxFermentationScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val reading by viewModel.latestReading.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
-    val lowThreshold by viewModel.lowTempThreshold.collectAsState()
-    val highThreshold by viewModel.highTempThreshold.collectAsState()
     val isConnected = connectionState == ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
 
     val rawTemp = reading?.temp ?: 0.0
@@ -53,8 +60,36 @@ fun FluxFermentationScreen(
     }
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
 
+    // Continuous Effervescent Bubbling Animation
+    val infiniteTransition = rememberInfiniteTransition(label = "fermentBubbleAnim")
+    val b1 by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(1900, easing = LinearEasing), RepeatMode.Restart),
+        label = "fb1"
+    )
+    val b2 by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(2400, delayMillis = 300, easing = LinearEasing), RepeatMode.Restart),
+        label = "fb2"
+    )
+    val b3 by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(1600, delayMillis = 600, easing = LinearEasing), RepeatMode.Restart),
+        label = "fb3"
+    )
+    val b4 by infiniteTransition.animateFloat(
+        initialValue = 1f, targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(2900, delayMillis = 150, easing = LinearEasing), RepeatMode.Restart),
+        label = "fb4"
+    )
+
+    val frothWavePhase by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = (2 * PI).toFloat(),
+        animationSpec = infiniteRepeatable(tween(3000, easing = LinearEasing), RepeatMode.Restart),
+        label = "frothWave"
+    )
+
     // Animated Fermentation Beaker Pulse
-    val infiniteTransition = rememberInfiniteTransition(label = "fermentPulse")
     val beakerScale by infiniteTransition.animateFloat(
         initialValue = 1.0f,
         targetValue = if (inRange && isConnected) 1.12f else 1.0f,
@@ -140,21 +175,98 @@ fun FluxFermentationScreen(
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Hero Fermentation Card
+                    // 1. Hero Animated Fermentation Vessel Card with Rising Effervescent Bubbles
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                            .clip(RoundedCornerShape(24.dp))
+                            .height(260.dp)
+                            .shadow(6.dp, RoundedCornerShape(26.dp), spotColor = Color(0x14000000))
+                            .clip(RoundedCornerShape(26.dp))
                             .background(colors.cardBg)
                             .border(
                                 width = if (inRange) 1.dp else 1.5.dp,
-                                color = if (inRange) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFFEF4444).copy(alpha = 0.6f),
-                                shape = RoundedCornerShape(24.dp)
+                                color = if (inRange) Color(0xFFF59E0B).copy(alpha = 0.5f) else Color(0xFFEF4444).copy(alpha = 0.6f),
+                                shape = RoundedCornerShape(26.dp)
                             )
-                            .padding(20.dp)
                     ) {
-                        Column {
+                        // Canvas: Frothy Fermentation Surface + Continuous Rising Micro-Bubbles
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val w = size.width
+                            val h = size.height
+                            val foamY = h * 0.46f
+
+                            // Gentle frothy surface wave
+                            val foamPath = Path().apply {
+                                moveTo(0f, foamY)
+                                val wavelength = w * 0.6f
+                                var x = 0f
+                                while (x <= w) {
+                                    val y = foamY + 5.dp.toPx() * sin((2 * PI * (x / wavelength) + frothWavePhase).toFloat())
+                                    lineTo(x, y)
+                                    x += 5f
+                                }
+                                lineTo(w, h)
+                                lineTo(0f, h)
+                                close()
+                            }
+
+                            // Fermentation broth warm golden/amber gradient
+                            drawPath(
+                                path = foamPath,
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFFFDE68A).copy(alpha = 0.40f),
+                                        Color(0xFFD97706).copy(alpha = 0.85f)
+                                    ),
+                                    startY = foamY,
+                                    endY = h
+                                )
+                            )
+
+                            // Rising effervescent carbonation bubbles
+                            if (isConnected) {
+                                val y1 = foamY + (h - foamY) * b1
+                                val x1 = w * 0.18f + 4.dp.toPx() * sin(b1 * 8f)
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.65f * b1),
+                                    radius = 3.2.dp.toPx(),
+                                    center = Offset(x1, y1)
+                                )
+
+                                val y2 = foamY + (h - foamY) * b2
+                                val x2 = w * 0.44f + 3.dp.toPx() * cos(b2 * 6f)
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.70f * b2),
+                                    radius = 4.2.dp.toPx(),
+                                    center = Offset(x2, y2)
+                                )
+
+                                val y3 = foamY + (h - foamY) * b3
+                                val x3 = w * 0.78f + 5.dp.toPx() * sin(b3 * 7f)
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.60f * b3),
+                                    radius = 3.6.dp.toPx(),
+                                    center = Offset(x3, y3)
+                                )
+
+                                val y4 = foamY + (h - foamY) * b4
+                                val x4 = w * 0.62f + 2.dp.toPx() * cos(b4 * 9f)
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.55f * b4),
+                                    radius = 2.4.dp.toPx(),
+                                    center = Offset(x4, y4)
+                                )
+                            }
+                        }
+
+                        // Content Overlay
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(20.dp),
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Top Row: Science Icon + Optimal Band Pill
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -178,7 +290,7 @@ fun FluxFermentationScreen(
                                     }
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Text(
-                                        text = "Vessel Temperature",
+                                        text = "Vessel Thermics",
                                         color = colors.textPrimary,
                                         fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold
@@ -200,37 +312,41 @@ fun FluxFermentationScreen(
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Text(
-                                text = if (isConnected) "$displayTemp $unitSymbol" else "--.-",
-                                fontSize = 44.sp,
-                                fontWeight = FontWeight.Black,
-                                color = if (inRange) colors.textPrimary else Color(0xFFEF4444)
-                            )
-
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Text(
-                                text = if (!isConnected) "Sensor Disconnected"
-                                else if (inRange) "Yeast kinetics optimal • Stable fermentation zone"
-                                else "Warning: Thermal limits breached! Adjust regulation.",
-                                color = if (inRange) colors.textSecondary else Color(0xFFEF4444),
-                                fontSize = 12.5.sp
-                            )
+                            // Temperature Readout in Golden Broth
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = if (isConnected) "$displayTemp $unitSymbol" else "--.-",
+                                    fontSize = 46.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = Color.White,
+                                    letterSpacing = (-0.5).sp
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (!isConnected) "Sensor Disconnected"
+                                    else if (inRange) "Yeast kinetics optimal • Stable active fermentation"
+                                    else "Warning: Thermal limit breached! Regulate ambient temp.",
+                                    color = Color.White.copy(alpha = 0.92f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // Active Batch Duration Timer Card
+                    // 2. Active Batch Duration Timer Card
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                            .clip(RoundedCornerShape(24.dp))
+                            .shadow(3.dp, RoundedCornerShape(22.dp), spotColor = Color(0x0C000000))
+                            .clip(RoundedCornerShape(22.dp))
                             .background(colors.cardBg)
-                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
                             .padding(18.dp)
                     ) {
                         Row(
@@ -263,9 +379,9 @@ fun FluxFermentationScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Elapsed batch duration",
+                                        text = "Monotonic elapsed hardware duration",
                                         color = colors.textSecondary,
-                                        fontSize = 12.sp
+                                        fontSize = 11.5.sp
                                     )
                                 }
                             }
@@ -278,7 +394,7 @@ fun FluxFermentationScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
-                                        .size(6.dp)
+                                        .size(6.5.dp)
                                         .scale(timerPulseAlpha)
                                         .clip(CircleShape)
                                         .background(FluxOrange)
@@ -294,9 +410,80 @@ fun FluxFermentationScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // Notice Card
+                    // 3. Fermentation Phase Tracker Card
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .shadow(2.dp, RoundedCornerShape(22.dp), spotColor = Color(0x0C000000))
+                            .clip(RoundedCornerShape(22.dp))
+                            .background(colors.cardBg)
+                            .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Grain,
+                                        contentDescription = null,
+                                        tint = Color(0xFFD97706),
+                                        modifier = Modifier.size(17.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Kinetic Phase",
+                                        color = colors.textPrimary,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp
+                                    )
+                                }
+                                Text(
+                                    text = if (isConnected && inRange) "Active High Kräusen" else "Awaiting Inoculation",
+                                    color = if (isConnected && inRange) Color(0xFF10B981) else colors.textSecondary,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            // 3-step progress bar
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(if (isConnected) FluxOrange else Color(0xFFE2E8F0))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(if (isConnected && inRange) FluxOrange else Color(0xFFE2E8F0))
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(6.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(Color(0xFFE2E8F0))
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // 4. Notice Card
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()

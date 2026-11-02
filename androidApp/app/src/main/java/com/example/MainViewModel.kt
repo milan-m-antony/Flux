@@ -303,14 +303,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else if (wasSensorDisconnected) {
                         wasSensorDisconnected = false
                         val title = "Sensor Restored"
-                        val message = "Thermal probe reconnected. Telemetry reading ${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C."
+                        val message = "Thermal probe reconnected. Telemetry reading ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C."
                         createNotification(title, message, "INFO")
                         if (pushAlerts.value) {
                             com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = false)
                         }
                     }
 
-                    // 2. Threshold Alert Check with anti-flap hysteresis (0.3Â°C margin) & 5-min cooldown
+                    // 2. Threshold Alert Check with anti-flap hysteresis (0.3°C margin) & 5-min cooldown
                     if (!isSensorDown) {
                         val isCurrentlyBreached = reading.temp < (lowTempThreshold.value - HYSTERESIS_MARGIN) ||
                                                   reading.temp > (highTempThreshold.value + HYSTERESIS_MARGIN)
@@ -322,9 +322,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val isHigh = reading.temp > highTempThreshold.value
                                 val title = if (isHigh) "High Temperature Alert" else "Low Temperature Alert"
                                 val message = if (isHigh) {
-                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C exceeded maximum limit (${highTempThreshold.value}Â°C)."
+                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C exceeded maximum limit (${highTempThreshold.value}°C)."
                                 } else {
-                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C dropped below minimum limit (${lowTempThreshold.value}Â°C)."
+                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C dropped below minimum limit (${lowTempThreshold.value}°C)."
                                 }
                                 createNotification(title, message, "ALERT")
                                 if (pushAlerts.value) {
@@ -335,7 +335,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             // Temperature safely normalized
                             wasInBreach = false
                             val title = "Temperature Normalized"
-                            val message = "Thermal reading returned to safe range (${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C)."
+                            val message = "Thermal reading returned to safe range (${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C)."
                             createNotification(title, message, "INFO")
                             if (pushAlerts.value) {
                                 com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = false)

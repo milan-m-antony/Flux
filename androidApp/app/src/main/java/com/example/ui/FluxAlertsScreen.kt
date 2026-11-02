@@ -5,6 +5,8 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -29,6 +31,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -61,6 +64,28 @@ fun FluxAlertsScreen(
             repeatMode = RepeatMode.Reverse
         ),
         label = "bellPulse"
+    )
+
+    // Animated ringing bell wobble when unread notifications exist
+    val bellWobbleAngle by infiniteTransition.animateFloat(
+        initialValue = if (unreadCount > 0) -8f else 0f,
+        targetValue = if (unreadCount > 0) 8f else 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(260, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "bellWobble"
+    )
+
+    // Dynamic emergency breach pulse glow for unread alert cards
+    val alertPulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.95f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(850, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alertPulseAlpha"
     )
 
     Box(
@@ -186,7 +211,7 @@ fun FluxAlertsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Circular Orange Bell Icon with live breathing scale
+                    // Circular Orange Bell Icon with live breathing scale & ringing wobble
                     Box(
                         modifier = Modifier
                             .size(46.dp)
@@ -204,7 +229,9 @@ fun FluxAlertsScreen(
                             imageVector = Icons.Filled.Notifications,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier
+                                .size(22.dp)
+                                .graphicsLayer(rotationZ = bellWobbleAngle)
                         )
                     }
 
@@ -326,6 +353,8 @@ fun FluxAlertsScreen(
                             pillBg = pillBg,
                             pillColor = pillColor,
                             isRead = notif.isRead,
+                            isAlert = isAlert,
+                            pulseAlpha = alertPulseAlpha,
                             colors = colors,
                             onDelete = { viewModel.dismissNotification(notif.id) }
                         )
@@ -348,13 +377,22 @@ private fun AlertHeaderActions(
     onMarkAllRead: () -> Unit,
     onClearAll: () -> Unit
 ) {
+    val configInteraction = remember { MutableInteractionSource() }
+    val isConfigPressed by configInteraction.collectIsPressedAsState()
+    val configScale by animateFloatAsState(
+        targetValue = if (isConfigPressed) 0.94f else 1.0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "configScale"
+    )
+
     // Config Button
     Box(
         modifier = Modifier
+            .scale(configScale)
             .clip(RoundedCornerShape(12.dp))
             .background(Color(0xFFF1F5F9))
             .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-            .clickable { onConfig() }
+            .clickable(interactionSource = configInteraction, indication = null) { onConfig() }
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -377,12 +415,21 @@ private fun AlertHeaderActions(
 
     if (hasNotifications) {
         if (unreadCount > 0) {
+            val readInteraction = remember { MutableInteractionSource() }
+            val isReadPressed by readInteraction.collectIsPressedAsState()
+            val readScale by animateFloatAsState(
+                targetValue = if (isReadPressed) 0.94f else 1.0f,
+                animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
+                label = "readScale"
+            )
+
             Box(
                 modifier = Modifier
+                    .scale(readScale)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFFF1F5F9))
                     .border(0.5.dp, Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
-                    .clickable { onMarkAllRead() }
+                    .clickable(interactionSource = readInteraction, indication = null) { onMarkAllRead() }
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -404,12 +451,21 @@ private fun AlertHeaderActions(
             }
         }
 
+        val clearInteraction = remember { MutableInteractionSource() }
+        val isClearPressed by clearInteraction.collectIsPressedAsState()
+        val clearScale by animateFloatAsState(
+            targetValue = if (isClearPressed) 0.94f else 1.0f,
+            animationSpec = spring(stiffness = Spring.StiffnessMedium, dampingRatio = Spring.DampingRatioMediumBouncy),
+            label = "clearScale"
+        )
+
         Box(
             modifier = Modifier
+                .scale(clearScale)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color(0xFFFEE2E2))
                 .border(0.5.dp, Color(0xFFFECACA), RoundedCornerShape(12.dp))
-                .clickable { onClearAll() }
+                .clickable(interactionSource = clearInteraction, indication = null) { onClearAll() }
                 .padding(horizontal = 10.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -435,22 +491,31 @@ private fun AlertRecordItem(
     pillBg: Color,
     pillColor: Color,
     isRead: Boolean,
+    isAlert: Boolean,
+    pulseAlpha: Float,
     colors: FluxColors,
     onDelete: () -> Unit
 ) {
+    val borderColor = if (!isRead) {
+        if (isAlert) Color(0xFFEF4444).copy(alpha = pulseAlpha)
+        else FluxOrange.copy(alpha = pulseAlpha)
+    } else {
+        colors.cardBorder
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 2.dp,
+                elevation = if (!isRead) 4.dp else 2.dp,
                 shape = RoundedCornerShape(20.dp),
-                spotColor = Color(0x0C000000)
+                spotColor = if (!isRead) borderColor.copy(alpha = 0.25f) else Color(0x0C000000)
             )
             .clip(RoundedCornerShape(20.dp))
             .background(colors.cardBg)
             .border(
-                width = if (!isRead) 1.2.dp else 0.5.dp,
-                color = if (!isRead) FluxOrange.copy(alpha = 0.55f) else colors.cardBorder,
+                width = if (!isRead) 1.4.dp else 0.5.dp,
+                color = borderColor,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(horizontal = 14.dp, vertical = 12.dp)
