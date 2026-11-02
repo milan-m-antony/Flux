@@ -101,86 +101,23 @@ fun FluxAlertsScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // Spacer to clear the fixed top header cleanly
-            Spacer(modifier = Modifier.height(72.dp))
+            // Clearance below fixed header
+            Spacer(modifier = Modifier.height(86.dp))
 
-            // Responsive Title & Action Buttons Header Row
-            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                val isNarrow = maxWidth < 380.dp
-
-                if (isNarrow) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Column {
-                            Text(
-                                text = "Alerts",
-                                color = colors.textPrimary,
-                                fontSize = 26.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                            Text(
-                                text = "Real-time hardware breaches & notifications",
-                                color = colors.textSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AlertHeaderActions(
-                                unreadCount = unreadCount,
-                                hasNotifications = notifications.isNotEmpty(),
-                                colors = colors,
-                                onConfig = onNavigateToAlertSettings,
-                                onMarkAllRead = { viewModel.markAllNotificationsAsRead() },
-                                onClearAll = { viewModel.clearAllNotifications() }
-                            )
-                        }
-                    }
-                } else {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Alerts",
-                                color = colors.textPrimary,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = (-0.5).sp
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Stay informed about your device",
-                                color = colors.textSecondary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            AlertHeaderActions(
-                                unreadCount = unreadCount,
-                                hasNotifications = notifications.isNotEmpty(),
-                                colors = colors,
-                                onConfig = onNavigateToAlertSettings,
-                                onMarkAllRead = { viewModel.markAllNotificationsAsRead() },
-                                onClearAll = { viewModel.clearAllNotifications() }
-                            )
-                        }
-                    }
-                }
+            // Action Buttons Row (Mark Read, Clear All, Settings)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AlertHeaderActions(
+                    unreadCount = unreadCount,
+                    hasNotifications = notifications.isNotEmpty(),
+                    colors = colors,
+                    onConfig = onNavigateToAlertSettings,
+                    onMarkAllRead = { viewModel.markAllNotificationsAsRead() },
+                    onClearAll = { viewModel.clearAllNotifications() }
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

@@ -90,7 +90,9 @@ fun FluxSettingsScreen(
     val manualPreferredTransport by viewModel.manualPreferredTransport.collectAsState()
     val activeProfile by viewModel.activeProfile.collectAsState()
 
-    var alertsEnabled by remember { mutableStateOf(true) }
+    val pushAlerts by viewModel.pushAlerts.collectAsState()
+    val isFahrenheit = preferredUnit.equals("F", ignoreCase = true)
+    val unitSymbol = if (isFahrenheit) "°F" else "°C"
     var currentMinLimit by remember(lowThreshold) { mutableStateOf(lowThreshold.toInt()) }
     var currentMaxLimit by remember(highThreshold) { mutableStateOf(highThreshold.toInt()) }
     var selectedUnit by remember(preferredUnit) { mutableStateOf(preferredUnit) }
@@ -110,26 +112,8 @@ fun FluxSettingsScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // Spacer to clear the fixed top header cleanly
-            Spacer(modifier = Modifier.height(68.dp))
-
-            // 2. Title & Subtitle
-            Text(
-                text = "Settings",
-                color = colors.textPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-0.5).sp
-            )
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = "Personalize your Flux experience",
-                color = colors.textSecondary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            // Clearance below fixed header
+            Spacer(modifier = Modifier.height(86.dp))
 
             // 4. Card 2 — Temperature Unit (°C / °F Selection)
             Box(
@@ -558,9 +542,9 @@ fun FluxSettingsScreen(
                         }
 
                         Switch(
-                            checked = alertsEnabled,
+                            checked = pushAlerts,
                             onCheckedChange = {
-                                alertsEnabled = it
+                                viewModel.setPushAlerts(it)
                                 Toast.makeText(context, if (it) "Temperature alerts enabled" else "Temperature alerts disabled", Toast.LENGTH_SHORT).show()
                             },
                             colors = SwitchDefaults.colors(
@@ -580,6 +564,9 @@ fun FluxSettingsScreen(
                     )
 
                     Spacer(modifier = Modifier.height(14.dp))
+
+                    val minDisplayVal = if (isFahrenheit) ((lowThreshold * 9.0 / 5.0) + 32.0).toInt() else lowThreshold.toInt()
+                    val maxDisplayVal = if (isFahrenheit) ((highThreshold * 9.0 / 5.0) + 32.0).toInt() else highThreshold.toInt()
 
                     // Min Limit & Max Limit Adjusters Row
                     Row(
@@ -604,10 +591,19 @@ fun FluxSettingsScreen(
                                         .background(if (isDarkTheme) Color(0xFF334155) else Color.White)
                                         .border(0.5.dp, colors.cardBorder, CircleShape)
                                         .clickable {
-                                            if (currentMinLimit > 0) {
-                                                currentMinLimit--
-                                                viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
-                                                Toast.makeText(context, "Min Alert Limit updated: ${currentMinLimit}°C", Toast.LENGTH_SHORT).show()
+                                            if (isFahrenheit) {
+                                                val newMinF = minDisplayVal - 1
+                                                val newMinC = (newMinF - 32.0) * 5.0 / 9.0
+                                                if (newMinC < highThreshold) {
+                                                    viewModel.updateThresholds(newMinC, highThreshold)
+                                                    Toast.makeText(context, "Min Alert Limit updated: ${newMinF}°F", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                if (lowThreshold > -20.0) {
+                                                    val newMinC = (lowThreshold.toInt() - 1).toDouble()
+                                                    viewModel.updateThresholds(newMinC, highThreshold)
+                                                    Toast.makeText(context, "Min Alert Limit updated: ${newMinC.toInt()}°C", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -623,7 +619,7 @@ fun FluxSettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Text(
-                                    text = "$currentMinLimit°C",
+                                    text = "$minDisplayVal$unitSymbol",
                                     color = colors.textPrimary,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
@@ -638,10 +634,19 @@ fun FluxSettingsScreen(
                                         .clip(CircleShape)
                                         .background(colors.primary)
                                         .clickable {
-                                            if (currentMinLimit < currentMaxLimit - 1) {
-                                                currentMinLimit++
-                                                viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
-                                                Toast.makeText(context, "Min Alert Limit updated: ${currentMinLimit}°C", Toast.LENGTH_SHORT).show()
+                                            if (isFahrenheit) {
+                                                val newMinF = minDisplayVal + 1
+                                                val newMinC = (newMinF - 32.0) * 5.0 / 9.0
+                                                if (newMinC < highThreshold - 0.5) {
+                                                    viewModel.updateThresholds(newMinC, highThreshold)
+                                                    Toast.makeText(context, "Min Alert Limit updated: ${newMinF}°F", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                if (lowThreshold < highThreshold - 1.0) {
+                                                    val newMinC = (lowThreshold.toInt() + 1).toDouble()
+                                                    viewModel.updateThresholds(newMinC, highThreshold)
+                                                    Toast.makeText(context, "Min Alert Limit updated: ${newMinC.toInt()}°C", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -674,10 +679,19 @@ fun FluxSettingsScreen(
                                         .background(if (isDarkTheme) Color(0xFF334155) else Color.White)
                                         .border(0.5.dp, colors.cardBorder, CircleShape)
                                         .clickable {
-                                            if (currentMaxLimit > currentMinLimit + 1) {
-                                                currentMaxLimit--
-                                                viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
-                                                Toast.makeText(context, "Max Alert Limit updated: ${currentMaxLimit}°C", Toast.LENGTH_SHORT).show()
+                                            if (isFahrenheit) {
+                                                val newMaxF = maxDisplayVal - 1
+                                                val newMaxC = (newMaxF - 32.0) * 5.0 / 9.0
+                                                if (newMaxC > lowThreshold + 0.5) {
+                                                    viewModel.updateThresholds(lowThreshold, newMaxC)
+                                                    Toast.makeText(context, "Max Alert Limit updated: ${newMaxF}°F", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                if (highThreshold > lowThreshold + 1.0) {
+                                                    val newMaxC = (highThreshold.toInt() - 1).toDouble()
+                                                    viewModel.updateThresholds(lowThreshold, newMaxC)
+                                                    Toast.makeText(context, "Max Alert Limit updated: ${newMaxC.toInt()}°C", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -693,7 +707,7 @@ fun FluxSettingsScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
 
                                 Text(
-                                    text = "$currentMaxLimit°C",
+                                    text = "$maxDisplayVal$unitSymbol",
                                     color = colors.textPrimary,
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
@@ -708,10 +722,19 @@ fun FluxSettingsScreen(
                                         .clip(CircleShape)
                                         .background(colors.primary)
                                         .clickable {
-                                            if (currentMaxLimit < 90) {
-                                                currentMaxLimit++
-                                                viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
-                                                Toast.makeText(context, "Max Alert Limit updated: ${currentMaxLimit}°C", Toast.LENGTH_SHORT).show()
+                                            if (isFahrenheit) {
+                                                val newMaxF = maxDisplayVal + 1
+                                                val newMaxC = (newMaxF - 32.0) * 5.0 / 9.0
+                                                if (newMaxF <= 212) {
+                                                    viewModel.updateThresholds(lowThreshold, newMaxC)
+                                                    Toast.makeText(context, "Max Alert Limit updated: ${newMaxF}°F", Toast.LENGTH_SHORT).show()
+                                                }
+                                            } else {
+                                                if (highThreshold < 100.0) {
+                                                    val newMaxC = (highThreshold.toInt() + 1).toDouble()
+                                                    viewModel.updateThresholds(lowThreshold, newMaxC)
+                                                    Toast.makeText(context, "Max Alert Limit updated: ${newMaxC.toInt()}°C", Toast.LENGTH_SHORT).show()
+                                                }
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -888,36 +911,46 @@ fun FluxSettingsScreen(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // Right: Animated floating photo of the ESP32 board with ambient glow
+                        // Right: Animated floating photo of the Flux Smart Sensor Device with ambient glow
                         Box(
                             modifier = Modifier
-                                .size(105.dp)
+                                .size(108.dp)
                                 .offset(y = boardFloatY.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            // Subtle radial glow
+                            // Soft radial glow aura
                             Box(
                                 modifier = Modifier
-                                    .size(95.dp)
+                                    .size(100.dp)
                                     .scale(1.15f)
                                     .alpha(boardGlow)
                                     .clip(CircleShape)
-                                    .background(FluxOrange.copy(alpha = 0.35f))
+                                    .background(
+                                        Brush.radialGradient(
+                                            colors = listOf(
+                                                FluxOrange.copy(alpha = 0.35f),
+                                                FluxOrangeSoft.copy(alpha = 0.15f),
+                                                Color.Transparent
+                                            )
+                                        )
+                                    )
                             )
 
                             // Image container
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = Color(0x18000000))
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB))
-                                    .border(1.dp, FluxOrange.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                                    .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color(0x18000000))
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF9F5))
+                                    .border(1.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
+                                    .padding(4.dp),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Image(
-                                    painter = painterResource(id = R.drawable.esp32_board),
-                                    contentDescription = "ESP32 Microcontroller",
-                                    contentScale = ContentScale.Crop,
+                                    painter = painterResource(id = R.drawable.ic_flux_device),
+                                    contentDescription = "Flux Smart Telemetry Sensor",
+                                    contentScale = ContentScale.Fit,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }

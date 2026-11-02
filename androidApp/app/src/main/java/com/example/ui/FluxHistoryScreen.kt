@@ -129,30 +129,8 @@ fun FluxHistoryScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.Start
         ) {
-            // Spacer to clear the fixed top header cleanly
-            Spacer(modifier = Modifier.height(68.dp))
-
-            // 2. Title & Subtitle
-            Text(
-                text = "History",
-                color = colors.textPrimary,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-0.5).sp
-            )
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = when (selectedTab) {
-                    "Alerts" -> "Historical alarm breaches and system notices"
-                    "Device Activity" -> "Hardware telemetry pipeline and sync logs"
-                    else -> "View past data and device activity"
-                },
-                color = colors.textSecondary,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
+            // Clearance below fixed header
+            Spacer(modifier = Modifier.height(86.dp))
 
             // 3. Segmented Navigation Tabs (Temperature / Device Activity / Alerts)
             Row(

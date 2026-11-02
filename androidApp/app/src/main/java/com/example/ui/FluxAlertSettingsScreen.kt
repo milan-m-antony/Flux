@@ -37,13 +37,15 @@ fun FluxAlertSettingsScreen(
     val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
     val lowThresholdC by viewModel.lowTempThreshold.collectAsState()
     val highThresholdC by viewModel.highTempThreshold.collectAsState()
+    val pushAlerts by viewModel.pushAlerts.collectAsState()
+    val soundAlerts by viewModel.soundAlerts.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
     val latestReading by viewModel.latestReading.collectAsState()
 
     var lowVal by remember(lowThresholdC) { mutableFloatStateOf(lowThresholdC.toFloat()) }
     var highVal by remember(highThresholdC) { mutableFloatStateOf(highThresholdC.toFloat()) }
-    var pushEnabled by remember { mutableStateOf(true) }
-    var soundEnabled by remember { mutableStateOf(true) }
+    var pushEnabled by remember(pushAlerts) { mutableStateOf(pushAlerts) }
+    var soundEnabled by remember(soundAlerts) { mutableStateOf(soundAlerts) }
     var hardwareBuzzerEnabled by remember(latestReading?.buzzer) { mutableStateOf(latestReading?.buzzer ?: true) }
     var saveSuccess by remember { mutableStateOf(false) }
 
@@ -71,7 +73,7 @@ fun FluxAlertSettingsScreen(
                 ) {
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Top Header Row
+                // Top Back Button Row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -92,46 +94,6 @@ fun FluxAlertSettingsScreen(
                             tint = colors.textPrimary,
                             modifier = Modifier.size(18.dp)
                         )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Text(
-                        text = "Alert Configuration",
-                        color = colors.textPrimary,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.3).sp
-                    )
-                }
-
-                // Header Overview Card
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color(0x10000000))
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(colors.cardBg)
-                        .border(0.5.dp, colors.cardBorder, RoundedCornerShape(22.dp))
-                        .padding(16.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(FluxOrange.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Filled.Notifications, contentDescription = null, tint = FluxOrange)
-                        }
-                        Column {
-                            Text("Threshold Safety Limits", color = colors.textPrimary, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                            Text("Push notifications trigger when telemetry breaches limits", color = colors.textSecondary, fontSize = 12.sp)
-                        }
                     }
                 }
 
@@ -334,6 +296,8 @@ fun FluxAlertSettingsScreen(
                 Button(
                     onClick = {
                         viewModel.updateThresholds(lowVal.toDouble(), highVal.toDouble())
+                        viewModel.saveNotificationSettings(push = pushEnabled, sound = soundEnabled, vibration = true)
+                        viewModel.setBuzzerEnabled(hardwareBuzzerEnabled)
                         saveSuccess = true
                         Toast.makeText(
                             context,

@@ -6,11 +6,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import java.io.IOException
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -52,36 +55,44 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         val MANUAL_PREFERRED_TRANSPORT = stringPreferencesKey("manual_preferred_transport") // "bluetooth" or "wifi"
     }
 
-    val lastDeviceAddress: Flow<String?> = dataStore.data.map { it[LAST_DEVICE_ADDRESS] }
-    val lastDeviceName: Flow<String?> = dataStore.data.map { it[LAST_DEVICE_NAME] }
-    val preferredUnit: Flow<String> = dataStore.data.map { it[PREFERRED_UNIT] ?: "C" }
-    val activeProfile: Flow<String> = dataStore.data.map { it[ACTIVE_PROFILE] ?: "Live Monitor" }
-    val lowTempThreshold: Flow<Double> = dataStore.data.map { it[LOW_TEMP_THRESHOLD] ?: 18.0 }
-    val highTempThreshold: Flow<Double> = dataStore.data.map { it[HIGH_TEMP_THRESHOLD] ?: 28.0 }
-    val cloudUploadIntervalSec: Flow<Int> = dataStore.data.map { it[CLOUD_UPLOAD_INTERVAL_SEC] ?: 5 }
-    val supabaseUrl: Flow<String> = dataStore.data.map { it[SUPABASE_URL] ?: DEFAULT_SUPABASE_URL }
-    val supabaseAnonKey: Flow<String> = dataStore.data.map { it[SUPABASE_ANON_KEY] ?: DEFAULT_SUPABASE_ANON_KEY }
-    val onesignalAppId: Flow<String> = dataStore.data.map { it[ONESIGNAL_APP_ID] ?: DEFAULT_ONESIGNAL_APP_ID }
-    val backendUrl: Flow<String> = dataStore.data.map { it[BACKEND_URL] ?: DEFAULT_BACKEND_URL }
+    private val preferencesFlow: Flow<Preferences> = dataStore.data.catch { exception ->
+        if (exception is IOException) {
+            emit(emptyPreferences())
+        } else {
+            throw exception
+        }
+    }
 
-    val savedWifiSsid: Flow<String> = dataStore.data.map { it[SAVED_WIFI_SSID] ?: "" }
-    val savedWifiPass: Flow<String> = dataStore.data.map { it[SAVED_WIFI_PASS] ?: "" }
-    val smartSwitchMode: Flow<String> = dataStore.data.map { it[SMART_SWITCH_MODE] ?: "automatic" }
-    val manualPreferredTransport: Flow<String> = dataStore.data.map { it[MANUAL_PREFERRED_TRANSPORT] ?: "bluetooth" }
+    val lastDeviceAddress: Flow<String?> = preferencesFlow.map { it[LAST_DEVICE_ADDRESS] }
+    val lastDeviceName: Flow<String?> = preferencesFlow.map { it[LAST_DEVICE_NAME] }
+    val preferredUnit: Flow<String> = preferencesFlow.map { it[PREFERRED_UNIT] ?: "C" }
+    val activeProfile: Flow<String> = preferencesFlow.map { it[ACTIVE_PROFILE] ?: "Live Monitor" }
+    val lowTempThreshold: Flow<Double> = preferencesFlow.map { it[LOW_TEMP_THRESHOLD] ?: 18.0 }
+    val highTempThreshold: Flow<Double> = preferencesFlow.map { it[HIGH_TEMP_THRESHOLD] ?: 28.0 }
+    val cloudUploadIntervalSec: Flow<Int> = preferencesFlow.map { it[CLOUD_UPLOAD_INTERVAL_SEC] ?: 5 }
+    val supabaseUrl: Flow<String> = preferencesFlow.map { it[SUPABASE_URL] ?: DEFAULT_SUPABASE_URL }
+    val supabaseAnonKey: Flow<String> = preferencesFlow.map { it[SUPABASE_ANON_KEY] ?: DEFAULT_SUPABASE_ANON_KEY }
+    val onesignalAppId: Flow<String> = preferencesFlow.map { it[ONESIGNAL_APP_ID] ?: DEFAULT_ONESIGNAL_APP_ID }
+    val backendUrl: Flow<String> = preferencesFlow.map { it[BACKEND_URL] ?: DEFAULT_BACKEND_URL }
 
-    val pushAlerts: Flow<Boolean> = dataStore.data.map { it[PUSH_ALERTS] ?: true }
-    val soundAlerts: Flow<Boolean> = dataStore.data.map { it[SOUND_ALERTS] ?: true }
-    val vibrationAlerts: Flow<Boolean> = dataStore.data.map { it[VIBRATION_ALERTS] ?: true }
+    val savedWifiSsid: Flow<String> = preferencesFlow.map { it[SAVED_WIFI_SSID] ?: "" }
+    val savedWifiPass: Flow<String> = preferencesFlow.map { it[SAVED_WIFI_PASS] ?: "" }
+    val smartSwitchMode: Flow<String> = preferencesFlow.map { it[SMART_SWITCH_MODE] ?: "automatic" }
+    val manualPreferredTransport: Flow<String> = preferencesFlow.map { it[MANUAL_PREFERRED_TRANSPORT] ?: "bluetooth" }
 
-    val userName: Flow<String> = dataStore.data.map { it[USER_NAME] ?: "" }
-    val userAge: Flow<String> = dataStore.data.map { it[USER_AGE] ?: "" }
-    val userWeight: Flow<String> = dataStore.data.map { it[USER_WEIGHT] ?: "" }
-    val userHeight: Flow<String> = dataStore.data.map { it[USER_HEIGHT] ?: "" }
-    val userPhotoUrl: Flow<String> = dataStore.data.map { it[USER_PHOTO_URL] ?: "" }
-    val userNotes: Flow<String> = dataStore.data.map { it[USER_NOTES] ?: "" }
-    val isDarkTheme: Flow<Boolean> = dataStore.data.map { false } // Never use black/dark theme; strictly follow Flux signature light theme
-    val waterIntakeMl: Flow<Int> = dataStore.data.map { it[WATER_INTAKE_ML] ?: 1250 }
-    val waterGoalMl: Flow<Int> = dataStore.data.map { it[WATER_GOAL_ML] ?: 2500 }
+    val pushAlerts: Flow<Boolean> = preferencesFlow.map { it[PUSH_ALERTS] ?: true }
+    val soundAlerts: Flow<Boolean> = preferencesFlow.map { it[SOUND_ALERTS] ?: true }
+    val vibrationAlerts: Flow<Boolean> = preferencesFlow.map { it[VIBRATION_ALERTS] ?: true }
+
+    val userName: Flow<String> = preferencesFlow.map { it[USER_NAME] ?: "" }
+    val userAge: Flow<String> = preferencesFlow.map { it[USER_AGE] ?: "" }
+    val userWeight: Flow<String> = preferencesFlow.map { it[USER_WEIGHT] ?: "" }
+    val userHeight: Flow<String> = preferencesFlow.map { it[USER_HEIGHT] ?: "" }
+    val userPhotoUrl: Flow<String> = preferencesFlow.map { it[USER_PHOTO_URL] ?: "" }
+    val userNotes: Flow<String> = preferencesFlow.map { it[USER_NOTES] ?: "" }
+    val isDarkTheme: Flow<Boolean> = preferencesFlow.map { false } // Never use black/dark theme; strictly follow Flux signature light theme
+    val waterIntakeMl: Flow<Int> = preferencesFlow.map { it[WATER_INTAKE_ML] ?: 1250 }
+    val waterGoalMl: Flow<Int> = preferencesFlow.map { it[WATER_GOAL_ML] ?: 2500 }
 
     suspend fun saveDevice(address: String, name: String?) {
         dataStore.edit { prefs ->
@@ -113,6 +124,12 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { prefs ->
             prefs[LOW_TEMP_THRESHOLD] = low
             prefs[HIGH_TEMP_THRESHOLD] = high
+        }
+    }
+
+    suspend fun savePushAlerts(enabled: Boolean) {
+        dataStore.edit { prefs ->
+            prefs[PUSH_ALERTS] = enabled
         }
     }
 

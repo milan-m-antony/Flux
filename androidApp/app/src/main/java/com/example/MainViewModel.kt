@@ -143,10 +143,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = null
     )
     
-    val preferredUnit = settingsRepository.preferredUnit.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "C")
-    val activeProfile = settingsRepository.activeProfile.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "Live Monitor")
-    val lowTempThreshold = settingsRepository.lowTempThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 18.0)
-    val highTempThreshold = settingsRepository.highTempThreshold.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 28.0)
+    val preferredUnit = settingsRepository.preferredUnit.stateIn(viewModelScope, SharingStarted.Eagerly, "C")
+    val activeProfile = settingsRepository.activeProfile.stateIn(viewModelScope, SharingStarted.Eagerly, "Live Monitor")
+    val lowTempThreshold = settingsRepository.lowTempThreshold.stateIn(viewModelScope, SharingStarted.Eagerly, 18.0)
+    val highTempThreshold = settingsRepository.highTempThreshold.stateIn(viewModelScope, SharingStarted.Eagerly, 28.0)
     val cloudUploadIntervalSec = settingsRepository.cloudUploadIntervalSec.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 5)
     val supabaseUrl = settingsRepository.supabaseUrl.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_SUPABASE_URL)
     val supabaseAnonKey = settingsRepository.supabaseAnonKey.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), com.example.data.SettingsRepository.DEFAULT_SUPABASE_ANON_KEY)
@@ -169,7 +169,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val savedWifiSsid = settingsRepository.savedWifiSsid.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
     val savedWifiPass = settingsRepository.savedWifiPass.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "")
-    val pushAlerts = settingsRepository.pushAlerts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+    val pushAlerts = settingsRepository.pushAlerts.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val soundAlerts = settingsRepository.soundAlerts.stateIn(viewModelScope, SharingStarted.Eagerly, true)
+    val vibrationAlerts = settingsRepository.vibrationAlerts.stateIn(viewModelScope, SharingStarted.Eagerly, true)
     val lastDeviceAddress: StateFlow<String?> = settingsRepository.lastDeviceAddress.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     private var wasInBreach = false
@@ -417,6 +419,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (state == ConnectionState.CONNECTED && !wasConnected) {
                     wasConnected = true
                     createNotification("Device Connected", "Successfully connected to your Flux sensor.", "INFO")
+                    // Immediately sync saved threshold limits, unit and time to ESP32 hardware
+                    viewModelScope.launch {
+                        kotlinx.coroutines.delay(600)
+                        bleManager.sendCommand("SET_THRESH:${lowTempThreshold.value.toInt()},${highTempThreshold.value.toInt()}")
+                        val unitCmd = if (preferredUnit.value.equals("F", ignoreCase = true)) "SET_UNIT_F" else "SET_UNIT_C"
+                        bleManager.sendCommand(unitCmd)
+                        bleManager.sendCommand("SET_TIME:${System.currentTimeMillis() / 1000L}")
+                    }
                 } else if (state == ConnectionState.DISCONNECTED) {
                     if (wasConnected) {
                         wasConnected = false
@@ -756,6 +766,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             settingsRepository.saveThresholds(low, high)
             bleManager.sendCommand("SET_THRESH:${low.toInt()},${high.toInt()}")
+        }
+    }
+
+    fun setPushAlerts(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.savePushAlerts(enabled)
+        }
+    }
+
+    fun saveNotificationSettings(push: Boolean, sound: Boolean, vibration: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.saveNotificationSettings(push, sound, vibration)
         }
     }
 
