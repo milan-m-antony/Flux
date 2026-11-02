@@ -123,6 +123,7 @@ fun FluxApp(viewModel: MainViewModel) {
     }
 
     val isDarkTheme by viewModel.isDarkTheme.collectAsState()
+    val activeProfile by viewModel.activeProfile.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val connectivityState by viewModel.connectivityState.collectAsState()
     val isOnline = connectivityState.isOnline
@@ -138,7 +139,7 @@ fun FluxApp(viewModel: MainViewModel) {
             Box(modifier = Modifier.fillMaxSize()) {
                 NavHost(
                     navController = navController,
-                    startDestination = HomeRoute,
+                    startDestination = SplashRoute,
                     modifier = Modifier.fillMaxSize(),
                     enterTransition = { androidx.compose.animation.fadeIn(animationSpec = androidx.compose.animation.core.tween(240)) },
                     exitTransition = { androidx.compose.animation.fadeOut(animationSpec = androidx.compose.animation.core.tween(180)) },
@@ -186,7 +187,7 @@ fun FluxApp(viewModel: MainViewModel) {
                         )
                     }
 
-                    // 3. Screen 3 — Profiles (Exact match to Reference Screenshot 3)
+                    // 3. Screen 3 — Profiles (Theme Switching & Presets)
                     composable<ProfilesRoute> {
                         FluxProfilesScreen(
                             viewModel = viewModel,
@@ -198,10 +199,13 @@ fun FluxApp(viewModel: MainViewModel) {
                                     restoreState = true
                                 }
                             },
-                            onNavigateToLiveMonitor = { navController.navigate(FluxLiveMonitorRoute) },
-                            onNavigateToEnvironment = { navController.navigate(FluxEnvironmentRoute) },
-                            onNavigateToLiquid = { navController.navigate(FluxLiquidRoute) },
-                            onNavigateToFermentation = { navController.navigate(FluxFermentationRoute) }
+                            onNavigateToHome = {
+                                navController.navigate(HomeRoute) {
+                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
                         )
                     }
 
@@ -212,6 +216,9 @@ fun FluxApp(viewModel: MainViewModel) {
                             onBack = { navController.navigateUp() },
                             onNotificationClick = {
                                 navController.navigate(AlertsRoute)
+                            },
+                            onNavigateToHome = {
+                                navController.navigate(HomeRoute)
                             }
                         )
                     }
@@ -274,34 +281,25 @@ fun FluxApp(viewModel: MainViewModel) {
                     composable<SplashRoute> {
                         SplashScreen(
                             viewModel = viewModel,
-                            onNavigateToNext = { isLoggedIn ->
-                                navController.navigate(HomeRoute) { popUpTo(SplashRoute) { inclusive = true } }
+                            onNavigateToNext = { hasOnboarded ->
+                                val target = if (hasOnboarded) HomeRoute else DeviceSetupRoute
+                                navController.navigate(target) {
+                                    popUpTo(SplashRoute) { inclusive = true }
+                                }
                             }
-                        )
-                    }
-                    composable<LoginRoute> {
-                        LoginScreen(
-                            viewModel = viewModel,
-                            onLoginSuccess = {
-                                navController.navigate(HomeRoute) { popUpTo(LoginRoute) { inclusive = true } }
-                            },
-                            onNavigateToSignUp = { navController.navigate(SignUpRoute) }
-                        )
-                    }
-                    composable<SignUpRoute> {
-                        SignUpScreen(
-                            viewModel = viewModel,
-                            onSignUpSuccess = {
-                                navController.navigate(HomeRoute) { popUpTo(SignUpRoute) { inclusive = true } }
-                            },
-                            onBack = { navController.navigateUp() }
                         )
                     }
                     composable<DeviceSetupRoute> {
                         DeviceSetupScreen(
                             viewModel = viewModel,
-                            onNext = { navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } } },
-                            onSkip = { navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } } },
+                            onNext = {
+                                viewModel.setCompletedOnboarding(true)
+                                navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } }
+                            },
+                            onSkip = {
+                                viewModel.setCompletedOnboarding(true)
+                                navController.navigate(HomeRoute) { popUpTo(DeviceSetupRoute) { inclusive = true } }
+                            },
                             onBack = { navController.navigateUp() }
                         )
                     }
@@ -408,7 +406,8 @@ fun FluxApp(viewModel: MainViewModel) {
                             }
                         },
                         modifier = Modifier.align(Alignment.BottomCenter),
-                        darkTheme = isDarkTheme
+                        darkTheme = isDarkTheme,
+                        activeProfile = activeProfile
                     )
                 }
 

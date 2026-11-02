@@ -76,6 +76,9 @@ fun FluxHomeScreen(
     val preferredUnit by viewModel.preferredUnit.collectAsState()
     val connectionState by viewModel.connectionState.collectAsState()
     val connectivityState by viewModel.connectivityState.collectAsState()
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val lowThreshold by viewModel.lowTempThreshold.collectAsState()
+    val highThreshold by viewModel.highTempThreshold.collectAsState()
 
     val hasRealData = latestReading != null || allReadings.isNotEmpty() || connectionState == com.example.ble.ConnectionState.CONNECTED
     val currentTempC = latestReading?.temp ?: allReadings.firstOrNull()?.temperature ?: 0.0
@@ -93,8 +96,7 @@ fun FluxHomeScreen(
         label = "animatedDisplayTemp"
     )
 
-    val darkTheme by viewModel.isDarkTheme.collectAsState()
-    val colors = rememberFluxColors(darkTheme)
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -183,7 +185,7 @@ fun FluxHomeScreen(
                 displayTempStr = if (hasRealData && (isDeviceOnline || allReadings.isNotEmpty())) String.format(java.util.Locale.US, "%.1f", animatedDisplayTemp) else "--.-",
                 hasData = hasRealData && (isDeviceOnline || allReadings.isNotEmpty()),
                 isLive = isDeviceOnline,
-                darkTheme = darkTheme,
+                darkTheme = false,
                 colors = colors,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -212,7 +214,7 @@ fun FluxHomeScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (selectedUnit == "C") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                            .background(if (selectedUnit == "C") colors.primary else Color.Transparent)
                             .clickable {
                                 selectedUnit = "C"
                                 viewModel.setPreferredUnit("C")
@@ -231,7 +233,7 @@ fun FluxHomeScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (selectedUnit == "F") (if (darkTheme) FluxOrange else Color(0xFF0F172A)) else Color.Transparent)
+                            .background(if (selectedUnit == "F") colors.primary else Color.Transparent)
                             .clickable {
                                 selectedUnit = "F"
                                 viewModel.setPreferredUnit("F")
@@ -293,14 +295,27 @@ fun FluxHomeScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Active Profile Kinetic Display Card
+            ActiveProfileDisplayBanner(
+                activeProfile = activeProfile,
+                lowThreshold = lowThreshold,
+                highThreshold = highThreshold,
+                unitSymbol = unitSymbol,
+                isFahrenheit = selectedUnit == "F",
+                colors = colors,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
 
             // 4. Temperature Trend Card (Interactive Graph, Filter, Min/Max/Avg Stat Cards)
             TemperatureTrendCard(
                 unitSymbol = unitSymbol,
                 isFahrenheit = selectedUnit == "F",
                 readings = allReadings,
-                darkTheme = darkTheme,
+                darkTheme = false,
                 colors = colors,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -438,12 +453,12 @@ private fun TemperatureGauge(
                 style = Stroke(width = 18.dp.toPx(), cap = StrokeCap.Round)
             )
 
-            // C. Active Orange Gradient Arc
+            // C. Active Dynamic Gradient Arc
             val activeSweep = sweepTotalAngle * animatedProgress
             if (activeSweep > 0) {
                 // Subtle ambient glow behind active arc
                 drawArc(
-                    color = FluxOrange.copy(alpha = 0.18f),
+                    color = colors.primary.copy(alpha = 0.20f),
                     startAngle = startAngle,
                     sweepAngle = activeSweep,
                     useCenter = false,
@@ -452,13 +467,13 @@ private fun TemperatureGauge(
                     style = Stroke(width = 22.dp.toPx(), cap = StrokeCap.Round)
                 )
 
-                // Main vibrant orange gradient stroke
+                // Main vibrant profile gradient stroke
                 drawArc(
                     brush = Brush.sweepGradient(
                         colors = listOf(
-                            FluxOrangeGradientStart,
-                            FluxOrangeGradientEnd,
-                            Color(0xFFFF3D00)
+                            colors.primaryGradientStart,
+                            colors.primaryGradientEnd,
+                            colors.primary
                         ),
                         center = center
                     ),
@@ -480,29 +495,43 @@ private fun TemperatureGauge(
             // Animated breathing radio aura rings when live
             if (isLive) {
                 drawCircle(
-                    color = FluxOrange.copy(alpha = (1f - knobPulseProgress) * 0.40f),
+                    color = colors.primary.copy(alpha = (1f - knobPulseProgress) * 0.40f),
                     radius = (10.dp.toPx() + knobPulseProgress * 14.dp.toPx()),
                     center = thumbPos
                 )
                 drawCircle(
-                    color = FluxOrange.copy(alpha = (1f - knobPulseProgress2) * 0.25f),
+                    color = colors.primary.copy(alpha = (1f - knobPulseProgress2) * 0.25f),
                     radius = (10.dp.toPx() + knobPulseProgress2 * 22.dp.toPx()),
                     center = thumbPos
                 )
             }
-            // Outer white thumb with crisp orange border
+            // Outer white thumb with crisp profile border
             drawCircle(
                 color = Color.White,
                 radius = 10.dp.toPx(),
                 center = thumbPos
             )
             drawCircle(
-                color = FluxOrange,
+                color = colors.primary,
                 radius = 10.dp.toPx(),
                 center = thumbPos,
                 style = Stroke(width = 3.dp.toPx())
             )
         }
+
+        // Ambient Thermal Aura Glow (Warm amber-red when hot, cool cyan when cold, profile-themed when optimal)
+        val thermalAuraColor = when {
+            temperature > 28f -> Color(0xFFEF4444)
+            temperature < 18f -> Color(0xFF38BDF8)
+            else -> colors.primary
+        }
+        Box(
+            modifier = Modifier
+                .size(164.dp)
+                .offset(y = 5.dp)
+                .clip(CircleShape)
+                .background(thermalAuraColor.copy(alpha = if (hasData) 0.12f else 0f))
+        )
 
         // 3. Inner Elevated White/Card Circle (Comfortably sized at 158.dp)
         Box(
@@ -524,11 +553,11 @@ private fun TemperatureGauge(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // Thermometer icon
+                // Thermometer icon tinted with active profile primary color
                 Icon(
                     imageVector = Icons.Outlined.Thermostat,
                     contentDescription = null,
-                    tint = colors.textPrimary,
+                    tint = colors.primary,
                     modifier = Modifier.size(22.dp)
                 )
 
@@ -1037,8 +1066,8 @@ private fun InteractiveTrendChart(
                         path = fillPath,
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                FluxOrange.copy(alpha = 0.28f),
-                                FluxOrange.copy(alpha = 0.02f)
+                                colors.primary.copy(alpha = 0.28f),
+                                colors.primary.copy(alpha = 0.02f)
                             ),
                             startY = topPadding,
                             endY = topPadding + chartHeight
@@ -1047,7 +1076,7 @@ private fun InteractiveTrendChart(
 
                     drawPath(
                         path = fullSplinePath,
-                        color = FluxOrange,
+                        color = colors.primary,
                         style = Stroke(width = 2.8.dp.toPx(), cap = StrokeCap.Round)
                     )
                 }
@@ -1069,7 +1098,7 @@ private fun InteractiveTrendChart(
                 // Outer glowing pulse ring
                 if (chartAnimProgress > 0.8f) {
                     drawCircle(
-                        color = FluxOrange.copy(alpha = beaconPulseAlpha),
+                        color = colors.primary.copy(alpha = beaconPulseAlpha),
                         radius = 5.5.dp.toPx() * beaconPulseScale,
                         center = pointPos
                     )
@@ -1077,7 +1106,7 @@ private fun InteractiveTrendChart(
 
                 drawCircle(color = Color.White, radius = 5.5.dp.toPx(), center = pointPos)
                 drawCircle(
-                    color = FluxOrange,
+                    color = colors.primary,
                     radius = 5.5.dp.toPx(),
                     center = pointPos,
                     style = Stroke(width = 2.2.dp.toPx())
@@ -1089,7 +1118,7 @@ private fun InteractiveTrendChart(
                 val badgeY = activeY - badgeH - 6.dp.toPx()
 
                 drawRoundRect(
-                    color = FluxOrange,
+                    color = colors.primary,
                     topLeft = Offset(badgeLeft, badgeY),
                     size = Size(badgeW, badgeH),
                     cornerRadius = CornerRadius(5.dp.toPx(), 5.dp.toPx())
@@ -1101,7 +1130,7 @@ private fun InteractiveTrendChart(
                     lineTo(pointPos.x, badgeY + badgeH + 3.5.dp.toPx())
                     close()
                 }
-                drawPath(path = trianglePath, color = FluxOrange)
+                drawPath(path = trianglePath, color = colors.primary)
             }
         }
 
@@ -1172,6 +1201,189 @@ private fun InteractiveTrendChart(
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActiveProfileDisplayBanner(
+    activeProfile: String,
+    lowThreshold: Double,
+    highThreshold: Double,
+    unitSymbol: String,
+    isFahrenheit: Boolean,
+    colors: FluxColors,
+    modifier: Modifier = Modifier
+) {
+    val lowDisp = if (isFahrenheit) (lowThreshold * 9 / 5) + 32 else lowThreshold
+    val highDisp = if (isFahrenheit) (highThreshold * 9 / 5) + 32 else highThreshold
+    val presetLabel = when {
+        activeProfile.contains("Environment", ignoreCase = true) -> "Preset Safety: 18°C – 26°C"
+        activeProfile.contains("Liquid", ignoreCase = true) -> "Preset Safety: 10°C – 35°C"
+        activeProfile.contains("Fermentation", ignoreCase = true) -> "Preset Safety: 18°C – 24°C"
+        else -> "Safety Limits: %.1f%s – %.1f%s".format(lowDisp, unitSymbol, highDisp, unitSymbol)
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "bannerAnim")
+    val bannerWavePhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * kotlin.math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "bannerWavePhase"
+    )
+    val sporeFloat by infiniteTransition.animateFloat(
+        initialValue = -3f,
+        targetValue = 3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sporeFloat"
+    )
+
+    Box(
+        modifier = modifier
+            .shadow(3.dp, RoundedCornerShape(18.dp), spotColor = Color(0x10000000))
+            .clip(RoundedCornerShape(18.dp))
+            .background(colors.cardBg)
+            .border(0.5.dp, colors.primaryBorder.copy(alpha = 0.5f), RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                // Profile Animation Visual Canvas Mini-Badge
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(colors.primarySoft),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.size(24.dp)) {
+                        val w = size.width
+                        val h = size.height
+                        when {
+                            activeProfile.contains("Environment", ignoreCase = true) -> {
+                                drawCircle(
+                                    color = colors.primary,
+                                    radius = 2.8.dp.toPx(),
+                                    center = Offset(w * 0.35f, h * 0.5f + sporeFloat)
+                                )
+                                drawCircle(
+                                    color = colors.primary.copy(alpha = 0.7f),
+                                    radius = 2.0.dp.toPx(),
+                                    center = Offset(w * 0.65f, h * 0.35f - sporeFloat)
+                                )
+                                drawCircle(
+                                    color = colors.primary.copy(alpha = 0.5f),
+                                    radius = 1.6.dp.toPx(),
+                                    center = Offset(w * 0.7f, h * 0.7f + (sporeFloat * 0.6f))
+                                )
+                            }
+                            activeProfile.contains("Liquid", ignoreCase = true) -> {
+                                val wavePath = Path().apply {
+                                    moveTo(0f, h * 0.5f)
+                                    for (x in 0..w.toInt() step 2) {
+                                        val y = h * 0.5f + sin(x * 0.35f + bannerWavePhase) * 4f
+                                        lineTo(x.toFloat(), y)
+                                    }
+                                }
+                                drawPath(
+                                    path = wavePath,
+                                    color = colors.primary,
+                                    style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+                                )
+                            }
+                            activeProfile.contains("Fermentation", ignoreCase = true) -> {
+                                drawCircle(
+                                    color = colors.primary,
+                                    radius = 3.dp.toPx(),
+                                    center = Offset(w * 0.5f, h * 0.4f + (sporeFloat * 1.2f))
+                                )
+                                drawCircle(
+                                    color = colors.primary.copy(alpha = 0.6f),
+                                    radius = 2.dp.toPx(),
+                                    center = Offset(w * 0.3f, h * 0.6f - (sporeFloat * 0.8f))
+                                )
+                                drawCircle(
+                                    color = colors.primary.copy(alpha = 0.4f),
+                                    radius = 1.5.dp.toPx(),
+                                    center = Offset(w * 0.75f, h * 0.55f + sporeFloat)
+                                )
+                            }
+                            else -> {
+                                drawCircle(
+                                    color = colors.primary.copy(alpha = 0.35f),
+                                    radius = 8.dp.toPx() * (1f + (sporeFloat + 3f) / 10f),
+                                    style = Stroke(width = 1.2.dp.toPx())
+                                )
+                                drawCircle(
+                                    color = colors.primary,
+                                    radius = 3.dp.toPx(),
+                                    center = Offset(w / 2f, h / 2f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = activeProfile,
+                            color = colors.textPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.5.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(colors.primarySoft)
+                                .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                        ) {
+                            Text(
+                                text = "ACTIVE",
+                                color = colors.primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
+                            )
+                        }
+                    }
+                    Text(
+                        text = presetLabel,
+                        color = colors.textSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(colors.pillBg)
+                    .border(0.5.dp, colors.pillBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 9.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = "Theme Active",
+                    color = colors.primary,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

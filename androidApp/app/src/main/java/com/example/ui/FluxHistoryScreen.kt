@@ -51,21 +51,70 @@ fun FluxHistoryScreen(
     viewModel: MainViewModel,
     onNotificationClick: () -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     var selectedTab by remember { mutableStateOf("Temperature") }
     var selectedRange by remember { mutableStateOf("Day") }
+    val selectedCalendar = remember { mutableStateOf(java.util.Calendar.getInstance()) }
+    val formattedCurrentDate = remember(selectedCalendar.value) {
+        java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(selectedCalendar.value.time)
+    }
+
     val connectionState by viewModel.connectionState.collectAsState()
     val allReadings by viewModel.allReadings.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
     val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
 
-    val darkTheme by viewModel.isDarkTheme.collectAsState()
-    val colors = rememberFluxColors(darkTheme)
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
 
     val allNotifications by viewModel.allNotifications.collectAsState()
     val connectivityState by viewModel.connectivityState.collectAsState()
     val lastCalibration by viewModel.lastCalibration.collectAsState()
     val pendingRecords by viewModel.pendingOfflineRecords.collectAsState()
     val supabaseSyncStatus by viewModel.supabaseSyncStatus.collectAsState()
+
+    // Dynamic Date & Range Filtering
+    val filteredReadings = remember(allReadings, selectedCalendar.value, selectedRange) {
+        val cal = selectedCalendar.value
+        val startCal = java.util.Calendar.getInstance().apply {
+            time = cal.time
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }
+        val endCal = java.util.Calendar.getInstance().apply {
+            time = cal.time
+            set(java.util.Calendar.HOUR_OF_DAY, 23)
+            set(java.util.Calendar.MINUTE, 59)
+            set(java.util.Calendar.SECOND, 59)
+            set(java.util.Calendar.MILLISECOND, 999)
+        }
+
+        when (selectedRange) {
+            "Day" -> {
+                val s = startCal.timeInMillis
+                val e = endCal.timeInMillis
+                val list = allReadings.filter { it.timestamp in s..e }
+                if (list.isNotEmpty()) list else allReadings
+            }
+            "Week" -> {
+                val e = endCal.timeInMillis
+                val s = e - (7L * 24 * 60 * 60 * 1000)
+                val list = allReadings.filter { it.timestamp in s..e }
+                if (list.isNotEmpty()) list else allReadings
+            }
+            "Month" -> {
+                startCal.set(java.util.Calendar.DAY_OF_MONTH, 1)
+                endCal.set(java.util.Calendar.DAY_OF_MONTH, endCal.getActualMaximum(java.util.Calendar.DAY_OF_MONTH))
+                val s = startCal.timeInMillis
+                val e = endCal.timeInMillis
+                val list = allReadings.filter { it.timestamp in s..e }
+                if (list.isNotEmpty()) list else allReadings
+            }
+            else -> allReadings
+        }
+    }
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -120,7 +169,7 @@ fun FluxHistoryScreen(
                     modifier = Modifier
                         .weight(1.3f)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(if (selectedTab == "Temperature") FluxOrange else Color.Transparent)
+                        .background(if (selectedTab == "Temperature") colors.primary else Color.Transparent)
                         .clickable { selectedTab = "Temperature" }
                         .padding(vertical = 9.dp),
                     horizontalArrangement = Arrangement.Center,
@@ -146,7 +195,7 @@ fun FluxHistoryScreen(
                     modifier = Modifier
                         .weight(1.3f)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(if (selectedTab == "Device Activity") FluxOrange else Color.Transparent)
+                        .background(if (selectedTab == "Device Activity") colors.primary else Color.Transparent)
                         .clickable { selectedTab = "Device Activity" }
                         .padding(vertical = 9.dp),
                     horizontalArrangement = Arrangement.Center,
@@ -172,7 +221,7 @@ fun FluxHistoryScreen(
                     modifier = Modifier
                         .weight(1.1f)
                         .clip(RoundedCornerShape(22.dp))
-                        .background(if (selectedTab == "Alerts") FluxOrange else Color.Transparent)
+                        .background(if (selectedTab == "Alerts") colors.primary else Color.Transparent)
                         .clickable { selectedTab = "Alerts" }
                         .padding(vertical = 9.dp),
                     horizontalArrangement = Arrangement.Center,
@@ -204,25 +253,38 @@ fun FluxHistoryScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Date Selector Pill
+                        // Date Selector Pill with Interactive DatePickerDialog
                         Row(
                             modifier = Modifier
                                 .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = Color(0x0E000000))
                                 .background(colors.pillBg, RoundedCornerShape(20.dp))
                                 .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
+                                .clickable {
+                                    val c = selectedCalendar.value
+                                    android.app.DatePickerDialog(
+                                        context,
+                                        { _, year, month, dayOfMonth ->
+                                            val newCal = java.util.Calendar.getInstance().apply {
+                                                set(year, month, dayOfMonth, 0, 0, 0)
+                                                set(java.util.Calendar.MILLISECOND, 0)
+                                            }
+                                            selectedCalendar.value = newCal
+                                        },
+                                        c.get(java.util.Calendar.YEAR),
+                                        c.get(java.util.Calendar.MONTH),
+                                        c.get(java.util.Calendar.DAY_OF_MONTH)
+                                    ).show()
+                                }
                                 .padding(horizontal = 14.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Outlined.CalendarToday,
-                                contentDescription = null,
-                                tint = colors.textPrimary,
+                                contentDescription = "Select Date",
+                                tint = colors.primary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            val formattedCurrentDate = remember {
-                                java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                            }
                             Text(
                                 text = formattedCurrentDate,
                                 color = colors.textPrimary,
@@ -250,7 +312,7 @@ fun FluxHistoryScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (selectedRange == "Day") FluxOrange else Color.Transparent)
+                                    .background(if (selectedRange == "Day") colors.primary else Color.Transparent)
                                     .clickable { selectedRange = "Day" }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -265,7 +327,7 @@ fun FluxHistoryScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (selectedRange == "Week") FluxOrange else Color.Transparent)
+                                    .background(if (selectedRange == "Week") colors.primary else Color.Transparent)
                                     .clickable { selectedRange = "Week" }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -280,7 +342,7 @@ fun FluxHistoryScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (selectedRange == "Month") FluxOrange else Color.Transparent)
+                                    .background(if (selectedRange == "Month") colors.primary else Color.Transparent)
                                     .clickable { selectedRange = "Month" }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -317,13 +379,13 @@ fun FluxHistoryScreen(
                                         modifier = Modifier
                                             .size(38.dp)
                                             .clip(CircleShape)
-                                            .background(if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                                            .background(colors.primarySoft),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Filled.Thermostat,
                                             contentDescription = null,
-                                            tint = FluxOrange,
+                                            tint = colors.primary,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -335,9 +397,6 @@ fun FluxHistoryScreen(
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold
                                         )
-                                        val formattedCurrentDate = remember {
-                                            java.text.SimpleDateFormat("dd MMM yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-                                        }
                                         Text(
                                             text = "$formattedCurrentDate • $selectedRange",
                                             color = colors.textSecondary,
@@ -348,8 +407,8 @@ fun FluxHistoryScreen(
                                 }
 
                                 val isFahrBadge = preferredUnit.equals("F", ignoreCase = true)
-                                val maxTemp = remember(allReadings) { allReadings.maxOfOrNull { it.temperature } }
-                                val minTemp = remember(allReadings) { allReadings.minOfOrNull { it.temperature } }
+                                val maxTemp = remember(filteredReadings) { filteredReadings.maxOfOrNull { it.temperature } }
+                                val minTemp = remember(filteredReadings) { filteredReadings.minOfOrNull { it.temperature } }
                                 fun fmtBadge(t: Double?) = if (t == null) "--" else {
                                     val v = if (isFahrBadge) (t * 9 / 5) + 32 else t
                                     String.format("%.1f°%s", v, if (isFahrBadge) "F" else "C")
@@ -357,7 +416,7 @@ fun FluxHistoryScreen(
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Column(
                                         modifier = Modifier
-                                            .background(if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2), RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFFEE2E2), RoundedCornerShape(12.dp))
                                             .padding(horizontal = 8.dp, vertical = 4.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
@@ -377,7 +436,7 @@ fun FluxHistoryScreen(
 
                                     Column(
                                         modifier = Modifier
-                                            .background(if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE), RoundedCornerShape(12.dp))
+                                            .background(Color(0xFFDBEAFE), RoundedCornerShape(12.dp))
                                             .padding(horizontal = 8.dp, vertical = 4.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
@@ -406,8 +465,9 @@ fun FluxHistoryScreen(
                             ) {
                                 HistoryChartCanvas(
                                     modifier = Modifier.fillMaxSize(),
-                                    darkTheme = darkTheme,
-                                    readings = allReadings
+                                    darkTheme = false,
+                                    readings = filteredReadings,
+                                    colors = colors
                                 )
                             }
                         }
@@ -500,21 +560,21 @@ fun FluxHistoryScreen(
                             }
 
                             val iconBg = when {
-                                isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
-                                isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
-                                else -> if (darkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)
+                                isHigh -> Color(0xFFFEE2E2)
+                                isLow -> Color(0xFFDBEAFE)
+                                else -> colors.primarySoft
                             }
 
                             val statusBg = when {
-                                isHigh -> if (darkTheme) Color(0xFF451A1A) else Color(0xFFFEE2E2)
-                                isLow -> if (darkTheme) Color(0xFF172554) else Color(0xFFDBEAFE)
-                                else -> if (darkTheme) Color(0xFF14532D) else Color(0xFFDCFCE7)
+                                isHigh -> Color(0xFFFEE2E2)
+                                isLow -> Color(0xFFDBEAFE)
+                                else -> Color(0xFFDCFCE7)
                             }
 
                             val statusColor = when {
                                 isHigh -> Color(0xFFDC2626)
                                 isLow -> Color(0xFF2563EB)
-                                else -> if (darkTheme) Color(0xFF4ADE80) else Color(0xFF16A34A)
+                                else -> Color(0xFF16A34A)
                             }
 
                             DataLogCard(
@@ -828,7 +888,8 @@ private fun DataLogCard(
 private fun HistoryChartCanvas(
     modifier: Modifier = Modifier,
     darkTheme: Boolean = false,
-    readings: List<com.example.data.Reading> = emptyList()
+    readings: List<com.example.data.Reading> = emptyList(),
+    colors: FluxColors = rememberFluxColors(false)
 ) {
     // 1. Smooth animated line sweep progress
     val animProgress = remember { Animatable(0f) }
@@ -937,8 +998,8 @@ private fun HistoryChartCanvas(
                     path = fillPath,
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            FluxOrange.copy(alpha = 0.32f),
-                            FluxOrange.copy(alpha = 0.02f)
+                            colors.primary.copy(alpha = 0.32f),
+                            colors.primary.copy(alpha = 0.02f)
                         ),
                         startY = chartTop,
                         endY = chartBottom
@@ -947,7 +1008,7 @@ private fun HistoryChartCanvas(
 
                 drawPath(
                     path = path,
-                    color = FluxOrange,
+                    color = colors.primary,
                     style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                 )
 
@@ -955,7 +1016,7 @@ private fun HistoryChartCanvas(
                 if (chartAnimProgress > 0.85f) {
                     val lastP = points.last()
                     drawCircle(
-                        color = FluxOrange.copy(alpha = beaconPulseAlpha),
+                        color = colors.primary.copy(alpha = beaconPulseAlpha),
                         radius = 5.dp.toPx() * beaconPulseScale,
                         center = lastP
                     )
@@ -965,7 +1026,7 @@ private fun HistoryChartCanvas(
                         center = lastP
                     )
                     drawCircle(
-                        color = FluxOrange,
+                        color = colors.primary,
                         radius = 4.5.dp.toPx(),
                         center = lastP,
                         style = Stroke(width = 2.dp.toPx())

@@ -1,5 +1,7 @@
 package com.example.ui
 
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,8 +32,9 @@ fun FluxAlertSettingsScreen(
     viewModel: MainViewModel,
     onBack: () -> Unit
 ) {
-    val darkTheme by viewModel.isDarkTheme.collectAsState()
-    val colors = rememberFluxColors(darkTheme)
+    val context = LocalContext.current
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
     val lowThresholdC by viewModel.lowTempThreshold.collectAsState()
     val highThresholdC by viewModel.highTempThreshold.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
@@ -47,7 +50,7 @@ fun FluxAlertSettingsScreen(
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
     fun toDisp(c: Float) = if (preferredUnit == "F") (c * 9f / 5f) + 32f else c
 
-    FluxBackground(darkTheme = darkTheme) {
+    FluxBackground(darkTheme = false) {
         Scaffold(
             containerColor = Color.Transparent
         ) { innerPadding ->
@@ -332,12 +335,17 @@ fun FluxAlertSettingsScreen(
                     onClick = {
                         viewModel.updateThresholds(lowVal.toDouble(), highVal.toDouble())
                         saveSuccess = true
+                        Toast.makeText(
+                            context,
+                            "Alert limits saved successfully: %.1f%s - %.1f%s".format(toDisp(lowVal), unitSymbol, toDisp(highVal), unitSymbol),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = FluxOrange,
+                        containerColor = colors.primary,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(14.dp)

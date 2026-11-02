@@ -47,36 +47,10 @@ import android.widget.Toast
 
 @Composable
 fun SplashScreen(viewModel: MainViewModel, onNavigateToNext: (Boolean) -> Unit) {
-    val context = LocalContext.current
-    
     LaunchedEffect(key1 = true) {
-        delay(2000)
-        val isLoggedIn = viewModel.currentUser.value != null
-        
-        if (isLoggedIn) {
-            val activity = context as? FragmentActivity
-            if (activity != null && BiometricHelper.isAppLockEnabled(activity) && BiometricHelper.isBiometricAvailable(activity)) {
-                BiometricHelper.promptBiometricAuth(
-                    activity = activity,
-                    title = "App Lock",
-                    subtitle = "Unlock Flux using your biometric credentials",
-                    onSuccess = {
-                        onNavigateToNext(true)
-                    },
-                    onFailed = {
-                        Toast.makeText(activity, "Biometric authentication failed", Toast.LENGTH_SHORT).show()
-                    },
-                    onError = { err ->
-                        Toast.makeText(activity, "Biometric Error: $err", Toast.LENGTH_SHORT).show()
-                        onNavigateToNext(true) // Fallback to let them in or you can force exit
-                    }
-                )
-            } else {
-                onNavigateToNext(true)
-            }
-        } else {
-            onNavigateToNext(false)
-        }
+        delay(1200)
+        val hasCompletedOnboarding = viewModel.hasCompletedOnboarding()
+        onNavigateToNext(hasCompletedOnboarding)
     }
 
     val infiniteTransition = rememberInfiniteTransition()

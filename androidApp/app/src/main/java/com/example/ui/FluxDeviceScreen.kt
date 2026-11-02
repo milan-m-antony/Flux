@@ -52,8 +52,8 @@ fun FluxDeviceScreen(
     onNavigateToWifiSetup: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val isDarkTheme by viewModel.isDarkTheme.collectAsState()
-    val colors = rememberFluxColors(isDarkTheme)
+    val activeProfile by viewModel.activeProfile.collectAsState()
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
     val connectivityState by viewModel.connectivityState.collectAsState()
     val reading by viewModel.latestReading.collectAsState()
     val lastDeviceAddress by viewModel.lastDeviceAddress.collectAsState()
@@ -106,7 +106,7 @@ fun FluxDeviceScreen(
         label = "StatusPulse"
     )
 
-    FluxBackground(darkTheme = isDarkTheme) {
+    FluxBackground(darkTheme = false) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopCenter
@@ -198,8 +198,8 @@ fun FluxDeviceScreen(
                                 .background(
                                     Brush.radialGradient(
                                         colors = listOf(
-                                            FluxOrange.copy(alpha = 0.45f),
-                                            FluxOrange.copy(alpha = 0.10f),
+                                            colors.primary.copy(alpha = 0.40f),
+                                            colors.primary.copy(alpha = 0.08f),
                                             Color.Transparent
                                         )
                                     )
@@ -212,8 +212,8 @@ fun FluxDeviceScreen(
                                 .fillMaxSize()
                                 .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color(0x20000000))
                                 .clip(RoundedCornerShape(24.dp))
-                                .background(if (isDarkTheme) Color(0xFF1E293B) else Color(0xFFFFF2EB))
-                                .border(1.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(24.dp))
+                                .background(Color(0xFFF8FAFC))
+                                .border(1.dp, colors.primaryBorder, RoundedCornerShape(24.dp))
                                 .padding(6.dp)
                         ) {
                             Image(
@@ -349,7 +349,7 @@ fun FluxDeviceScreen(
                                 .fillMaxWidth()
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(percent = 50))
-                                .background(if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0))
+                                .background(Color(0xFFE2E8F0))
                         ) {
                             Box(
                                 modifier = Modifier
@@ -359,7 +359,7 @@ fun FluxDeviceScreen(
                                     .background(
                                         when {
                                             (batteryPercent ?: 0) > 50 -> Color(0xFF00C853)
-                                            (batteryPercent ?: 0) > 20 -> FluxOrange
+                                            (batteryPercent ?: 0) > 20 -> colors.primary
                                             else -> Color(0xFFDC2626)
                                         }
                                     )
@@ -388,13 +388,13 @@ fun FluxDeviceScreen(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(FluxOrange.copy(alpha = 0.12f)),
+                                    .background(colors.primarySoft),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Wifi,
                                     contentDescription = "Signal",
-                                    tint = FluxOrange,
+                                    tint = colors.primary,
                                     modifier = Modifier.size(19.dp)
                                 )
                             }
@@ -402,7 +402,7 @@ fun FluxDeviceScreen(
                             // 4-Bar Meter
                             FluxSignalMeter(
                                 state = connectivityState,
-                                darkTheme = isDarkTheme,
+                                darkTheme = false,
                                 barHeights = listOf(5.dp, 9.dp, 13.dp, 17.dp),
                                 barWidth = 3.2.dp,
                                 barSpacing = 1.8.dp,
@@ -437,14 +437,14 @@ fun FluxDeviceScreen(
                                 .fillMaxWidth()
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(percent = 50))
-                                .background(if (isDarkTheme) Color(0xFF334155) else Color(0xFFE2E8F0))
+                                .background(Color(0xFFE2E8F0))
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth((signalPercent ?: 0) / 100f)
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(percent = 50))
-                                    .background(FluxOrange)
+                                    .background(colors.primary)
                             )
                         }
                     }

@@ -88,14 +88,14 @@ fun FluxSettingsScreen(
     val signalDbm = connectivityState.signalDbm
     val smartSwitchMode by viewModel.smartSwitchMode.collectAsState()
     val manualPreferredTransport by viewModel.manualPreferredTransport.collectAsState()
+    val activeProfile by viewModel.activeProfile.collectAsState()
 
     var alertsEnabled by remember { mutableStateOf(true) }
     var currentMinLimit by remember(lowThreshold) { mutableStateOf(lowThreshold.toInt()) }
     var currentMaxLimit by remember(highThreshold) { mutableStateOf(highThreshold.toInt()) }
-    var selectedTheme by remember(isDarkTheme) { mutableStateOf(if (isDarkTheme) "Dark" else "Light") }
     var selectedUnit by remember(preferredUnit) { mutableStateOf(preferredUnit) }
 
-    val colors = rememberFluxColors(isDarkTheme)
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -131,7 +131,7 @@ fun FluxSettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3. Card 1 — App Theme (Responsive Light / Dark Selection)
+            // 3. Card 1 — Active Theme Profile (Strictly Pure Light / White Theme)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -150,13 +150,13 @@ fun FluxSettingsScreen(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(CircleShape)
-                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
+                                .background(colors.primarySoft),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = if (isDarkTheme) Icons.Outlined.DarkMode else Icons.Outlined.LightMode,
+                                imageVector = Icons.Outlined.LightMode,
                                 contentDescription = null,
-                                tint = FluxOrange,
+                                tint = colors.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -165,13 +165,13 @@ fun FluxSettingsScreen(
 
                         Column {
                             Text(
-                                text = "App Theme",
+                                text = "App Theme & Profile Palette",
                                 color = colors.textPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Flux signature light theme active",
+                                text = "$activeProfile Theme Active",
                                 color = colors.textSecondary,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Medium
@@ -181,45 +181,39 @@ fun FluxSettingsScreen(
 
                     Spacer(modifier = Modifier.height(14.dp))
 
-                    // Responsive Full-Width Segmented Theme Buttons
-                    Row(
+                    // Dynamic Active Profile Accent Pill
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(colors.pillBg, RoundedCornerShape(20.dp))
-                            .border(0.5.dp, colors.pillBorder, RoundedCornerShape(20.dp))
-                            .padding(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    listOf(colors.primaryGradientStart, colors.primaryGradientEnd)
+                                )
+                            )
+                            .clickable {
+                                Toast.makeText(context, "$activeProfile Theme Active • Switch profile in Profiles tab", Toast.LENGTH_SHORT).show()
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Light Signature Theme Pill
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(FluxOrange)
-                                .clickable {
-                                    Toast.makeText(context, "Flux Signature Light Theme Active", Toast.LENGTH_SHORT).show()
-                                },
-                            contentAlignment = Alignment.Center
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Outlined.LightMode,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Signature Light Theme",
-                                    color = Color.White,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "$activeProfile • White / Light Theme",
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -735,6 +729,7 @@ fun FluxSettingsScreen(
                                             if (currentMinLimit > 0) {
                                                 currentMinLimit--
                                                 viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
+                                                Toast.makeText(context, "Min Alert Limit updated: ${currentMinLimit}°C", Toast.LENGTH_SHORT).show()
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -763,11 +758,12 @@ fun FluxSettingsScreen(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(FluxOrange)
+                                        .background(colors.primary)
                                         .clickable {
                                             if (currentMinLimit < currentMaxLimit - 1) {
                                                 currentMinLimit++
                                                 viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
+                                                Toast.makeText(context, "Min Alert Limit updated: ${currentMinLimit}°C", Toast.LENGTH_SHORT).show()
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -803,6 +799,7 @@ fun FluxSettingsScreen(
                                             if (currentMaxLimit > currentMinLimit + 1) {
                                                 currentMaxLimit--
                                                 viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
+                                                Toast.makeText(context, "Max Alert Limit updated: ${currentMaxLimit}°C", Toast.LENGTH_SHORT).show()
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -831,11 +828,12 @@ fun FluxSettingsScreen(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(FluxOrange)
+                                        .background(colors.primary)
                                         .clickable {
                                             if (currentMaxLimit < 90) {
                                                 currentMaxLimit++
                                                 viewModel.updateThresholds(currentMinLimit.toDouble(), currentMaxLimit.toDouble())
+                                                Toast.makeText(context, "Max Alert Limit updated: ${currentMaxLimit}°C", Toast.LENGTH_SHORT).show()
                                             }
                                         },
                                     contentAlignment = Alignment.Center
@@ -1080,85 +1078,7 @@ fun FluxSettingsScreen(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // 8. Account & Authentication Card
-            val currentUser by viewModel.currentUser.collectAsState()
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = Color(0x10000000))
-                    .background(colors.cardBg, RoundedCornerShape(24.dp))
-                    .border(0.5.dp, colors.cardBorder, RoundedCornerShape(24.dp))
-                    .padding(18.dp)
-            ) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(42.dp)
-                                .clip(CircleShape)
-                                .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF2EB)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Outlined.Person,
-                                contentDescription = null,
-                                tint = FluxOrange,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = currentUser?.displayName?.takeIf { it.isNotBlank() } ?: (if (currentUser != null) "Flux Operator" else "Guest Account"),
-                                color = colors.textPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = currentUser?.email ?: "Offline mode • Local Room DB active",
-                                color = colors.textSecondary,
-                                fontSize = 11.5.sp
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    if (currentUser != null) {
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.logout()
-                                Toast.makeText(context, "Signed out of Flux account", Toast.LENGTH_SHORT).show()
-                            },
-                            modifier = Modifier.fillMaxWidth().height(42.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.5f)),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFEF4444))
-                        ) {
-                            Text("Sign Out", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
-                        }
-                    } else {
-                        Button(
-                            onClick = onNavigateToLogin,
-                            modifier = Modifier.fillMaxWidth().height(42.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = FluxOrange,
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Text("Sign In or Create Account", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // 9. System, Privacy & Support Navigation Card
+            // 8. System & Diagnostics Card (Help & Support and Guest Account Removed)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1169,7 +1089,7 @@ fun FluxSettingsScreen(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(
-                        text = "System & Support",
+                        text = "System & Hardware Services",
                         color = colors.textPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
@@ -1181,16 +1101,6 @@ fun FluxSettingsScreen(
                         subtitle = "Biometrics, encrypted logs & telemetry purge",
                         colors = colors,
                         onClick = onNavigateToPrivacySecurity
-                    )
-
-                    Divider(color = colors.cardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)
-
-                    SettingsNavRow(
-                        icon = Icons.Outlined.HelpOutline,
-                        title = "Help & Support",
-                        subtitle = "Hardware setup guide, FAQs & troubleshooting",
-                        colors = colors,
-                        onClick = onNavigateToHelpSupport
                     )
 
                     Divider(color = colors.cardBorder.copy(alpha = 0.5f), thickness = 0.5.dp)

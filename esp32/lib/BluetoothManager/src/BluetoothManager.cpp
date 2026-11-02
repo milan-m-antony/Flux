@@ -229,9 +229,10 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         saveWifiCredentials(ssid.c_str(), pass.c_str());
         lastWifiRetryMs_ = millis();
         wifiConnecting_ = true;
+        WiFi.mode(WIFI_AP_STA);
         WiFi.persistent(true);
         WiFi.setAutoReconnect(true);
-        WiFi.disconnect();
+        WiFi.disconnect(false);
         delay(100);
         if (pass.empty()) {
             WiFi.begin(ssid.c_str());
@@ -275,11 +276,12 @@ void BluetoothManager::loadSavedWifi() noexcept {
             }
             lastWifiRetryMs_ = millis();
             wifiConnecting_ = true;
+            WiFi.mode(WIFI_AP_STA);
             WiFi.persistent(true);
             WiFi.setAutoReconnect(true);
             Serial.printf("Auto-reconnecting to saved Wi-Fi: '%s' (pass_len=%d)\n", savedSSID.c_str(), (int)savedPass.length());
-            WiFi.disconnect();
-            delay(50);
+            WiFi.disconnect(false);
+            delay(100);
             if (savedPass.length() > 0) {
                 WiFi.begin(savedSSID.c_str(), savedPass.c_str());
             } else {
@@ -526,6 +528,24 @@ void BluetoothManager::startApProvisioningServer() noexcept {
                      (state_) ? state_->wifiRSSI : 0,
                      (state_ && state_->bluetoothEnabled) ? "true" : "false");
             s_apServer.send(200, "application/json", buf);
+        });
+
+        // GET /telemetry: Query live sensor data directly over local Wi-Fi
+        s_apServer.on("/telemetry", HTTP_GET, [this]() {
+            s_apServer.sendHeader("Access-Control-Allow-Origin", "*");
+            unsigned long elapsedSec = (state_) ? (millis() - state_->sessionStartMs) / 1000UL : 0;
+            char json[380];
+            snprintf(json, sizeof(json),
+                     "{\"wifiConnected\":%s,\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"status\":\"%s\",\"mode\":\"%s\",\"elapsedSec\":%lu,\"alert\":%s}",
+                     (state_ && state_->wifiConnected) ? "true" : "false",
+                     state_ ? state_->temperature : 25.0f,
+                     state_ ? state_->batteryPercentage : 100,
+                     state_ ? state_->batteryVoltage : 4.15f,
+                     state_ ? state_->sensorStatus : "Active",
+                     state_ ? getProfileName(state_->activeProfile) : "Live Monitor",
+                     elapsedSec,
+                     (state_ && state_->isThresholdAlert) ? "true" : "false");
+            s_apServer.send(200, "application/json", json);
         });
 
         // POST /wifi: Configure Wi-Fi via SoftAP

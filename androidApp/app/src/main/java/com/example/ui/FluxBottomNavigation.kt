@@ -48,26 +48,29 @@ fun FluxBottomNavigation(
     currentScreen: FluxScreen,
     onScreenSelected: (FluxScreen) -> Unit,
     modifier: Modifier = Modifier,
-    darkTheme: Boolean = false
+    darkTheme: Boolean = false,
+    activeProfile: String = "Live Monitor"
 ) {
-    // Reduced size and curved capsule container
+    val colors = rememberFluxColors(darkTheme = false, activeProfile = activeProfile)
+
+    // Reduced size and curved capsule container (Strictly pure white theme)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .shadow(
-                elevation = if (darkTheme) 6.dp else 8.dp,
+                elevation = 8.dp,
                 shape = RoundedCornerShape(percent = 50),
-                spotColor = if (darkTheme) Color(0x30000000) else Color(0x14000000),
+                spotColor = Color(0x14000000),
                 ambientColor = Color(0x0A000000)
             )
             .background(
-                color = if (darkTheme) Color(0xFF1E293B).copy(alpha = 0.98f) else Color.White.copy(alpha = 0.98f),
+                color = Color.White.copy(alpha = 0.98f),
                 shape = RoundedCornerShape(percent = 50)
             )
             .border(
                 width = 1.dp,
-                color = if (darkTheme) Color(0xFF334155) else Color(0xFFF1F5F9),
+                color = Color(0xFFF1F5F9),
                 shape = RoundedCornerShape(percent = 50)
             )
             .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -81,8 +84,8 @@ fun FluxBottomNavigation(
             BottomNavItem(
                 label = "Home",
                 isSelected = currentScreen == FluxScreen.HOME,
-                activeColor = FluxOrange,
-                inactiveColor = if (darkTheme) Color(0xFF94A3B8) else FluxTextLight,
+                activeColor = colors.primary,
+                inactiveColor = FluxTextLight,
                 onClick = { onScreenSelected(FluxScreen.HOME) },
                 icon = { tint ->
                     Icon(
@@ -99,8 +102,8 @@ fun FluxBottomNavigation(
             BottomNavItem(
                 label = "History",
                 isSelected = currentScreen == FluxScreen.HISTORY,
-                activeColor = FluxOrange,
-                inactiveColor = if (darkTheme) Color(0xFF94A3B8) else FluxTextLight,
+                activeColor = colors.primary,
+                inactiveColor = FluxTextLight,
                 onClick = { onScreenSelected(FluxScreen.HISTORY) },
                 icon = { tint ->
                     HistoryNavIcon(tint = tint)
@@ -134,11 +137,11 @@ fun FluxBottomNavigation(
                             .shadow(
                                 elevation = 5.dp,
                                 shape = CircleShape,
-                                spotColor = FluxOrange.copy(alpha = 0.5f)
+                                spotColor = colors.primary.copy(alpha = 0.45f)
                             )
                             .background(
                                 brush = Brush.verticalGradient(
-                                    colors = listOf(FluxOrangeGradientStart, FluxOrangeGradientEnd)
+                                    colors = listOf(colors.primaryGradientStart, colors.primaryGradientEnd)
                                 ),
                                 shape = CircleShape
                             ),
@@ -156,7 +159,7 @@ fun FluxBottomNavigation(
 
                     Text(
                         text = "Profiles",
-                        color = FluxOrange,
+                        color = colors.primary,
                         fontSize = 9.sp,
                         fontWeight = if (currentScreen == FluxScreen.PROFILES) FontWeight.Bold else FontWeight.SemiBold
                     )
@@ -167,8 +170,8 @@ fun FluxBottomNavigation(
             BottomNavItem(
                 label = "Alerts",
                 isSelected = currentScreen == FluxScreen.ALERTS,
-                activeColor = FluxOrange,
-                inactiveColor = if (darkTheme) Color(0xFF94A3B8) else FluxTextLight,
+                activeColor = colors.primary,
+                inactiveColor = FluxTextLight,
                 onClick = { onScreenSelected(FluxScreen.ALERTS) },
                 icon = { tint ->
                     Icon(
@@ -185,8 +188,8 @@ fun FluxBottomNavigation(
             BottomNavItem(
                 label = "Settings",
                 isSelected = currentScreen == FluxScreen.SETTINGS,
-                activeColor = FluxOrange,
-                inactiveColor = if (darkTheme) Color(0xFF94A3B8) else FluxTextLight,
+                activeColor = colors.primary,
+                inactiveColor = FluxTextLight,
                 onClick = { onScreenSelected(FluxScreen.SETTINGS) },
                 icon = { tint ->
                     Icon(
