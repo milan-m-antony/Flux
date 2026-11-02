@@ -63,7 +63,7 @@ void BluetoothManager::begin(DeviceState* state) noexcept {
         auto addChar = [this](const char* uuid, bool writable = false) -> BLECharacteristic* {
             uint32_t props = BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_NOTIFY;
             if (writable) {
-                props |= BLECharacteristic::PROPERTY_WRITE;
+                props |= BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_WRITE_NR;
             }
             BLECharacteristic* pChar = pService_->createCharacteristic(uuid, props);
             pChar->addDescriptor(new BLE2902());
@@ -227,6 +227,10 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         }
 
         saveWifiCredentials(ssid.c_str(), pass.c_str());
+        lastWifiRetryMs_ = millis();
+        wifiConnecting_ = true;
+        WiFi.persistent(true);
+        WiFi.setAutoReconnect(true);
         WiFi.disconnect();
         delay(100);
         if (pass.empty()) {
@@ -234,6 +238,7 @@ void BluetoothManager::onWrite(BLECharacteristic* pCharacteristic) {
         } else {
             WiFi.begin(ssid.c_str(), pass.c_str());
         }
+        Serial.printf("Wi-Fi connection initiated for SSID='%s'\n", ssid.c_str());
     } else if (val.find("SET_BUZZER:1") != std::string::npos || val.find("BUZZER_ON") != std::string::npos || val.find("\"buzzer\":true") != std::string::npos) {
         state_->buzzerEnabled = true;
         Serial.println("Buzzer enabled via BLE");
@@ -268,6 +273,10 @@ void BluetoothManager::loadSavedWifi() noexcept {
             if (state_ != nullptr) {
                 state_->wifiSSID = currentWifiSsid_.c_str();
             }
+            lastWifiRetryMs_ = millis();
+            wifiConnecting_ = true;
+            WiFi.persistent(true);
+            WiFi.setAutoReconnect(true);
             Serial.printf("Auto-reconnecting to saved Wi-Fi: '%s' (pass_len=%d)\n", savedSSID.c_str(), (int)savedPass.length());
             WiFi.disconnect();
             delay(50);
@@ -391,7 +400,10 @@ void BluetoothManager::notifyDataChange() noexcept {
     unsigned long elapsedSec = (millis() - state_->sessionStartMs) / 1000UL;
     char json[420];
     snprintf(json, sizeof(json),
-             "{\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s,\"buzzer\":%s,\"wifiConnected\":%s,\"wifiRssi\":%d,\"wifiSsid\":\"%s\"}",
+             "{\"wifiConnected\":%s,\"wifiRssi\":%d,\"wifiSsid\":\"%s\",\"temperature\":%.1f,\"battery\":%d,\"batteryVoltage\":%.2f,\"charging\":%s,\"sodium\":\"%s\",\"status\":\"%s\",\"firmware\":\"%s\",\"device\":\"%s\",\"mode\":\"%s\",\"unit\":\"%s\",\"minTemp\":%.1f,\"maxTemp\":%.1f,\"avgTemp\":%.1f,\"elapsedSec\":%lu,\"alert\":%s,\"buzzer\":%s}",
+             state_->wifiConnected ? "true" : "false",
+             state_->wifiRSSI,
+             state_->wifiSSID ? state_->wifiSSID : "",
              state_->temperature,
              state_->batteryPercentage,
              state_->batteryVoltage,
@@ -407,10 +419,7 @@ void BluetoothManager::notifyDataChange() noexcept {
              state_->avgTemperature,
              elapsedSec,
              state_->isThresholdAlert ? "true" : "false",
-             state_->buzzerEnabled ? "true" : "false",
-             state_->wifiConnected ? "true" : "false",
-             state_->wifiRSSI,
-             state_->wifiSSID ? state_->wifiSSID : "");
+             state_->buzzerEnabled ? "true" : "false");
 
     pCharJson_->setValue(json);
     pCharJson_->notify();
@@ -429,29 +438,40 @@ void BluetoothManager::update() noexcept {
     }
 
     // Monitor Wi-Fi connection and trigger direct cloud telemetry upload
-    static unsigned long lastWifiRetryMs = 0;
     if (state_ != nullptr) {
         wl_status_t currentStatus = WiFi.status();
         if (currentStatus == WL_CONNECTED) {
             if (!state_->wifiConnected) {
                 Serial.printf("Wi-Fi Connected! SSID: '%s', IP: %s, RSSI: %d dBm\n",
                               WiFi.SSID().c_str(), WiFi.localIP().toString().c_str(), WiFi.RSSI());
+                state_->wifiConnected = true;
+                state_->wifiRSSI = WiFi.RSSI();
+                currentWifiSsid_ = WiFi.SSID();
+                state_->wifiSSID = currentWifiSsid_.c_str();
+                wifiConnecting_ = false;
+                // Immediately push updated Wi-Fi state over BLE so phone doesn't wait
+                notifyDataChange();
+            } else {
+                state_->wifiConnected = true;
+                state_->wifiRSSI = WiFi.RSSI();
+                currentWifiSsid_ = WiFi.SSID();
+                state_->wifiSSID = currentWifiSsid_.c_str();
             }
-            state_->wifiConnected = true;
-            state_->wifiRSSI = WiFi.RSSI();
-            currentWifiSsid_ = WiFi.SSID();
-            state_->wifiSSID = currentWifiSsid_.c_str();
             attemptCloudUpload();
         } else {
             if (state_->wifiConnected) {
                 Serial.printf("Wi-Fi Disconnected (status=%d)\n", (int)currentStatus);
+                state_->wifiConnected = false;
+                state_->supabaseSyncState = "Offline";
+                notifyDataChange();
+            } else {
+                state_->wifiConnected = false;
+                state_->supabaseSyncState = "Offline";
             }
-            state_->wifiConnected = false;
-            state_->supabaseSyncState = "Offline";
 
-            // Periodic auto-reconnect retry every 15s if saved SSID exists
-            if (currentWifiSsid_.length() > 0 && (nowMs - lastWifiRetryMs) >= 15000UL) {
-                lastWifiRetryMs = nowMs;
+            // Periodic auto-reconnect retry every 35s if saved SSID exists
+            if (currentWifiSsid_.length() > 0 && (nowMs - lastWifiRetryMs_) >= 35000UL) {
+                lastWifiRetryMs_ = nowMs;
                 Preferences prefs;
                 prefs.begin("flux_wifi", true);
                 String sSsid = prefs.getString("ssid", "");
@@ -540,7 +560,12 @@ void BluetoothManager::startApProvisioningServer() noexcept {
             if (ssid.length() > 0) {
                 Serial.printf("SoftAP Provisioning: Setting SSID='%s'\n", ssid.c_str());
                 saveWifiCredentials(ssid.c_str(), pass.c_str());
+                lastWifiRetryMs_ = millis();
+                wifiConnecting_ = true;
+                WiFi.persistent(true);
+                WiFi.setAutoReconnect(true);
                 WiFi.disconnect();
+                delay(50);
                 if (pass.isEmpty()) {
                     WiFi.begin(ssid.c_str());
                 } else {

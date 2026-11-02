@@ -323,7 +323,7 @@ fun FluxQuickWifiSheet(
                                         }
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
-                                            text = if (espWifiRssi != null) "Signal: $espWifiRssi dBm • Telemetry upload active"
+                                            text = if (espWifiRssi != null) "Signal: $espWifiRssi dBm â€¢ Telemetry upload active"
                                                    else "Cloud telemetry upload active",
                                             color = if (darkTheme) Color(0xFFA7F3D0) else Color(0xFF065F46),
                                             fontSize = 12.sp
@@ -467,7 +467,7 @@ fun FluxQuickWifiSheet(
                                         )
                                         Spacer(modifier = Modifier.width(6.dp))
                                         Text(
-                                            text = "Location is off • Tap to turn on for auto-detection",
+                                            text = "Location is off â€¢ Tap to turn on for auto-detection",
                                             color = if (darkTheme) Color(0xFFFBBF24) else Color(0xFF92400E),
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.SemiBold
@@ -614,9 +614,19 @@ fun FluxQuickWifiSheet(
                                             provisionState = WifiProvisionState.CONNECTING
                                             statusMessage = "Transmitting credentials to Flux node..."
 
-                                            if (isBleConnected) {
-                                                viewModel.sendWifiCredentials(wifiName.trim(), password)
+                                            if (setupMode == WifiProvisionMode.BLE) {
+                                                if (isBleConnected) {
+                                                    val sent = viewModel.sendWifiCredentials(wifiName.trim(), password)
+                                                    if (!sent) {
+                                                        statusMessage = "Sending credentials over BLE..."
+                                                    }
+                                                } else {
+                                                    provisionState = WifiProvisionState.FAILED
+                                                    statusMessage = "Bluetooth is not connected. Please connect Bluetooth or switch to AP Setup."
+                                                    return@Button
+                                                }
                                             }
+
                                             if (setupMode == WifiProvisionMode.ACCESS_POINT) {
                                                 coroutineScope.launch {
                                                     val result = viewModel.provisionWifiOverAp(wifiName.trim(), password)
@@ -626,19 +636,46 @@ fun FluxQuickWifiSheet(
                                                 }
                                             }
 
-                                            // 25-second verification countdown
+                                            // 40-second verification countdown with active polling
                                             coroutineScope.launch {
-                                                var secondsLeft = 25
-                                                while (secondsLeft > 0 && provisionState == WifiProvisionState.CONNECTING) {
+                                                var secondsLeft = 40
+                                                var verified = false
+                                                while (secondsLeft > 0 && provisionState == WifiProvisionState.CONNECTING && !verified) {
                                                     delay(1000)
                                                     secondsLeft--
-                                                    if (secondsLeft <= 20) {
+
+                                                    // In AP mode, actively poll the /status endpoint
+                                                    if (setupMode == WifiProvisionMode.ACCESS_POINT) {
+                                                        if (secondsLeft % 2 == 0) {
+                                                            val statusRes = viewModel.checkApStatus()
+                                                            if (statusRes.isSuccess && statusRes.getOrDefault(false)) {
+                                                                verified = true
+                                                                provisionState = WifiProvisionState.SUCCESS
+                                                                statusMessage = "Flux is online with '${wifiName.trim()}'"
+                                                                delay(2200)
+                                                                onDismiss()
+                                                                break
+                                                            }
+                                                        }
+                                                    }
+
+                                                    // In BLE mode, check espWifiConnected
+                                                    if (espWifiConnected) {
+                                                        verified = true
+                                                        provisionState = WifiProvisionState.SUCCESS
+                                                        statusMessage = "Flux is online with '${wifiName.trim()}'"
+                                                        delay(2200)
+                                                        onDismiss()
+                                                        break
+                                                    }
+
+                                                    if (secondsLeft <= 35) {
                                                         statusMessage = "Connecting to '${wifiName.trim()}' ($secondsLeft s)..."
                                                     }
                                                 }
-                                                if (provisionState == WifiProvisionState.CONNECTING && !espWifiConnected) {
+                                                if (provisionState == WifiProvisionState.CONNECTING && !espWifiConnected && !verified) {
                                                     provisionState = WifiProvisionState.FAILED
-                                                    statusMessage = "Could not verify connection within 25 seconds. Please check password."
+                                                    statusMessage = "Could not verify connection within 40 seconds. Please check that your password is correct and your router has 2.4 GHz enabled."
                                                 }
                                             }
                                         }
@@ -841,7 +878,8 @@ fun FluxQuickWifiSheet(
                             Spacer(modifier = Modifier.height(6.dp))
 
                             Text(
-                                text = "Could not connect to '${wifiName.trim()}'. Please verify the password and ensure your router provides a 2.4 GHz channel.",
+                                text = if (statusMessage.isNotBlank()) statusMessage
+                                       else "Could not connect to '${wifiName.trim()}'. Please verify the password and ensure your router provides a 2.4 GHz channel.",
                                 color = colors.textSecondary,
                                 fontSize = 13.sp,
                                 textAlign = TextAlign.Center

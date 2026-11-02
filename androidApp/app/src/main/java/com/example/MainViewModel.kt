@@ -303,14 +303,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else if (wasSensorDisconnected) {
                         wasSensorDisconnected = false
                         val title = "Sensor Restored"
-                        val message = "Thermal probe reconnected. Telemetry reading ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C."
+                        val message = "Thermal probe reconnected. Telemetry reading ${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C."
                         createNotification(title, message, "INFO")
                         if (pushAlerts.value) {
                             com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = false)
                         }
                     }
 
-                    // 2. Threshold Alert Check with anti-flap hysteresis (0.3°C margin) & 5-min cooldown
+                    // 2. Threshold Alert Check with anti-flap hysteresis (0.3Â°C margin) & 5-min cooldown
                     if (!isSensorDown) {
                         val isCurrentlyBreached = reading.temp < (lowTempThreshold.value - HYSTERESIS_MARGIN) ||
                                                   reading.temp > (highTempThreshold.value + HYSTERESIS_MARGIN)
@@ -322,9 +322,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                                 val isHigh = reading.temp > highTempThreshold.value
                                 val title = if (isHigh) "High Temperature Alert" else "Low Temperature Alert"
                                 val message = if (isHigh) {
-                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C exceeded maximum limit (${highTempThreshold.value}°C)."
+                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C exceeded maximum limit (${highTempThreshold.value}Â°C)."
                                 } else {
-                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C dropped below minimum limit (${lowTempThreshold.value}°C)."
+                                    "Temperature ${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C dropped below minimum limit (${lowTempThreshold.value}Â°C)."
                                 }
                                 createNotification(title, message, "ALERT")
                                 if (pushAlerts.value) {
@@ -335,7 +335,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             // Temperature safely normalized
                             wasInBreach = false
                             val title = "Temperature Normalized"
-                            val message = "Thermal reading returned to safe range (${String.format(java.util.Locale.US, "%.1f", reading.temp)}°C)."
+                            val message = "Thermal reading returned to safe range (${String.format(java.util.Locale.US, "%.1f", reading.temp)}Â°C)."
                             createNotification(title, message, "INFO")
                             if (pushAlerts.value) {
                                 com.example.util.FluxNotificationHelper.showSystemNotification(getApplication(), title, message, isAlert = false)
@@ -758,11 +758,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun sendWifiCredentials(ssid: String, pass: String) {
+    fun sendWifiCredentials(ssid: String, pass: String): Boolean {
         viewModelScope.launch {
             settingsRepository.saveWifiCredentials(ssid, pass)
-            bleManager.sendCommand("SET_WIFI:$ssid,$pass")
         }
+        return bleManager.sendCommand("SET_WIFI:$ssid,$pass")
     }
 
     fun turnOffBle() {
@@ -830,6 +830,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (code in 200..299) {
                     Result.success(true)
                 } else {
+                    Result.failure(Exception("ESP32 SoftAP returned HTTP $code"))
+                }
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        }
+    }
+
+    suspend fun checkApStatus(): Result<Boolean> {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val url = java.net.URL("http://192.168.4.1/status")
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.connectTimeout = 3000
+                conn.readTimeout = 3000
+                val code = conn.responseCode
+                if (code == 200) {
+                    val stream = conn.inputStream.bufferedReader().use { it.readText() }
+                    conn.disconnect()
+                    val json = org.json.JSONObject(stream)
+                    val wifiConnected = json.optBoolean("wifiConnected", false)
+                    Result.success(wifiConnected)
+                } else {
+                    conn.disconnect()
                     Result.failure(Exception("ESP32 SoftAP returned HTTP $code"))
                 }
             } catch (e: Exception) {

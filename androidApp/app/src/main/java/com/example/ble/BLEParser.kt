@@ -27,13 +27,21 @@ data class BLEStateData(
 )
 
 object BLEParser {
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        isLenient = true
+        coerceInputValues = true
+    }
 
     fun parse(payload: String): BLEStateData? {
+        val trimmed = payload.trim('\u0000', ' ', '\n', '\r')
+        if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+            return null
+        }
         return try {
-            json.decodeFromString<BLEStateData>(payload)
+            json.decodeFromString<BLEStateData>(trimmed)
         } catch (e: Exception) {
-            android.util.Log.e("BLEParser", "Failed to parse JSON payload: $payload", e)
+            android.util.Log.e("BLEParser", "Failed to parse JSON payload: $trimmed", e)
             null
         }
     }

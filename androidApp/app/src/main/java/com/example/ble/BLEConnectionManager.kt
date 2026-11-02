@@ -78,7 +78,7 @@ class BLEConnectionManager(
                 
                 // Bluetooth operations must often be on the main thread to avoid silent failures
                 handler.post {
-                    val mtuRequested = gatt.requestMtu(256)
+                    val mtuRequested = gatt.requestMtu(512)
                     if (!mtuRequested) {
                         // If MTU request fails or is unsupported, discover services immediately
                         discoveryStarted = true
@@ -132,20 +132,35 @@ class BLEConnectionManager(
                             gatt.writeDescriptor(descriptor)
                         }
                     }
-                    onDataReceived("Subscribed. Waiting for ESP32...")
                     syncTimeWithDevice()
                 }, 500)
             } else {
-                onDataReceived("Error: Service discovery failed with status $status")
+                android.util.Log.e("BLEManager", "Service discovery failed with status $status")
             }
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             val data = characteristic.value ?: return
-            if (characteristic.uuid == JSON_CHAR_UUID) {
+            handleCharacteristicPayload(characteristic.uuid, data)
+        }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray
+        ) {
+            super.onCharacteristicChanged(gatt, characteristic, value)
+            handleCharacteristicPayload(characteristic.uuid, value)
+        }
+
+        private fun handleCharacteristicPayload(uuid: UUID, data: ByteArray) {
+            if (uuid == JSON_CHAR_UUID) {
                 val payloadString = String(data, Charsets.UTF_8).trim('\u0000', ' ', '\n', '\r')
-                onDataReceived(payloadString)
-            } else if (characteristic.uuid == TEMP_CHAR_UUID) {
+                if (payloadString.isNotEmpty() && payloadString.startsWith("{")) {
+                    onDataReceived(payloadString)
+                }
+            } else if (uuid == TEMP_CHAR_UUID) {
                 if (data.size == 4) {
                     val temp = java.nio.ByteBuffer.wrap(data).order(java.nio.ByteOrder.LITTLE_ENDIAN).float
                     onTemperatureReceived(temp)
@@ -260,9 +275,22 @@ class BLEConnectionManager(
         val currentGatt = gatt ?: return false
         val service = currentGatt.getService(SERVICE_UUID) ?: return false
         val characteristic = service.getCharacteristic(JSON_CHAR_UUID) ?: return false
-        characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        characteristic.value = command.toByteArray(Charsets.UTF_8)
-        val success = currentGatt.writeCharacteristic(characteristic)
+        val bytes = command.toByteArray(Charsets.UTF_8)
+        val success = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val res = currentGatt.writeCharacteristic(
+                characteristic,
+                bytes,
+                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            )
+            res == BluetoothStatusCodes.SUCCESS
+        } else {
+            @Suppress("DEPRECATION")
+            characteristic.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+            @Suppress("DEPRECATION")
+            characteristic.value = bytes
+            @Suppress("DEPRECATION")
+            currentGatt.writeCharacteristic(characteristic)
+        }
         android.util.Log.d("BLEManager", "sendCommand('$command') -> $success")
         return success
     }

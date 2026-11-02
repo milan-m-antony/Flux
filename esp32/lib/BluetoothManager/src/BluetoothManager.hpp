@@ -49,6 +49,8 @@ private:
     unsigned long lastCloudUploadMs_ = 0UL;
     String currentWifiSsid_ = "";
     bool apServerStarted_ = false;
+    unsigned long lastWifiRetryMs_ = 0UL;
+    bool wifiConnecting_ = false;
 
     BLEServer* pServer_ = nullptr;
     BLEService* pService_ = nullptr;
