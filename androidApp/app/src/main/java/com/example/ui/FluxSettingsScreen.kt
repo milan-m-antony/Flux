@@ -528,7 +528,7 @@ fun FluxSettingsScreen(
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(3.dp))
-                                    val bleConnected = connectivityState.bleConnected
+                                    val bleConnected = connectivityState.bleConnected && viewModel.bleManager.isBluetoothEnabled()
                                     Text(
                                         text = if (bleConnected) "Connected" else "Disconnected",
                                         color = if (bleConnected) FluxGreenOnline else colors.textSecondary,
@@ -577,7 +577,7 @@ fun FluxSettingsScreen(
                                         )
                                     }
                                     Spacer(modifier = Modifier.height(3.dp))
-                                    val wifiOnline = connectivityState.espWifiConnected
+                                    val wifiOnline = connectivityState.espWifiConnected && connectivityState.phoneWifiAvailable
                                     Text(
                                         text = if (wifiOnline) "Online" else "Offline",
                                         color = if (wifiOnline) FluxGreenOnline else colors.textSecondary,

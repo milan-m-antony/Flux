@@ -587,13 +587,15 @@ private fun StepThreeProvisionWifi(
 
                 Spacer(modifier = Modifier.width(14.dp))
 
+                val bleConnState by viewModel.connectionState.collectAsState()
+                val isBleConnected = bleConnState == ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
                 Column(modifier = Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
                                 .size(7.dp)
                                 .clip(CircleShape)
-                                .background(FluxGreenOnline)
+                                .background(if (isBleConnected) FluxGreenOnline else Color(0xFF94A3B8))
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
@@ -605,10 +607,12 @@ private fun StepThreeProvisionWifi(
                     }
                     Spacer(modifier = Modifier.height(3.dp))
                     Text(
-                        text = if (reading != null) {
+                        text = if (isBleConnected && reading != null) {
                             "${reading?.battery ?: 100}% Battery • ${reading?.firmware ?: "v1.2.0"}"
-                        } else {
+                        } else if (isBleConnected) {
                             "Paired via Bluetooth Low Energy"
+                        } else {
+                            "Bluetooth Disconnected"
                         },
                         color = colors.textSecondary,
                         fontSize = 12.sp,
@@ -619,12 +623,12 @@ private fun StepThreeProvisionWifi(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(FluxGreenOnline.copy(alpha = 0.12f))
+                        .background(if (isBleConnected) FluxGreenOnline.copy(alpha = 0.12f) else colors.cardBorder.copy(alpha = 0.2f))
                         .padding(horizontal = 9.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "Connected",
-                        color = FluxGreenOnline,
+                        text = if (isBleConnected) "Connected" else "Disconnected",
+                        color = if (isBleConnected) FluxGreenOnline else colors.textSecondary,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
                     )

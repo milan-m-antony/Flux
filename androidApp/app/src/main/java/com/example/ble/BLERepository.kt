@@ -51,6 +51,10 @@ class BLERepository private constructor(context: Context) {
     val deviceName: StateFlow<String> = connectionManager.deviceName
     val rssi: StateFlow<Int?> = connectionManager.rssi
 
+    fun isBluetoothEnabled(): Boolean {
+        return connectionManager.isBluetoothEnabled()
+    }
+
     fun connect(address: String) {
         connectionManager.connect(address)
     }

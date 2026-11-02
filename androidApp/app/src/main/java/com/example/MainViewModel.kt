@@ -225,6 +225,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     _espWifiConnected.value = false
                     _espWifiRssi.value = null
                     connectivityCoordinator.recalculateConnectivity()
+                } else if (state == android.bluetooth.BluetoothAdapter.STATE_ON) {
+                    bleManager.autoReconnectIfPossible()
+                    connectivityCoordinator.recalculateConnectivity()
                 }
             }
         }
@@ -235,6 +238,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val filter = android.content.IntentFilter(android.bluetooth.BluetoothAdapter.ACTION_STATE_CHANGED)
             application.registerReceiver(bluetoothReceiver, filter)
         } catch (_: Exception) {}
+
+        // Ensure offline state on startup if Bluetooth is not enabled
+        val btMgr = application.getSystemService(android.content.Context.BLUETOOTH_SERVICE) as? android.bluetooth.BluetoothManager
+        if (btMgr?.adapter?.isEnabled != true) {
+            bleManager.disconnect()
+            _lastTelemetryTimestamp.value = 0L
+            _espWifiConnected.value = false
+            _espWifiRssi.value = null
+            connectivityCoordinator.recalculateConnectivity()
+        }
 
         firebaseAuth?.addAuthStateListener { auth ->
             val user = auth.currentUser
@@ -361,7 +374,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Triple(addr, mode, pref)
             }.collect { (addr, mode, pref) ->
                 val isManualWifi = mode.equals("manual", ignoreCase = true) && pref.equals("wifi", ignoreCase = true)
-                if (addr != null && !isManualWifi && bleManager.connectionState.value == ConnectionState.DISCONNECTED) {
+                val isBtEnabled = bleManager.isBluetoothEnabled()
+                if (addr != null && !isManualWifi && isBtEnabled && bleManager.connectionState.value == ConnectionState.DISCONNECTED) {
                     bleManager.connect(addr)
                 }
             }

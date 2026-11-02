@@ -78,7 +78,7 @@ fun FluxQuickWifiSheet(
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)
     val bleConnectionState by viewModel.connectionState.collectAsState()
-    val isBleConnected = bleConnectionState == ConnectionState.CONNECTED
+    val isBleConnected = bleConnectionState == ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
     val espWifiConnected by viewModel.espWifiConnected.collectAsState()
     val espWifiRssi by viewModel.espWifiRssi.collectAsState()
     val latestReading by viewModel.latestReading.collectAsState()
@@ -183,7 +183,7 @@ fun FluxQuickWifiSheet(
     }
 
     // Is the ESP32 already connected to a known Wi-Fi?
-    val isDeviceAlreadyConnected = espWifiConnected && connectedSsid.isNotBlank() && !showChangeNetworkForm
+    val isDeviceAlreadyConnected = isBleConnected && espWifiConnected && connectedSsid.isNotBlank() && !showChangeNetworkForm
 
     Dialog(
         onDismissRequest = {

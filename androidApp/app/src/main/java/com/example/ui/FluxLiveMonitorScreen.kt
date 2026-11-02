@@ -42,7 +42,7 @@ fun FluxLiveMonitorScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val reading by viewModel.latestReading.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
-    val isConnected = connectionState == ConnectionState.CONNECTED
+    val isConnected = connectionState == ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
 
     val rawTemp = reading?.temp ?: 0.0
     val displayTemp = if (preferredUnit == "F") {

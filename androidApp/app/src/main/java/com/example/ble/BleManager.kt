@@ -94,7 +94,12 @@ class BleManager(private val context: Context) {
         scanner.stopScan()
     }
 
+    fun isBluetoothEnabled(): Boolean {
+        return repository.isBluetoothEnabled()
+    }
+
     fun connect(address: String) {
+        if (!repository.isBluetoothEnabled()) return
         repository.connect(address)
     }
 

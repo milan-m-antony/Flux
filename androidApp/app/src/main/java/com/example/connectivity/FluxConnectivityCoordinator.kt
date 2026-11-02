@@ -216,9 +216,10 @@ class FluxConnectivityCoordinator(
         val lastTelemetry = lastTelemetryTimestamp.value
         val isStale = (lastTelemetry > 0 && (now - lastTelemetry) > 60_000L)
         val bleState = bleManager.connectionState.value
-        val isBleConnected = bleState == ConnectionState.CONNECTED
-        val isBleScanning = bleState == ConnectionState.SCANNING || bleState == ConnectionState.CONNECTING
-        val bleRssiVal = bleManager.rssi.value
+        val isBtEnabled = bleManager.isBluetoothEnabled()
+        val isBleConnected = isBtEnabled && bleState == ConnectionState.CONNECTED
+        val isBleScanning = isBtEnabled && (bleState == ConnectionState.SCANNING || bleState == ConnectionState.CONNECTING)
+        val bleRssiVal = if (isBleConnected) bleManager.rssi.value else null
 
         val isEspWifiOnline = espWifiConnected.value
         val espWifiRssiVal = espWifiRssi.value
@@ -317,7 +318,7 @@ class FluxConnectivityCoordinator(
                     }
                 }
                 ManualTransportPreference.WIFI -> {
-                    if (isEspWifiOnline && lastTelemetry > 0 && !isStale) {
+                    if (hasWifi && isEspWifiOnline && lastTelemetry > 0 && !isStale) {
                         val effectiveDbm = espWifiRssiVal ?: -57
                         val percent = SignalCalibrator.rssiToWifiPercent(effectiveDbm)
                         FluxConnectivityState(
@@ -416,7 +417,7 @@ class FluxConnectivityCoordinator(
                 }
 
                 // Priority 2: Registered ESP32 device online through Wi-Fi (fresh telemetry received within 60s)
-                isEspWifiOnline && lastTelemetry > 0 && !isStale -> {
+                hasWifi && isEspWifiOnline && lastTelemetry > 0 && !isStale -> {
                     val effectiveDbm = espWifiRssiVal ?: -57
                     val percent = SignalCalibrator.rssiToWifiPercent(effectiveDbm)
                     FluxConnectivityState(
@@ -465,8 +466,8 @@ class FluxConnectivityCoordinator(
                     )
                 }
 
-                // Priority 4: Phone mobile data active fallback with active telemetry
-                hasCellular && !hasWifi && lastTelemetry > 0 && !isStale -> {
+                // Priority 4: Phone mobile data active fallback with active fresh telemetry
+                hasCellular && !hasWifi && isCloudReachable && _isInternetValidated.value && lastTelemetry > 0 && (now - lastTelemetry) <= 15_000L -> {
                     val effectiveDbm = _phoneNetworkSignalDbm.value ?: -86
                     val percent = SignalCalibrator.rssiToCellularPercent(effectiveDbm)
                     FluxConnectivityState(
@@ -523,13 +524,13 @@ class FluxConnectivityCoordinator(
                         signalDbm = null,
                         signalLevel = SignalLevel.UNAVAILABLE,
                         isOnline = false,
-                        isCloudReachable = false,
+                        isCloudReachable = isCloudReachable,
                         isStale = false,
                         lastTelemetryTimestamp = 0L,
                         switchMode = mode,
                         manualPreference = manualPref,
-                        espWifiConnected = isEspWifiOnline,
-                        bleConnected = isBleConnected,
+                        espWifiConnected = false,
+                        bleConnected = false,
                         phoneWifiAvailable = hasWifi,
                         phoneCellularAvailable = hasCellular
                     )

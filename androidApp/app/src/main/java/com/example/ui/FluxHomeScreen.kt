@@ -161,7 +161,7 @@ fun FluxHomeScreen(
                 Spacer(modifier = Modifier.height(14.dp))
             }
 
-            val isDeviceOnline = connectivityState.isOnline || connectionState == com.example.ble.ConnectionState.CONNECTED
+            val isDeviceOnline = connectivityState.isOnline || (viewModel.bleManager.isBluetoothEnabled() && connectionState == com.example.ble.ConnectionState.CONNECTED)
             // 2. Large Circular Temperature Gauge (Slightly reduced from 290.dp to 265.dp to preserve generous size)
             TemperatureGauge(
                 temperature = currentTempC.toFloat(),

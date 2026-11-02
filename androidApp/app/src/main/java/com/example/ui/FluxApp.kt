@@ -369,7 +369,7 @@ fun FluxApp(viewModel: MainViewModel) {
                         FluxHeader(
                             connectivityState = connectivityState,
                             isOnline = isOnline,
-                            isBleConnected = connectionState == com.example.ble.ConnectionState.CONNECTED,
+                            isBleConnected = connectionState == com.example.ble.ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled(),
                             isWifiConnected = connectivityState.type == com.example.connectivity.ConnectionType.WIFI,
                             darkTheme = isDarkTheme,
                             hasUnreadAlerts = hasUnreadAlerts,

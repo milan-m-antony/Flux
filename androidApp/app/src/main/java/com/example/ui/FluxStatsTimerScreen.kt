@@ -37,7 +37,7 @@ fun FluxStatsTimerScreen(
     val reading by viewModel.latestReading.collectAsState()
     val allReadings by viewModel.allReadings.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
-    val isConnected = connectionState == ConnectionState.CONNECTED
+    val isConnected = connectionState == ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
 
     val unitSymbol = if (preferredUnit == "F") "°F" else "°C"
     val isFahr = preferredUnit.equals("F", ignoreCase = true)

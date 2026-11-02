@@ -56,7 +56,7 @@ fun FluxHistoryScreen(
     val connectionState by viewModel.connectionState.collectAsState()
     val allReadings by viewModel.allReadings.collectAsState()
     val preferredUnit by viewModel.preferredUnit.collectAsState()
-    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED
+    val isOnline = connectionState == com.example.ble.ConnectionState.CONNECTED && viewModel.bleManager.isBluetoothEnabled()
 
     val darkTheme by viewModel.isDarkTheme.collectAsState()
     val colors = rememberFluxColors(darkTheme)

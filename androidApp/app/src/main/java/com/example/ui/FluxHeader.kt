@@ -34,9 +34,9 @@ import com.example.ui.theme.*
 fun FluxHeader(
     modifier: Modifier = Modifier,
     connectivityState: FluxConnectivityState = FluxConnectivityState(),
-    isOnline: Boolean = true,
-    isBleConnected: Boolean = true,
-    isWifiConnected: Boolean = true,
+    isOnline: Boolean = false,
+    isBleConnected: Boolean = false,
+    isWifiConnected: Boolean = false,
     darkTheme: Boolean = false,
     showNotificationBell: Boolean = false,
     hasUnreadAlerts: Boolean = false,

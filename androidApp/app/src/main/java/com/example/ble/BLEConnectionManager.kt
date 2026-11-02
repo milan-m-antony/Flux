@@ -178,14 +178,28 @@ class BLEConnectionManager(
         }
     }
 
+    fun isBluetoothEnabled(): Boolean {
+        return adapter?.isEnabled == true
+    }
+
     fun connect(address: String) {
         userExplicitDisconnect = false
         handler.removeCallbacksAndMessages(null)
         isAutoReconnecting = false
         disconnect(isUserRequested = false)
+
+        if (adapter == null || !adapter.isEnabled) {
+            _connectionState.value = BLEState.DISCONNECTED
+            return
+        }
+
         lastAddress = address
         _connectionState.value = BLEState.CONNECTING
-        val device = adapter?.getRemoteDevice(address)
+        val device = try {
+            adapter.getRemoteDevice(address)
+        } catch (e: Exception) {
+            null
+        }
         if (device != null) {
             gatt = device.connectGatt(context, false, gattCallback)
         } else {
@@ -211,7 +225,10 @@ class BLEConnectionManager(
 
     private fun retryOrScheduleReconnect() {
         if (userExplicitDisconnect) return
-        if (adapter?.isEnabled != true) return
+        if (adapter?.isEnabled != true) {
+            _connectionState.value = BLEState.DISCONNECTED
+            return
+        }
         val savedAddr = sharedPrefs.getString("last_address", null) ?: lastAddress
         if (savedAddr != null && !isAutoReconnecting) {
             isAutoReconnecting = true
@@ -220,6 +237,8 @@ class BLEConnectionManager(
                 isAutoReconnecting = false
                 if (!userExplicitDisconnect && adapter?.isEnabled == true) {
                     connect(savedAddr)
+                } else {
+                    _connectionState.value = BLEState.DISCONNECTED
                 }
             }, 5000)
         }
@@ -227,7 +246,10 @@ class BLEConnectionManager(
 
     fun autoReconnectIfPossible() {
         if (userExplicitDisconnect) return
-        if (adapter?.isEnabled != true) return
+        if (adapter?.isEnabled != true) {
+            _connectionState.value = BLEState.DISCONNECTED
+            return
+        }
         val savedAddr = sharedPrefs.getString("last_address", null)
         if (savedAddr != null && _connectionState.value == BLEState.DISCONNECTED) {
             connect(savedAddr)

@@ -484,9 +484,9 @@ fun FluxDeviceScreen(
 
                     val liveFirmware = reading?.firmware?.ifBlank { "v2.0.0" } ?: if (isOnline) "v2.0.0" else "Unavailable"
                     val liveMac = lastDeviceAddress ?: if (isOnline) "Connected (BLE)" else "Disconnected"
-                    val liveIp = if (reading?.wifiConnected == true) {
+                    val liveIp = if (isOnline && reading?.wifiConnected == true) {
                         if (!reading?.wifiSsid.isNullOrBlank()) "Connected (${reading?.wifiSsid})" else "Connected (DHCP)"
-                    } else if (isOnline) {
+                    } else if (isOnline && connectivityState.bleConnected) {
                         "Connected via BLE"
                     } else {
                         "Disconnected"
