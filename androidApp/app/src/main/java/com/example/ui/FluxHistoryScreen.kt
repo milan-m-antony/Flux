@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.MainViewModel
+import com.example.ui.components.FluxTrendGraph
 import com.example.ui.theme.*
 
 @Composable
@@ -441,11 +442,16 @@ fun FluxHistoryScreen(
                                     .fillMaxWidth()
                                     .height(140.dp)
                             ) {
-                                HistoryChartCanvas(
-                                    modifier = Modifier.fillMaxSize(),
-                                    darkTheme = false,
+                                FluxTrendGraph(
                                     readings = filteredReadings,
-                                    colors = colors
+                                    unitSymbol = if (preferredUnit == "F") "°F" else "°C",
+                                    isFahrenheit = preferredUnit == "F",
+                                    colors = colors,
+                                    chartHeight = 140.dp,
+                                    showTimeAxis = true,
+                                    showYAxis = true,
+                                    interactive = true,
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
                         }
@@ -858,216 +864,6 @@ private fun DataLogCard(
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold
             )
-        }
-    }
-}
-
-@Composable
-private fun HistoryChartCanvas(
-    modifier: Modifier = Modifier,
-    darkTheme: Boolean = false,
-    readings: List<com.example.data.Reading> = emptyList(),
-    colors: FluxColors = rememberFluxColors(false)
-) {
-    // 1. Smooth animated line sweep progress
-    val animProgress = remember { Animatable(0f) }
-    LaunchedEffect(readings.size) {
-        animProgress.snapTo(0f)
-        animProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = 750,
-                easing = FastOutSlowInEasing
-            )
-        )
-    }
-    val chartAnimProgress = animProgress.value
-
-    // 2. Continuous Live Pulse Beacon on latest telemetry point
-    val infiniteTransition = rememberInfiniteTransition(label = "historyBeacon")
-    val beaconPulseScale by infiniteTransition.animateFloat(
-        initialValue = 1.0f,
-        targetValue = 2.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "beaconPulseScale"
-    )
-    val beaconPulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 0.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "beaconPulseAlpha"
-    )
-
-    Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
-
-        val chartLeft = 28f.dp.toPx()
-        val chartRight = w - 8f.dp.toPx()
-        val chartTop = 10f.dp.toPx()
-        val chartBottom = h - 22f.dp.toPx()
-
-        val chartWidth = chartRight - chartLeft
-        val chartHeight = chartBottom - chartTop
-
-        val gridLineColor = Color(0xFFF1F5F9)
-
-        // Draw 4 horizontal dashed grid lines
-        val ySteps = 4
-        for (i in 0..ySteps) {
-            val y = chartTop + (chartHeight / ySteps) * i
-            drawLine(
-                color = gridLineColor,
-                start = Offset(chartLeft, y),
-                end = Offset(chartRight, y),
-                strokeWidth = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
-            )
-        }
-
-        if (readings.size >= 2) {
-            // Plot real data points
-            val displayList = readings.takeLast(24) // up to 24 real telemetry records
-            val minTemp = (displayList.minOfOrNull { it.temperature } ?: 10.0).coerceAtMost(10.0)
-            val maxTemp = (displayList.maxOfOrNull { it.temperature } ?: 40.0).coerceAtLeast(40.0)
-            val tempRange = (maxTemp - minTemp).coerceAtLeast(1.0)
-
-            val xStep = chartWidth / (displayList.size - 1).coerceAtLeast(1)
-
-            val points = displayList.mapIndexed { idx, r ->
-                val x = chartLeft + idx * xStep
-                val normalizedY = ((r.temperature - minTemp) / tempRange).toFloat()
-                val y = chartBottom - (normalizedY * chartHeight)
-                Offset(x, y.coerceIn(chartTop, chartBottom))
-            }
-
-            val path = Path().apply {
-                moveTo(points.first().x, points.first().y)
-                for (i in 0 until points.size - 1) {
-                    val p0 = points[i]
-                    val p1 = points[i + 1]
-                    val cx = (p0.x + p1.x) / 2f
-                    cubicTo(cx, p0.y, cx, p1.y, p1.x, p1.y)
-                }
-            }
-
-            val fillPath = Path().apply {
-                addPath(path)
-                lineTo(points.last().x, chartBottom)
-                lineTo(points.first().x, chartBottom)
-                close()
-            }
-
-            val clipRight = chartLeft + (chartWidth * chartAnimProgress)
-
-            clipRect(
-                left = 0f,
-                top = 0f,
-                right = clipRight,
-                bottom = h
-            ) {
-                drawPath(
-                    path = fillPath,
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            colors.primary.copy(alpha = 0.32f),
-                            colors.primary.copy(alpha = 0.02f)
-                        ),
-                        startY = chartTop,
-                        endY = chartBottom
-                    )
-                )
-
-                drawPath(
-                    path = path,
-                    color = colors.primary,
-                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
-                )
-
-                // Live Glowing Beacon Ring on newest reading
-                if (chartAnimProgress > 0.85f) {
-                    val lastP = points.last()
-                    drawCircle(
-                        color = colors.primary.copy(alpha = beaconPulseAlpha),
-                        radius = 5.dp.toPx() * beaconPulseScale,
-                        center = lastP
-                    )
-                    drawCircle(
-                        color = Color.White,
-                        radius = 4.5.dp.toPx(),
-                        center = lastP
-                    )
-                    drawCircle(
-                        color = colors.primary,
-                        radius = 4.5.dp.toPx(),
-                        center = lastP,
-                        style = Stroke(width = 2.dp.toPx())
-                    )
-                }
-            }
-        }
-    }
-
-    // Dynamic Axis Labels Overlay (Computed from genuine Room DB timestamps)
-    Box(modifier = modifier) {
-        if (readings.isEmpty()) {
-            androidx.compose.material3.Text(
-                text = "Awaiting Telemetry Readings",
-                color = FluxTextLight,
-                fontSize = 11.5.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .fillMaxHeight()
-                    .padding(bottom = 20.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text("40°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("30°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("20°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                Text("10°", color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-            }
-
-            // Real dynamic timestamps from actual data records
-            val displayList = remember(readings) { readings.takeLast(24) }
-            val timeLabels = remember(displayList) {
-                val timeFmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                val startT = displayList.first().timestamp
-                val endT = displayList.last().timestamp
-                if (displayList.size < 4 || (endT - startT) < 120_000L) {
-                    displayList.map { timeFmt.format(java.util.Date(it.timestamp)) }.distinct().takeLast(4)
-                } else {
-                    val step = (endT - startT) / 3
-                    listOf(
-                        timeFmt.format(java.util.Date(startT)),
-                        timeFmt.format(java.util.Date(startT + step)),
-                        timeFmt.format(java.util.Date(startT + step * 2)),
-                        timeFmt.format(java.util.Date(endT))
-                    )
-                }
-            }
-
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .fillMaxWidth()
-                    .padding(start = 28.dp, end = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                timeLabels.forEach { label ->
-                    Text(label, color = FluxTextLight, fontSize = 9.sp, fontWeight = FontWeight.Medium)
-                }
-            }
         }
     }
 }
