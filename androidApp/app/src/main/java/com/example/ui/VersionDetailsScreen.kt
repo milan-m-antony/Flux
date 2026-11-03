@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.BuildConfig
 import com.example.ui.theme.*
 
 @Composable
@@ -98,7 +99,7 @@ fun VersionDetailsScreen(onBack: () -> Unit) {
                 Spacer(modifier = Modifier.height(2.dp))
 
                 Text(
-                    text = "Version 1.0.4 (Build 104)",
+                    text = "Version ${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})",
                     fontSize = 13.5.sp,
                     color = colors.textSecondary,
                     fontWeight = FontWeight.Medium
@@ -156,21 +157,21 @@ fun VersionDetailsScreen(onBack: () -> Unit) {
                             value = "Jetpack Compose (M3)",
                             colors = colors
                         )
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
                         BuildSpecItem(
                             icon = Icons.Default.Terminal,
                             label = "BLE Telemetry Engine",
                             value = "Nordic Semiconductor BLE GATT",
                             colors = colors
                         )
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
                         BuildSpecItem(
                             icon = Icons.Default.Code,
                             label = "Local Storage",
                             value = "Room DB SQLite Cache",
                             colors = colors
                         )
-                        Divider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
+                        HorizontalDivider(color = colors.cardBorder.copy(alpha = 0.6f), thickness = 0.5.dp)
                         BuildSpecItem(
                             icon = Icons.Default.Info,
                             label = "Hardware Target",

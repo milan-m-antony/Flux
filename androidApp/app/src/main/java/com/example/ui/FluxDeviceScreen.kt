@@ -186,7 +186,8 @@ fun FluxDeviceScreen(
                     // Animated floating Flux Smart Sensor with glowing aura
                     Box(
                         modifier = Modifier
-                            .size(if (isNarrow) 140.dp else 165.dp)
+                            .fillMaxWidth(if (isNarrow) 0.95f else 0.88f)
+                            .height(if (isNarrow) 180.dp else 215.dp)
                             .offset(y = floatY.dp)
                             .scale(boardScale),
                         contentAlignment = Alignment.Center
@@ -194,15 +195,15 @@ fun FluxDeviceScreen(
                         // Ambient Radial Glow
                         Box(
                             modifier = Modifier
-                                .size(if (isNarrow) 125.dp else 150.dp)
-                                .scale(1.25f)
+                                .fillMaxSize()
+                                .scale(1.08f)
                                 .alpha(glowPulse)
-                                .clip(CircleShape)
+                                .clip(RoundedCornerShape(26.dp))
                                 .background(
                                     Brush.radialGradient(
                                         colors = listOf(
-                                            FluxOrange.copy(alpha = 0.45f),
-                                            FluxOrangeSoft.copy(alpha = 0.15f),
+                                            FluxOrange.copy(alpha = 0.35f),
+                                            FluxOrangeSoft.copy(alpha = 0.12f),
                                             Color.Transparent
                                         )
                                     )
@@ -215,15 +216,14 @@ fun FluxDeviceScreen(
                                 .fillMaxSize()
                                 .shadow(8.dp, RoundedCornerShape(26.dp), spotColor = Color(0x18000000))
                                 .clip(RoundedCornerShape(26.dp))
-                                .background(Color(0xFFFFF9F5))
-                                .border(1.2.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(26.dp))
-                                .padding(if (isNarrow) 8.dp else 12.dp),
+                                .background(Color(0xFF141418))
+                                .border(1.2.dp, FluxOrange.copy(alpha = 0.45f), RoundedCornerShape(26.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_flux_device),
                                 contentDescription = "Flux Smart Telemetry Sensor",
-                                contentScale = ContentScale.Fit,
+                                contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -337,7 +337,10 @@ fun FluxDeviceScreen(
                         Spacer(modifier = Modifier.height(2.dp))
 
                         Text(
-                            text = if (batteryVoltage != null && batteryVoltage > 0.0) String.format("%.2fV • Healthy", batteryVoltage) else if (isOnline) "Measuring..." else "Standby",
+                            text = if (batteryVoltage != null && batteryVoltage > 0.0) {
+                                if (batteryVoltage >= 4.5) String.format("%.2fV • USB Power", batteryVoltage)
+                                else String.format("%.2fV • Healthy", batteryVoltage)
+                            } else if (isOnline) "5.00V • USB Power" else "Standby",
                             color = colors.textSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium

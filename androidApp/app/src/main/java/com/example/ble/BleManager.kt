@@ -65,6 +65,7 @@ class BleManager(private val context: Context) {
                 slope = 59.2,
                 battery = data.battery,
                 batteryVoltage = data.batteryVoltage,
+                charging = data.charging,
                 firmware = data.firmware,
                 deviceName = data.device,
                 mode = data.mode,

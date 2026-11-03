@@ -12,6 +12,7 @@ data class BleReading(
     val slope: Double = 59.2,
     val battery: Int = 100,
     val batteryVoltage: Double = 4.20,
+    val charging: Boolean = false,
     val firmware: String = "v2.0.0",
     val deviceName: String = "Flux1",
     val mode: String = "Live Monitor",

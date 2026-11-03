@@ -65,9 +65,9 @@ struct DeviceState {
     const char* sensorStatus = "Initializing";
     
     // Battery & Hardware
-    int batteryPercentage = 87;
-    float batteryVoltage = 4.02f;
-    bool charging = false;
+    int batteryPercentage = 100;
+    float batteryVoltage = 5.0f;
+    bool charging = true;
     
     // Connectivity & Cloud
     bool bluetoothConnected = false;

@@ -942,15 +942,14 @@ fun FluxSettingsScreen(
                                     .fillMaxSize()
                                     .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = Color(0x18000000))
                                     .clip(RoundedCornerShape(22.dp))
-                                    .background(if (isDarkTheme) Color(0xFF332014) else Color(0xFFFFF9F5))
-                                    .border(1.dp, FluxOrange.copy(alpha = 0.35f), RoundedCornerShape(22.dp))
-                                    .padding(4.dp),
+                                    .background(Color(0xFF141418))
+                                    .border(1.2.dp, FluxOrange.copy(alpha = 0.45f), RoundedCornerShape(22.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Image(
                                     painter = painterResource(id = R.drawable.ic_flux_device),
                                     contentDescription = "Flux Smart Telemetry Sensor",
-                                    contentScale = ContentScale.Fit,
+                                    contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
