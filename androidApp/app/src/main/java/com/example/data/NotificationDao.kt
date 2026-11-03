@@ -28,4 +28,7 @@ interface NotificationDao {
 
     @Query("DELETE FROM notifications")
     suspend fun deleteAll()
+
+    @Query("UPDATE notifications SET title = REPLACE(REPLACE(title, 'NaTrack', 'Flux'), 'natrack', 'Flux'), message = REPLACE(REPLACE(message, 'NaTrack', 'Flux'), 'natrack', 'Flux') WHERE title LIKE '%natrack%' OR message LIKE '%natrack%'")
+    suspend fun sanitizeExistingNotifications()
 }

@@ -79,7 +79,7 @@ const response = await fetch("https://onesignal.com/api/v1/notifications", {
 2. **Real FCM Integration (`MyFirebaseMessagingService`):**
    - Ingests incoming push notifications and data payloads (`title`, `body`, `message`, `type`).
    - Automatically writes records into the local Room database (`FluxDatabase` / `NotificationDao` -> `NotificationEntity`).
-   - Dispatches native system heads-up notifications across the `flux_alerts_channel` channel via `FluxNotificationHelper`.
+   - Dispatches native system heads-up notifications across the `flux_sound_alerts_channel_v2` channel via `FluxNotificationHelper`.
 3. **Zero Mock Data Policy:**
    - Simulated test cards, fake FCM buttons, and hardcoded dates have been completely removed.
    - `FluxAlertsScreen` displays real alerts from Room DB with unread tracking, one-tap "Mark all as read", and swipe/click dismissal.

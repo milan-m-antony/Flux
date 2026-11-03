@@ -25,14 +25,23 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
         Log.d(TAG, "onMessageReceived called. From: ${remoteMessage.from}")
 
         // 1. Resolve notification title and body from notification payload OR data payload
-        val title = remoteMessage.notification?.title
+        val rawTitle = remoteMessage.notification?.title
             ?: remoteMessage.data["title"]
             ?: "Flux Telemetry Alert"
 
-        val body = remoteMessage.notification?.body
+        val rawBody = remoteMessage.notification?.body
             ?: remoteMessage.data["message"]
             ?: remoteMessage.data["body"]
             ?: "New notification from your Flux thermal monitoring node."
+
+        // Sanitize incoming strings to purge any legacy project identifiers (e.g. NaTrack)
+        val title = FluxNotificationHelper.sanitizeBrandText(rawTitle).let {
+            if (it.isBlank() || it.equals("Flux", ignoreCase = true)) "Flux Telemetry Alert" else it
+        }
+
+        val body = FluxNotificationHelper.sanitizeBrandText(rawBody).let {
+            if (it.isBlank()) "New notification from your Flux thermal monitoring node." else it
+        }
 
         val type = remoteMessage.data["type"]
             ?: if (title.contains("Alert", ignoreCase = true) || body.contains("Alert", ignoreCase = true) || body.contains("exceeded", ignoreCase = true) || body.contains("breach", ignoreCase = true)) "ALERT"

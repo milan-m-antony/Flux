@@ -15,5 +15,5 @@ To prevent alert fatigue and redundant database/push events:
 ## 3. Real Firebase Cloud Messaging (FCM) Flow
 - `MyFirebaseMessagingService` parses incoming FCM payloads (both data and notification payloads).
 - Automatically converts incoming pushes into `NotificationEntity` instances and persists them into Room DB via `Dispatchers.IO`.
-- Dispatches Android system heads-up notifications across the `flux_alerts_channel` notification channel.
+- Dispatches Android system heads-up notifications across the `flux_sound_alerts_channel_v2` notification channel.
 - Automatically refreshes and syncs FCM tokens to Firestore on `onNewToken`.

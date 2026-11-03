@@ -2,9 +2,13 @@ package com.example
 
 import android.app.Application
 import android.util.Log
+import com.example.data.AppDatabase
 import com.example.util.FluxNotificationHelper
 import com.example.util.OneSignalManager
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class FluxApplication : Application() {
     override fun onCreate() {
@@ -13,6 +17,17 @@ class FluxApplication : Application() {
         
         // Ensure high-priority alert notification channel is created with sound & vibration
         FluxNotificationHelper.ensureNotificationChannel(this)
+
+        // Asynchronously sanitize any legacy notification records in Room DB
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                AppDatabase.getDatabase(this@FluxApplication)
+                    .notificationDao()
+                    .sanitizeExistingNotifications()
+            } catch (e: Exception) {
+                Log.w("FluxApplication", "Could not sanitize existing notifications: ${e.message}")
+            }
+        }
 
         // Initialize OneSignal with provided App ID
         OneSignalManager.init(this, OneSignalManager.DEFAULT_APP_ID)

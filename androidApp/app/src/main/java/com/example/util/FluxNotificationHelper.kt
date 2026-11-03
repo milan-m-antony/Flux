@@ -22,6 +22,20 @@ object FluxNotificationHelper {
     private const val CHANNEL_NAME = "Flux Telemetry & Sound Alerts"
     private const val TAG = "FluxNotificationHelper"
 
+    /**
+     * Sanitizes brand strings across all notification dispatch and ingestion paths,
+     * ensuring legacy project names (e.g. "NaTrack", "na-track") are permanently
+     * cleansed and converted to "Flux".
+     */
+    fun sanitizeBrandText(text: String?): String {
+        if (text.isNullOrBlank()) return ""
+        return text
+            .replace("natrack-6548a", "Flux", ignoreCase = true)
+            .replace("natrack", "Flux", ignoreCase = true)
+            .replace("na-track", "Flux", ignoreCase = true)
+            .trim()
+    }
+
     fun ensureNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -115,6 +129,13 @@ object FluxNotificationHelper {
     ) {
         ensureNotificationChannel(context)
 
+        val cleanTitle = sanitizeBrandText(title).let {
+            if (it.isBlank() || it.equals("Flux", ignoreCase = true)) "Flux Telemetry Alert" else it
+        }
+        val cleanMessage = sanitizeBrandText(message).let {
+            if (it.isBlank()) "New notification from your Flux thermal monitoring node." else it
+        }
+
         val soundUri: Uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
 
@@ -130,9 +151,9 @@ object FluxNotificationHelper {
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(title)
-            .setContentText(message)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setContentTitle(cleanTitle)
+            .setContentText(cleanMessage)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(cleanMessage))
             .setPriority(if (isAlert) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
             .setSound(soundUri)
             .setVibrate(longArrayOf(0, 450, 200, 450))

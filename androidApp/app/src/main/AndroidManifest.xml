@@ -66,7 +66,7 @@
 
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="flux_alerts_channel" />
+            android:value="flux_sound_alerts_channel_v2" />
     </application>
 
 </manifest>
